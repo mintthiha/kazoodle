@@ -5,14 +5,27 @@ npm-debug.log*
 
 # Go
 /server/bin/
+/server/server
+/server/server.exe
 *.test
 *.out
+go.work
+go.work.sum
+
+# Vite / web
+/web/dist/
+/web/dist-ssr/
+node_modules/.vite/
+*.local
+
+# Env
+.env
+.env.*
+!.env.example
 
 # Editor / OS
 .DS_Store
+Thumbs.db
 .idea/
 .vscode/
 *.swp
-
-# Build output
-/web/dist/
