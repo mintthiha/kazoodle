@@ -53,37 +53,103 @@ presence, and state sync for all of them.
 
 ## Architecture direction
 
-_Nothing here is final. These are the decisions to make before writing much
-code, because they're expensive to change later._
+_Still pre-alpha — none of this is running yet. But the decisions below are
+settled enough to build against, and the ones left open are called out
+explicitly._
 
-### Open questions to resolve first
+### Stack
 
-1. **Host authority** — is one device authoritative for game state, or is the
-   server? (Leaning server-authoritative: makes remote play and reconnection
-   dramatically simpler, at the cost of requiring a backend for local play.)
-2. **Reconnection** — phones sleep, browsers get backgrounded, tabs get closed.
-   A player rejoining mid-round should be routine, not an edge case.
-3. **Room identity** — short human-readable codes (`BEAR`, `4-word`, 4-char
-   alphanumeric?) and how collisions are handled.
-4. **Transport** — WebSocket vs. WebRTC vs. both. WebRTC is tempting for local
-   play; it also adds real complexity.
-5. **Spectators / late joiners** — supported or not, decided once, globally.
+- **Backend: Go.** WebSocket handling via [`coder/websocket`][coder-ws] (falling
+  back to [`gorilla/websocket`][gorilla-ws] if we hit a wall). The server owns
+  game state — see _Host authority_ below.
+- **Frontend: React + Vite + TypeScript.** Mobile-browser-first: every layout
+  decision starts from a phone held in one hand, desktop is the afterthought.
+- **Room state: in-memory, owned by a per-room goroutine.** One goroutine per
+  active room serializes all state changes for that room; no shared locks across
+  rooms. A room that empties out is torn down.
+- **Scale-out: Redis pub/sub.** Not needed on day one — a single process holds
+  every room in memory just fine at first. But the design must not assume it:
+  the per-room goroutine communicates through a message bus abstraction so that
+  a room's players can be spread across server processes later, with Redis
+  pub/sub carrying room events between them.
+- **Persistence: Postgres, later.** For anything that needs to outlive a room —
+  accounts, stats, saved decks. Not in v1; v1 rooms are entirely ephemeral.
+- **Deployment: Docker,** on a host that supports long-lived connections
+  ([Fly.io][fly], [Railway][railway], or similar). Not Vercel or other
+  serverless-function platforms — the WebSocket connections are the whole point
+  and they need a real process to live in.
+
+### Wire protocol
+
+Go and TypeScript can't share a types package, so the client/server wire
+protocol is **schema-first**: defined once, both sides generated, never
+hand-written on either end.
+
+Concrete approach: the protocol is described in **Protocol Buffers `.proto`
+files** as the single source of truth. Messages travel over the WebSocket as
+**proto3 canonical JSON** (not binary — it stays debuggable in browser
+devtools). Code generation is driven by [`buf`][buf], with `protoc-gen-go` for
+the Go types and `protoc-gen-es` for the TypeScript types. A CI check fails the
+build if generated code is out of sync with the `.proto` files.
+
+### Resolved decisions
+
+- **Host authority: server-authoritative.** The server is the single source of
+  truth for game state. Clients send intents and render what they're told;
+  they never adjudicate. This requires a backend even for a single phone on a
+  couch, and that's an accepted cost — it's what makes remote play, hybrid
+  rooms, and reconnection tractable instead of special-cased.
+- **Transport: WebSockets only.** No WebRTC. Peer-to-peer would shave latency
+  for co-located play, but it roughly doubles the connection-management surface
+  and fights the server-authoritative model. One transport, everywhere.
+
+### Still open
+
+These are deliberately unresolved. Each should be decided once and applied
+globally, not per game.
+
+1. **Room code format** — word (`BEAR`), multi-word, 4-char alphanumeric? And
+   how collisions are handled.
+2. **Reconnection / session restore** — phones sleep, browsers get backgrounded,
+   tabs get closed. A player rejoining mid-round should be routine, not an edge
+   case. The mechanism (session tokens, grace windows, state replay) is TBD.
+3. **Spectators and late joiners** — supported or not, decided once, globally.
+
+### Internationalization
+
+**French-language support is in scope from the start.** The UI, game copy, and
+any player-facing server strings are built to be localized from the first
+commit — not shipped English-only and retrofitted later. English and French are
+the initial target locales.
 
 ### Game module contract
 
-Games should be self-contained modules the platform loads, so that adding
-game #10 is a weekend, not a rewrite. Rough shape:
+Games are self-contained modules the platform loads, so that adding game #10 is
+a weekend, not a rewrite. The server side of a game is a normal Go package; the
+client side lives in the frontend tree. They don't share a directory — Go
+packages and the Vite app have different build roots.
 
 ```
-games/
-  <game-id>/
-    manifest.json   # name, player count, supported play modes, assets
-    server/         # authoritative game logic, no rendering
-    client/         # host view (if any) + player view
+internal/games/<game-id>/
+    manifest.json         # name, player count, supported play modes, assets
+    <game-id>.go          # package <gameid> — authoritative game logic, no rendering
+    <game-id>_test.go
+    state.go              # room state types for this game
+
+web/src/games/<game-id>/
+    index.ts              # registers the game's views with the client
+    PlayerView.tsx        # what each player sees on their phone
+    HostView.tsx          # shared/host screen, if the game has one
 ```
 
 A game should never open its own socket, manage its own room, or know a
 player's physical location. It receives players and events; it emits state.
+
+[coder-ws]: https://github.com/coder/websocket
+[gorilla-ws]: https://github.com/gorilla/websocket
+[buf]: https://buf.build
+[fly]: https://fly.io
+[railway]: https://railway.app
 
 ---
 
