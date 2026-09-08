@@ -1,0 +1,14 @@
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - STANDARD
+  except:
+    # The protocol lives in a single flat file (proto/protocol.proto) but keeps
+    # a versioned package name (kazoodle.v1) so the wire format can evolve.
+    # That trade means the file path deliberately does not mirror the package.
+    - PACKAGE_DIRECTORY_MATCH
+breaking:
+  use:
+    - FILE

@@ -1,0 +1,18 @@
+version: v2
+clean: true
+plugins:
+  # Go types -> server/internal/protocol/protocol.pb.go
+  # Requires protoc-gen-go on PATH:
+  #   go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6
+  - local: protoc-gen-go
+    out: ../server/internal/protocol
+    opt: paths=source_relative
+
+  # TypeScript types -> web/src/net/gen/protocol_pb.ts
+  # protoc-gen-es comes from the @bufbuild/protoc-gen-es dev dependency here;
+  # `npm run generate` puts ./node_modules/.bin on PATH so buf can find it.
+  - local: protoc-gen-es
+    out: ../web/src/net/gen
+    opt:
+      - target=ts
+      - import_extension=none
