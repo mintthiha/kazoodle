@@ -769,17 +769,17 @@ var File_protocol_proto protoreflect.FileDescriptor
 
 const file_protocol_proto_rawDesc = "" +
 	"\n" +
-	"\x0eprotocol.proto\x12\vkazoodle.v1\";\n" +
+	"\x0eprotocol.proto\x12\rpartygames.v1\";\n" +
 	"\x06Player\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
-	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\"\xee\x01\n" +
-	"\rClientMessage\x12:\n" +
-	"\vcreate_room\x18\x01 \x01(\v2\x17.kazoodle.v1.CreateRoomH\x00R\n" +
-	"createRoom\x124\n" +
-	"\tjoin_room\x18\x02 \x01(\v2\x15.kazoodle.v1.JoinRoomH\x00R\bjoinRoom\x127\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\"\xf6\x01\n" +
+	"\rClientMessage\x12<\n" +
+	"\vcreate_room\x18\x01 \x01(\v2\x19.partygames.v1.CreateRoomH\x00R\n" +
+	"createRoom\x126\n" +
+	"\tjoin_room\x18\x02 \x01(\v2\x17.partygames.v1.JoinRoomH\x00R\bjoinRoom\x129\n" +
 	"\n" +
-	"leave_room\x18\x03 \x01(\v2\x16.kazoodle.v1.LeaveRoomH\x00R\tleaveRoom\x12'\n" +
-	"\x04echo\x18\x04 \x01(\v2\x11.kazoodle.v1.EchoH\x00R\x04echoB\t\n" +
+	"leave_room\x18\x03 \x01(\v2\x18.partygames.v1.LeaveRoomH\x00R\tleaveRoom\x12)\n" +
+	"\x04echo\x18\x04 \x01(\v2\x13.partygames.v1.EchoH\x00R\x04echoB\t\n" +
 	"\apayload\"/\n" +
 	"\n" +
 	"CreateRoom\x12!\n" +
@@ -789,24 +789,24 @@ const file_protocol_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\"\v\n" +
 	"\tLeaveRoom\"\x1a\n" +
 	"\x04Echo\x12\x12\n" +
-	"\x04text\x18\x01 \x01(\tR\x04text\"\xc0\x02\n" +
-	"\rServerMessage\x12:\n" +
-	"\vroom_joined\x18\x01 \x01(\v2\x17.kazoodle.v1.RoomJoinedH\x00R\n" +
-	"roomJoined\x12@\n" +
-	"\rplayer_joined\x18\x02 \x01(\v2\x19.kazoodle.v1.PlayerJoinedH\x00R\fplayerJoined\x12:\n" +
-	"\vplayer_left\x18\x03 \x01(\v2\x17.kazoodle.v1.PlayerLeftH\x00R\n" +
-	"playerLeft\x12:\n" +
-	"\vecho_result\x18\x04 \x01(\v2\x17.kazoodle.v1.EchoResultH\x00R\n" +
-	"echoResult\x12.\n" +
-	"\x05error\x18\x05 \x01(\v2\x16.kazoodle.v1.ErrorInfoH\x00R\x05errorB\t\n" +
-	"\apayload\"~\n" +
+	"\x04text\x18\x01 \x01(\tR\x04text\"\xca\x02\n" +
+	"\rServerMessage\x12<\n" +
+	"\vroom_joined\x18\x01 \x01(\v2\x19.partygames.v1.RoomJoinedH\x00R\n" +
+	"roomJoined\x12B\n" +
+	"\rplayer_joined\x18\x02 \x01(\v2\x1b.partygames.v1.PlayerJoinedH\x00R\fplayerJoined\x12<\n" +
+	"\vplayer_left\x18\x03 \x01(\v2\x19.partygames.v1.PlayerLeftH\x00R\n" +
+	"playerLeft\x12<\n" +
+	"\vecho_result\x18\x04 \x01(\v2\x19.partygames.v1.EchoResultH\x00R\n" +
+	"echoResult\x120\n" +
+	"\x05error\x18\x05 \x01(\v2\x18.partygames.v1.ErrorInfoH\x00R\x05errorB\t\n" +
+	"\apayload\"\x80\x01\n" +
 	"\n" +
 	"RoomJoined\x12\x1b\n" +
 	"\troom_code\x18\x01 \x01(\tR\broomCode\x12$\n" +
-	"\x0eself_player_id\x18\x02 \x01(\tR\fselfPlayerId\x12-\n" +
-	"\aplayers\x18\x03 \x03(\v2\x13.kazoodle.v1.PlayerR\aplayers\";\n" +
-	"\fPlayerJoined\x12+\n" +
-	"\x06player\x18\x01 \x01(\v2\x13.kazoodle.v1.PlayerR\x06player\")\n" +
+	"\x0eself_player_id\x18\x02 \x01(\tR\fselfPlayerId\x12/\n" +
+	"\aplayers\x18\x03 \x03(\v2\x15.partygames.v1.PlayerR\aplayers\"=\n" +
+	"\fPlayerJoined\x12-\n" +
+	"\x06player\x18\x01 \x01(\v2\x15.partygames.v1.PlayerR\x06player\")\n" +
 	"\n" +
 	"PlayerLeft\x12\x1b\n" +
 	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\"F\n" +
@@ -816,7 +816,7 @@ const file_protocol_proto_rawDesc = "" +
 	"\x0efrom_player_id\x18\x02 \x01(\tR\ffromPlayerId\"9\n" +
 	"\tErrorInfo\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessageBAZ?github.com/mintthiha/kazoodle/server/internal/protocol;protocolb\x06proto3"
+	"\amessage\x18\x02 \x01(\tR\amessageBDZBgithub.com/mintthiha/party-games/server/internal/protocol;protocolb\x06proto3"
 
 var (
 	file_protocol_proto_rawDescOnce sync.Once
@@ -832,31 +832,31 @@ func file_protocol_proto_rawDescGZIP() []byte {
 
 var file_protocol_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_protocol_proto_goTypes = []any{
-	(*Player)(nil),        // 0: kazoodle.v1.Player
-	(*ClientMessage)(nil), // 1: kazoodle.v1.ClientMessage
-	(*CreateRoom)(nil),    // 2: kazoodle.v1.CreateRoom
-	(*JoinRoom)(nil),      // 3: kazoodle.v1.JoinRoom
-	(*LeaveRoom)(nil),     // 4: kazoodle.v1.LeaveRoom
-	(*Echo)(nil),          // 5: kazoodle.v1.Echo
-	(*ServerMessage)(nil), // 6: kazoodle.v1.ServerMessage
-	(*RoomJoined)(nil),    // 7: kazoodle.v1.RoomJoined
-	(*PlayerJoined)(nil),  // 8: kazoodle.v1.PlayerJoined
-	(*PlayerLeft)(nil),    // 9: kazoodle.v1.PlayerLeft
-	(*EchoResult)(nil),    // 10: kazoodle.v1.EchoResult
-	(*ErrorInfo)(nil),     // 11: kazoodle.v1.ErrorInfo
+	(*Player)(nil),        // 0: partygames.v1.Player
+	(*ClientMessage)(nil), // 1: partygames.v1.ClientMessage
+	(*CreateRoom)(nil),    // 2: partygames.v1.CreateRoom
+	(*JoinRoom)(nil),      // 3: partygames.v1.JoinRoom
+	(*LeaveRoom)(nil),     // 4: partygames.v1.LeaveRoom
+	(*Echo)(nil),          // 5: partygames.v1.Echo
+	(*ServerMessage)(nil), // 6: partygames.v1.ServerMessage
+	(*RoomJoined)(nil),    // 7: partygames.v1.RoomJoined
+	(*PlayerJoined)(nil),  // 8: partygames.v1.PlayerJoined
+	(*PlayerLeft)(nil),    // 9: partygames.v1.PlayerLeft
+	(*EchoResult)(nil),    // 10: partygames.v1.EchoResult
+	(*ErrorInfo)(nil),     // 11: partygames.v1.ErrorInfo
 }
 var file_protocol_proto_depIdxs = []int32{
-	2,  // 0: kazoodle.v1.ClientMessage.create_room:type_name -> kazoodle.v1.CreateRoom
-	3,  // 1: kazoodle.v1.ClientMessage.join_room:type_name -> kazoodle.v1.JoinRoom
-	4,  // 2: kazoodle.v1.ClientMessage.leave_room:type_name -> kazoodle.v1.LeaveRoom
-	5,  // 3: kazoodle.v1.ClientMessage.echo:type_name -> kazoodle.v1.Echo
-	7,  // 4: kazoodle.v1.ServerMessage.room_joined:type_name -> kazoodle.v1.RoomJoined
-	8,  // 5: kazoodle.v1.ServerMessage.player_joined:type_name -> kazoodle.v1.PlayerJoined
-	9,  // 6: kazoodle.v1.ServerMessage.player_left:type_name -> kazoodle.v1.PlayerLeft
-	10, // 7: kazoodle.v1.ServerMessage.echo_result:type_name -> kazoodle.v1.EchoResult
-	11, // 8: kazoodle.v1.ServerMessage.error:type_name -> kazoodle.v1.ErrorInfo
-	0,  // 9: kazoodle.v1.RoomJoined.players:type_name -> kazoodle.v1.Player
-	0,  // 10: kazoodle.v1.PlayerJoined.player:type_name -> kazoodle.v1.Player
+	2,  // 0: partygames.v1.ClientMessage.create_room:type_name -> partygames.v1.CreateRoom
+	3,  // 1: partygames.v1.ClientMessage.join_room:type_name -> partygames.v1.JoinRoom
+	4,  // 2: partygames.v1.ClientMessage.leave_room:type_name -> partygames.v1.LeaveRoom
+	5,  // 3: partygames.v1.ClientMessage.echo:type_name -> partygames.v1.Echo
+	7,  // 4: partygames.v1.ServerMessage.room_joined:type_name -> partygames.v1.RoomJoined
+	8,  // 5: partygames.v1.ServerMessage.player_joined:type_name -> partygames.v1.PlayerJoined
+	9,  // 6: partygames.v1.ServerMessage.player_left:type_name -> partygames.v1.PlayerLeft
+	10, // 7: partygames.v1.ServerMessage.echo_result:type_name -> partygames.v1.EchoResult
+	11, // 8: partygames.v1.ServerMessage.error:type_name -> partygames.v1.ErrorInfo
+	0,  // 9: partygames.v1.RoomJoined.players:type_name -> partygames.v1.Player
+	0,  // 10: partygames.v1.PlayerJoined.player:type_name -> partygames.v1.Player
 	11, // [11:11] is the sub-list for method output_type
 	11, // [11:11] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name

@@ -1,6 +1,6 @@
 # schema
 
-The Kazoodle wire protocol. `proto/protocol.proto` is the single source of
+The party-games wire protocol. `proto/protocol.proto` is the single source of
 truth; both the Go server and the TypeScript web client use **generated** types,
 never hand-written ones.
 
@@ -9,7 +9,7 @@ Messages travel over the WebSocket as **proto3 canonical JSON**.
 ## Layout
 
 ```
-proto/protocol.proto   # the protocol (package kazoodle.v1)
+proto/protocol.proto   # the protocol (package partygames.v1)
 buf.yaml               # buf module + lint config
 buf.gen.yaml           # codegen: Go -> ../server, TS -> ../web
 ```
