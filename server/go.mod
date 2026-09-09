@@ -2,4 +2,7 @@ module github.com/mintthiha/party-games/server
 
 go 1.27
 
-require google.golang.org/protobuf v1.36.6
+require (
+	github.com/coder/websocket v1.8.15
+	google.golang.org/protobuf v1.36.6
+)
