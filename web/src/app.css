@@ -1,0 +1,223 @@
+:root {
+  --bg: #101014;
+  --panel: #1b1b22;
+  --fg: #eeeef6;
+  --muted: #9a9aae;
+  --border: #33333d;
+  --accent: #4f7cff;
+  --danger: #ff5a5a;
+  --warn: #ffd166;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.4;
+  -webkit-text-size-adjust: 100%;
+}
+
+.app {
+  max-width: 30rem;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  flex: 1;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+h1 {
+  font-size: 1.5rem;
+  margin: 0.25rem 0 0.5rem;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Forms — thumb-sized targets, 16px text so iOS doesn't zoom on focus. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field > span {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.85rem;
+  font-size: 1rem;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.9rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+button.secondary {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+
+button.danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+.divider {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.hint {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+/* Connection status strip */
+.conn-banner {
+  padding: 0.6rem 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+  background: var(--warn);
+  color: #000;
+}
+
+.conn-banner[data-state="closed"] {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* Lobby */
+.room-code {
+  align-items: center;
+  padding: 1rem;
+  background: var(--panel);
+  border-radius: 12px;
+}
+
+.room-code .label {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.room-code .code {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+.players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.players li {
+  padding: 0.75rem 1rem;
+  background: var(--panel);
+  border-radius: 10px;
+}
+
+.players .you {
+  color: var(--muted);
+}
+
+.echo-line {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Language switch */
+.lang {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.lang button {
+  width: auto;
+  min-height: 36px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.85rem;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+
+.lang button[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
