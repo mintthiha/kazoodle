@@ -9,9 +9,10 @@ different cities. Same game library, no separate apps, no TV required.
 
 ## Status
 
-**Pre-alpha — nothing is built yet.** This README describes intent and
-architecture direction, not shipped functionality. Sections marked _TODO_ are
-placeholders.
+**Pre-alpha.** The session layer runs — start the server, open the web client,
+create or join a room, watch players sync, bounce a message through the server —
+but there are **no games yet**. Most of this README is still architecture
+direction that the code is growing into.
 
 ---
 
@@ -167,12 +168,55 @@ matter before the core loop works.
 
 ---
 
+## Repository layout
+
+```
+schema/   wire protocol (.proto) + codegen for both sides
+server/   Go session server — WebSockets, rooms, game registry
+web/      React + Vite client — join screen, lobby
+```
+
+Each directory has its own README with detail.
+
+---
+
 ## Getting started
 
-_TODO — nothing to run yet._
+Two processes: the Go session server and the Vite dev server.
+
+**Prerequisites:** Go 1.27+, Node 22+.
 
 ```bash
-# TODO: clone, install, dev server
+# 1. session server — HTTP + WebSocket on :8080
+cd server
+go run ./cmd/server
+
+# 2. web client — dev server on :5173
+cd web
+npm install
+npm run dev
+```
+
+Open <http://localhost:5173> in two or more tabs (or phones on your LAN via
+`npm run dev -- --host`, with `VITE_WS_URL` pointed at your machine). Create a
+room in one, join with its code in the others; players and messages sync live.
+
+### Regenerating the wire protocol
+
+After editing `schema/proto/protocol.proto`:
+
+```bash
+cd schema
+npm install                                                      # first time
+go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6  # first time
+npm run generate   # rewrites server/internal/protocol/ and web/src/net/gen/
+```
+
+### Checks
+
+```bash
+cd server && gofmt -l . && go vet ./... && go test ./...   # add -race in CI
+cd web    && npm run typecheck && npm run lint && npm test
 ```
 
 ---
