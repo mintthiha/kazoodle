@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# One run per branch/PR; a new push cancels the previous run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: server (go)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::these files are not gofmt-clean:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - run: go vet ./...
+      - run: go build ./...
+
+      # Linux runners have a C toolchain, so the race detector works here even
+      # though it does not on every dev machine.
+      - run: go test -race ./...
+
+  web:
+    name: web (react + vite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  schema:
+    name: schema (no codegen drift)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: schema/package-lock.json
+
+      - name: Install protoc-gen-go
+        run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6
+
+      - name: Install buf + protoc-gen-es
+        working-directory: schema
+        run: npm ci
+
+      - name: Regenerate protocol code
+        working-directory: schema
+        run: npm run generate
+
+      - name: Fail if generated code differs from what is committed
+        run: |
+          changed=$(git status --porcelain -- server/internal/protocol web/src/net/gen)
+          if [ -n "$changed" ]; then
+            echo "::error::generated protocol code is stale. Run: cd schema && npm run generate"
+            echo "$changed"
+            git diff -- server/internal/protocol web/src/net/gen
+            exit 1
+          fi
