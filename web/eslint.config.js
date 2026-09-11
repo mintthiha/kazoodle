@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   // Generated protocol code is not ours to lint.
-  { ignores: ["dist", "src/net/gen"] },
+  { ignores: ["dist", "src/net/gen", "src/games/*/gen"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

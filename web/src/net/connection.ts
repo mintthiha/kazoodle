@@ -7,18 +7,22 @@
 //   - track "what the user wants" (create / join a room) and re-assert it after
 //     a reconnect, so a dropped phone reappears in its room
 //   - expose an immutable snapshot that React can subscribe to
+//   - fan out game events to whichever screen is showing the running game
 //
 // True session restore (same identity, same score) is a deliberately open
 // design question. On reconnect the server issues a fresh player; this layer
-// just gets the roster back in sync.
+// just gets the roster back in sync. A game running at reconnect time is
+// aborted server-side, so the client returns to the lobby.
 
 import { Backoff, type BackoffOptions } from "./backoff";
 import {
   decodeServerMessage,
   encodeCreateRoom,
   encodeEcho,
+  encodeGameAction,
   encodeJoinRoom,
   encodeLeaveRoom,
+  encodeStartGame,
 } from "./messages";
 
 /** The minimum of the WebSocket surface this module uses. Lets tests inject a
@@ -44,6 +48,7 @@ export interface Player {
 export interface RoomState {
   code: string;
   selfId: string;
+  hostId: string;
   players: Player[];
 }
 
@@ -53,10 +58,12 @@ export interface EchoLine {
 }
 
 /** Immutable view of the connection. A new object is produced on every change,
- * so referential identity is a safe "did anything change?" check. */
+ * so referential identity is a safe "did anything change?" check. Game *events*
+ * are not in here — they arrive through onGameEvent. */
 export interface Snapshot {
   state: ConnState;
   room: RoomState | null;
+  game: { id: string } | null;
   lastError: string | null;
   lastEcho: EchoLine | null;
 }
@@ -71,7 +78,12 @@ export interface ConnectionOptions {
 interface Desired {
   code: string | null;
   displayName: string;
+  locale: string;
 }
+
+// Cap on buffered game events per game, so onGameEvent can replay what a
+// just-mounted screen missed without growing without bound.
+const GAME_EVENT_BUFFER = 500;
 
 export class Connection {
   readonly #url: string;
@@ -87,10 +99,16 @@ export class Connection {
   #snapshot: Snapshot = {
     state: "connecting",
     room: null,
+    game: null,
     lastError: null,
     lastEcho: null,
   };
   readonly #listeners = new Set<() => void>();
+
+  // Game events are a stream, not snapshot state. #gameEventLog holds the
+  // current game's events so a screen that mounts slightly late can catch up.
+  readonly #gameListeners = new Set<(payload: string) => void>();
+  #gameEventLog: string[] = [];
 
   constructor(url: string, opts: ConnectionOptions = {}) {
     this.#url = url;
@@ -106,6 +124,14 @@ export class Connection {
   };
 
   getSnapshot = (): Snapshot => this.#snapshot;
+
+  /** Subscribe to game events for the current game. The callback is first
+   * replayed the events buffered so far, then called for each new one. */
+  onGameEvent = (fn: (payload: string) => void): (() => void) => {
+    for (const p of this.#gameEventLog) fn(p);
+    this.#gameListeners.add(fn);
+    return () => this.#gameListeners.delete(fn);
+  };
 
   // ─── lifecycle ───────────────────────────────────────────────────────────
 
@@ -160,8 +186,6 @@ export class Connection {
     };
 
     ws.onerror = () => {
-      // A socket error is always followed by a close event; let onclose drive
-      // the reconnect. Nothing to do here but note it.
       if (this.#ws !== ws) return;
       this.#patch({ lastError: "socket_error" });
     };
@@ -170,23 +194,32 @@ export class Connection {
   // ─── actions ─────────────────────────────────────────────────────────────
 
   readonly actions = {
-    createRoom: (displayName: string): void => {
-      this.#desired = { code: null, displayName };
+    createRoom: (displayName: string, locale: string): void => {
+      this.#desired = { code: null, displayName, locale };
       this.#patch({ lastError: null });
       this.#assertDesired();
     },
-    joinRoom: (code: string, displayName: string): void => {
-      this.#desired = { code, displayName };
+    joinRoom: (code: string, displayName: string, locale: string): void => {
+      this.#desired = { code, displayName, locale };
       this.#patch({ lastError: null });
       this.#assertDesired();
     },
     leaveRoom: (): void => {
       if (this.#isOpen()) this.#ws!.send(encodeLeaveRoom());
       this.#desired = null;
-      this.#patch({ room: null, lastEcho: null });
+      this.#gameEventLog = [];
+      this.#patch({ room: null, game: null, lastEcho: null });
     },
     echo: (text: string): void => {
       if (this.#isOpen() && this.#snapshot.room) this.#ws!.send(encodeEcho(text));
+    },
+    startGame: (gameId: string): void => {
+      if (this.#isOpen() && this.#snapshot.room) this.#ws!.send(encodeStartGame(gameId));
+    },
+    gameAction: (gameId: string, payload: string): void => {
+      if (this.#isOpen() && this.#snapshot.game) {
+        this.#ws!.send(encodeGameAction(gameId, payload));
+      }
     },
   };
 
@@ -201,7 +234,11 @@ export class Connection {
   #assertDesired(): void {
     if (!this.#isOpen() || this.#desired === null) return;
     const d = this.#desired;
-    this.#ws!.send(d.code === null ? encodeCreateRoom(d.displayName) : encodeJoinRoom(d.code, d.displayName));
+    this.#ws!.send(
+      d.code === null
+        ? encodeCreateRoom(d.displayName, d.locale)
+        : encodeJoinRoom(d.code, d.displayName, d.locale),
+    );
   }
 
   #handleFrame(raw: string): void {
@@ -215,17 +252,25 @@ export class Connection {
 
     switch (msg.payload.case) {
       case "roomJoined": {
-        const { roomCode, selfPlayerId, players } = msg.payload.value;
-        // Remember the code so a later reconnect rejoins instead of creating.
+        const { roomCode, selfPlayerId, hostId, players } = msg.payload.value;
         if (this.#desired) this.#desired = { ...this.#desired, code: roomCode };
+        this.#gameEventLog = [];
         this.#patch({
           room: {
             code: roomCode,
             selfId: selfPlayerId,
+            hostId,
             players: players.map((p) => ({ id: p.id, displayName: p.displayName })),
           },
+          game: null,
           lastError: null,
         });
+        break;
+      }
+
+      case "hostChanged": {
+        if (!this.#snapshot.room) break;
+        this.#patch({ room: { ...this.#snapshot.room, hostId: msg.payload.value.hostId } });
         break;
       }
 
@@ -260,14 +305,32 @@ export class Connection {
         break;
       }
 
+      case "gameStarted": {
+        this.#gameEventLog = [];
+        this.#patch({ game: { id: msg.payload.value.gameId } });
+        break;
+      }
+
+      case "gameEvent": {
+        const { payload } = msg.payload.value;
+        this.#gameEventLog.push(payload);
+        if (this.#gameEventLog.length > GAME_EVENT_BUFFER) this.#gameEventLog.shift();
+        for (const fn of this.#gameListeners) fn(payload);
+        break;
+      }
+
+      case "gameEnded": {
+        this.#gameEventLog = [];
+        this.#patch({ game: null });
+        break;
+      }
+
       case "error": {
         const { code } = msg.payload.value;
         this.#patch({ lastError: code });
-        // A rejoin that failed (room gone while we were away) sends us back to
-        // the join screen rather than leaving us stuck.
         if (code === "room_not_found") {
           this.#desired = null;
-          this.#patch({ room: null });
+          this.#patch({ room: null, game: null });
         }
         break;
       }
@@ -281,6 +344,7 @@ export class Connection {
     if (
       next.state === this.#snapshot.state &&
       next.room === this.#snapshot.room &&
+      next.game === this.#snapshot.game &&
       next.lastError === this.#snapshot.lastError &&
       next.lastEcho === this.#snapshot.lastEcho
     ) {

@@ -5,7 +5,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"sync"
+
+	"github.com/mintthiha/party-games/server/internal/game"
 )
+
+// defaultLocale is used when a client sends none.
+const defaultLocale = "en"
 
 // codeAlphabet excludes characters that are easy to misread aloud or by sight
 // (I/1, O/0). Room-code format is still an open design question; this is a
@@ -26,14 +31,18 @@ type Manager struct {
 	// (server shutdown) brings all rooms down.
 	base context.Context
 
+	// games is the shared, read-only registry every room uses to resolve a
+	// game_id when a host starts a game.
+	games *game.Registry
+
 	mu    sync.RWMutex
 	rooms map[string]*Room
 }
 
 // NewManager returns a Manager whose rooms live until they empty out or until
-// base is cancelled.
-func NewManager(base context.Context) *Manager {
-	return &Manager{base: base, rooms: make(map[string]*Room)}
+// base is cancelled. games is used by every room to look up games to start.
+func NewManager(base context.Context, games *game.Registry) *Manager {
+	return &Manager{base: base, games: games, rooms: make(map[string]*Room)}
 }
 
 // JoinResult is what a caller gets back after creating or joining a room.
@@ -41,34 +50,58 @@ type JoinResult struct {
 	RoomCode string
 	Self     Player
 	Players  []Player // full roster, in join order, including Self
+	HostID   string
 }
 
 // Create makes a new room with a freshly generated code, adds the caller as its
-// first member, and returns the roster (just them).
-func (m *Manager) Create(ctx context.Context, displayName string, s Sender) (JoinResult, error) {
+// first member (and so its host), and returns the roster (just them).
+func (m *Manager) Create(ctx context.Context, displayName, locale string, s Sender) (JoinResult, error) {
 	m.mu.Lock()
 	code, err := m.freeCodeLocked()
 	if err != nil {
 		m.mu.Unlock()
 		return JoinResult{}, err
 	}
-	r := newRoom(m.base, code, m.remove)
+	r := newRoom(m.base, code, m.games, m.remove)
 	m.rooms[code] = r
 	m.mu.Unlock() // release before talking to the room goroutine
 
-	return m.addPlayer(ctx, r, displayName, s)
+	return m.addPlayer(ctx, r, displayName, locale, s)
 }
 
 // Join adds the caller to an existing room. It returns ErrRoomNotFound if no
 // live room has that code.
-func (m *Manager) Join(ctx context.Context, code, displayName string, s Sender) (JoinResult, error) {
+func (m *Manager) Join(ctx context.Context, code, displayName, locale string, s Sender) (JoinResult, error) {
 	m.mu.RLock()
 	r, ok := m.rooms[code]
 	m.mu.RUnlock()
 	if !ok {
 		return JoinResult{}, ErrRoomNotFound
 	}
-	return m.addPlayer(ctx, r, displayName, s)
+	return m.addPlayer(ctx, r, displayName, locale, s)
+}
+
+// StartGame asks a room's host-driven state machine to begin a game.
+func (m *Manager) StartGame(ctx context.Context, code, playerID, gameID string) error {
+	m.mu.RLock()
+	r, ok := m.rooms[code]
+	m.mu.RUnlock()
+	if !ok {
+		return ErrRoomNotFound
+	}
+	return r.startGame(ctx, playerID, gameID)
+}
+
+// GameAction feeds one player's game-specific action (raw proto3-JSON) into the
+// running game.
+func (m *Manager) GameAction(ctx context.Context, code, playerID, gameID string, data []byte) error {
+	m.mu.RLock()
+	r, ok := m.rooms[code]
+	m.mu.RUnlock()
+	if !ok {
+		return ErrRoomNotFound
+	}
+	return r.gameAction(ctx, playerID, gameID, data)
 }
 
 // Leave removes a player from a room. Missing room or missing player is not an
@@ -102,13 +135,16 @@ func (m *Manager) RoomCount() int {
 }
 
 // addPlayer assigns a server-side ID and hands the player to the room.
-func (m *Manager) addPlayer(ctx context.Context, r *Room, displayName string, s Sender) (JoinResult, error) {
-	p := Player{ID: newPlayerID(), DisplayName: displayName}
+func (m *Manager) addPlayer(ctx context.Context, r *Room, displayName, locale string, s Sender) (JoinResult, error) {
+	if locale == "" {
+		locale = defaultLocale
+	}
+	p := Player{ID: newPlayerID(), DisplayName: displayName, Locale: locale}
 	rep, err := r.join(ctx, p, s)
 	if err != nil {
 		return JoinResult{}, err
 	}
-	return JoinResult{RoomCode: r.code, Self: rep.self, Players: rep.roster}, nil
+	return JoinResult{RoomCode: r.code, Self: rep.self, Players: rep.roster, HostID: rep.hostID}, nil
 }
 
 // remove drops a room from the map. It is called by that room's own goroutine

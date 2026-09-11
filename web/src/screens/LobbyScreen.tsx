@@ -3,18 +3,25 @@ import { useT } from "../i18n";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
 
+// IMPOSTER_MIN_PLAYERS mirrors the server's minPlayers for Imposter. If they
+// drift, the server still rejects the start — this only gates the button.
+const IMPOSTER_MIN_PLAYERS = 3;
+
 interface Props {
   room: RoomState;
   lastEcho: EchoLine | null;
+  isHost: boolean;
+  onStartGame: () => void;
   onEcho: (text: string) => void;
   onLeave: () => void;
 }
 
-// Second screen: the room's code, who is in it, and a tiny echo control to
-// prove a message round-trips through the server.
-export function LobbyScreen({ room, lastEcho, onEcho, onLeave }: Props) {
+// Second screen: the room's code, who is in it, a host-only "start game"
+// control, and a tiny echo box that proves a message round-trips.
+export function LobbyScreen({ room, lastEcho, isHost, onStartGame, onEcho, onLeave }: Props) {
   const { t } = useT();
   const [text, setText] = useState("");
+  const canStart = room.players.length >= IMPOSTER_MIN_PLAYERS;
 
   function send() {
     const trimmed = text.trim();
@@ -45,6 +52,17 @@ export function LobbyScreen({ room, lastEcho, onEcho, onLeave }: Props) {
           ))}
         </ul>
       </section>
+
+      {isHost && (
+        <section>
+          <button className="primary" onClick={onStartGame} disabled={!canStart}>
+            {t("lobby.startImposter")}
+          </button>
+          {!canStart && (
+            <p className="hint">{t("lobby.needPlayers", { min: IMPOSTER_MIN_PLAYERS })}</p>
+          )}
+        </section>
+      )}
 
       <section>
         <label className="field">

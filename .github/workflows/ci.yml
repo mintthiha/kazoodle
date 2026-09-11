@@ -95,10 +95,11 @@ jobs:
 
       - name: Fail if generated code differs from what is committed
         run: |
-          changed=$(git status --porcelain -- server/internal/protocol web/src/net/gen)
+          paths="server/internal/protocol web/src/net/gen server/internal/games/*/pb web/src/games/*/gen"
+          changed=$(git status --porcelain -- $paths)
           if [ -n "$changed" ]; then
             echo "::error::generated protocol code is stale. Run: cd schema && npm run generate"
             echo "$changed"
-            git diff -- server/internal/protocol web/src/net/gen
+            git diff -- $paths
             exit 1
           fi

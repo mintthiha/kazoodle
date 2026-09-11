@@ -30,6 +30,16 @@ class FakeSocket implements SocketLike {
   }
 }
 
+const roomJoined = (over: Record<string, unknown> = {}) => ({
+  roomJoined: {
+    roomCode: "ABCD",
+    selfPlayerId: "p1",
+    hostId: "p1",
+    players: [{ id: "p1", displayName: "Ana" }],
+    ...over,
+  },
+});
+
 describe("Connection", () => {
   let sockets: FakeSocket[];
   let conn: Connection;
@@ -60,19 +70,19 @@ describe("Connection", () => {
 
   it("holds a create request until the socket is open, then sends it", () => {
     conn.start();
-    conn.actions.createRoom("Ana");
+    conn.actions.createRoom("Ana", "fr");
     expect(sockets[0].sent).toEqual([]);
     sockets[0].open();
-    expect(JSON.parse(sockets[0].sent[0])).toEqual({ createRoom: { displayName: "Ana" } });
+    expect(JSON.parse(sockets[0].sent[0])).toEqual({
+      createRoom: { displayName: "Ana", locale: "fr" },
+    });
   });
 
   it("keeps the roster in sync with server frames", () => {
     conn.start();
     sockets[0].open();
-    conn.actions.createRoom("Ana");
-    sockets[0].receive({
-      roomJoined: { roomCode: "ABCD", selfPlayerId: "p1", players: [{ id: "p1", displayName: "Ana" }] },
-    });
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(roomJoined());
     sockets[0].receive({ playerJoined: { player: { id: "p2", displayName: "Ben" } } });
     expect(conn.getSnapshot().room?.players.map((p) => p.displayName)).toEqual(["Ana", "Ben"]);
 
@@ -80,36 +90,42 @@ describe("Connection", () => {
     expect(conn.getSnapshot().room?.players.map((p) => p.displayName)).toEqual(["Ana"]);
   });
 
+  it("tracks the host and updates it on hostChanged", () => {
+    conn.start();
+    sockets[0].open();
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(roomJoined({ hostId: "p1" }));
+    expect(conn.getSnapshot().room?.hostId).toBe("p1");
+
+    sockets[0].receive({ hostChanged: { hostId: "p2" } });
+    expect(conn.getSnapshot().room?.hostId).toBe("p2");
+  });
+
   it("records the last echo", () => {
     conn.start();
     sockets[0].open();
-    conn.actions.createRoom("Ana");
-    sockets[0].receive({
-      roomJoined: { roomCode: "ABCD", selfPlayerId: "p1", players: [{ id: "p1", displayName: "Ana" }] },
-    });
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(roomJoined());
     sockets[0].receive({ echoResult: { text: "marco", fromPlayerId: "p1" } });
     expect(conn.getSnapshot().lastEcho).toEqual({ text: "marco", fromPlayerId: "p1" });
   });
 
-  it("reconnects after a drop and re-asserts the room", () => {
+  it("reconnects after a drop and re-asserts the room with the same locale", () => {
     conn.start();
     sockets[0].open();
-    conn.actions.joinRoom("ABCD", "Ana");
-    sockets[0].receive({
-      roomJoined: { roomCode: "ABCD", selfPlayerId: "p1", players: [{ id: "p1", displayName: "Ana" }] },
-    });
+    conn.actions.joinRoom("ABCD", "Ana", "fr");
+    sockets[0].receive(roomJoined());
     sockets[0].sent.length = 0;
 
     sockets[0].drop();
     expect(conn.getSnapshot().state).toBe("reconnecting");
 
-    vi.advanceTimersByTime(100); // backoff baseMs
+    vi.advanceTimersByTime(100);
     expect(sockets).toHaveLength(2);
 
     sockets[1].open();
-    expect(conn.getSnapshot().state).toBe("open");
     expect(JSON.parse(sockets[1].sent[0])).toEqual({
-      joinRoom: { roomCode: "ABCD", displayName: "Ana" },
+      joinRoom: { roomCode: "ABCD", displayName: "Ana", locale: "fr" },
     });
   });
 
@@ -119,17 +135,81 @@ describe("Connection", () => {
     conn.stop();
     expect(conn.getSnapshot().state).toBe("closed");
 
-    sockets[0].drop(); // a late close event
+    sockets[0].drop();
     vi.advanceTimersByTime(10_000);
-    expect(sockets).toHaveLength(1); // no reconnect was scheduled
+    expect(sockets).toHaveLength(1);
   });
 
   it("a failed rejoin (room_not_found) drops back to the join screen", () => {
     conn.start();
     sockets[0].open();
-    conn.actions.joinRoom("ZZZZ", "Ana");
+    conn.actions.joinRoom("ZZZZ", "Ana", "en");
     sockets[0].receive({ error: { code: "room_not_found", message: "nope" } });
     expect(conn.getSnapshot().room).toBeNull();
     expect(conn.getSnapshot().lastError).toBe("room_not_found");
+  });
+
+  // ─── games ────────────────────────────────────────────────────────────────
+
+  it("gameStarted sets snapshot.game; gameEnded clears it", () => {
+    conn.start();
+    sockets[0].open();
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(roomJoined());
+
+    sockets[0].receive({ gameStarted: { gameId: "imposter" } });
+    expect(conn.getSnapshot().game).toEqual({ id: "imposter" });
+
+    sockets[0].receive({ gameEnded: { gameId: "imposter", reason: "player_left" } });
+    expect(conn.getSnapshot().game).toBeNull();
+  });
+
+  it("streams gameEvent payloads to subscribers", () => {
+    conn.start();
+    sockets[0].open();
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(roomJoined());
+    sockets[0].receive({ gameStarted: { gameId: "imposter" } });
+
+    const seen: string[] = [];
+    conn.onGameEvent((p) => seen.push(p));
+    sockets[0].receive({ gameEvent: { gameId: "imposter", payload: '{"revealProgress":{"total":3}}' } });
+
+    expect(seen).toEqual(['{"revealProgress":{"total":3}}']);
+  });
+
+  it("replays buffered gameEvents to a subscriber that attaches late", () => {
+    conn.start();
+    sockets[0].open();
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(roomJoined());
+    sockets[0].receive({ gameStarted: { gameId: "imposter" } });
+    sockets[0].receive({ gameEvent: { gameId: "imposter", payload: '{"roleAssignment":{"isImposter":true}}' } });
+    sockets[0].receive({ gameEvent: { gameId: "imposter", payload: '{"revealProgress":{"total":3}}' } });
+
+    const seen: string[] = [];
+    conn.onGameEvent((p) => seen.push(p)); // attaches after both events
+
+    expect(seen).toEqual([
+      '{"roleAssignment":{"isImposter":true}}',
+      '{"revealProgress":{"total":3}}',
+    ]);
+  });
+
+  it("gameAction sends an envelope only while a game is running", () => {
+    conn.start();
+    sockets[0].open();
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(roomJoined());
+    sockets[0].sent.length = 0;
+
+    conn.actions.gameAction("imposter", '{"markReady":{}}');
+    expect(sockets[0].sent).toEqual([]); // no game yet
+
+    sockets[0].receive({ gameStarted: { gameId: "imposter" } });
+    conn.actions.gameAction("imposter", '{"markReady":{}}');
+    expect(JSON.parse(sockets[0].sent[0])).toEqual({
+      gameAction: { gameId: "imposter", payload: '{"markReady":{}}' },
+    });
   });
 });

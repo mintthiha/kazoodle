@@ -2,7 +2,13 @@ package room
 
 import (
 	"context"
+	"fmt"
+	"log"
 
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+
+	"github.com/mintthiha/party-games/server/internal/game"
 	"github.com/mintthiha/party-games/server/internal/protocol"
 )
 
@@ -27,6 +33,7 @@ type joinCmd struct {
 type joinReply struct {
 	self   Player
 	roster []Player
+	hostID string
 }
 
 type leaveCmd struct {
@@ -45,9 +52,26 @@ type echoCmd struct {
 	ack      chan struct{}
 }
 
-func (joinCmd) isCommand()  {}
-func (leaveCmd) isCommand() {}
-func (echoCmd) isCommand()  {}
+// startGameCmd and gameActionCmd carry a buffered reply channel: nil means the
+// action succeeded, a non-nil error is reported back to the acting client.
+type startGameCmd struct {
+	playerID string
+	gameID   string
+	reply    chan error
+}
+
+type gameActionCmd struct {
+	playerID string
+	gameID   string
+	data     []byte
+	reply    chan error
+}
+
+func (joinCmd) isCommand()       {}
+func (leaveCmd) isCommand()      {}
+func (echoCmd) isCommand()       {}
+func (startGameCmd) isCommand()  {}
+func (gameActionCmd) isCommand() {}
 
 // ─── Room ────────────────────────────────────────────────────────────────────
 
@@ -55,7 +79,8 @@ func (echoCmd) isCommand()  {}
 // ever reads or writes the fields below the line, so they need no
 // synchronization. Everything else interacts with a Room by sending a command.
 type Room struct {
-	code string
+	code  string
+	games *game.Registry // shared, read-only lookup table
 
 	// cmds is unbuffered: a caller hands a command straight to run, or blocks
 	// until run is ready (or the room is gone). With no queue, no command can
@@ -79,6 +104,12 @@ type Room struct {
 	// ─── below: touched only by run ───
 	members map[string]*member
 	order   []string // player IDs in join order, for a stable roster
+	hostID  string   // the player who may start games; "" only before anyone joins
+
+	// The running game, or nil. gameState is opaque; only gm interprets it.
+	gm        game.Game
+	gameID    string
+	gameState game.State
 }
 
 type member struct {
@@ -88,10 +119,11 @@ type member struct {
 
 // newRoom creates a room and starts its goroutine. parent is the Manager's
 // context; cancelling it (server shutdown) ends the room.
-func newRoom(parent context.Context, code string, onEmpty func(string)) *Room {
+func newRoom(parent context.Context, code string, games *game.Registry, onEmpty func(string)) *Room {
 	ctx, cancel := context.WithCancel(parent)
 	r := &Room{
 		code:    code,
+		games:   games,
 		cmds:    make(chan command),
 		closed:  make(chan struct{}),
 		onEmpty: onEmpty,
@@ -128,6 +160,12 @@ func (r *Room) run(ctx context.Context) {
 				r.applyEcho(cmd)
 				close(cmd.ack)
 
+			case startGameCmd:
+				cmd.reply <- r.applyStartGame(cmd)
+
+			case gameActionCmd:
+				cmd.reply <- r.applyGameAction(cmd)
+
 			case leaveCmd:
 				r.applyLeave(cmd)
 				if len(r.members) == 0 {
@@ -147,10 +185,13 @@ func (r *Room) run(ctx context.Context) {
 func (r *Room) applyJoin(cmd joinCmd) {
 	r.members[cmd.player.ID] = &member{player: cmd.player, sender: cmd.sender}
 	r.order = append(r.order, cmd.player.ID)
+	if r.hostID == "" {
+		r.hostID = cmd.player.ID
+	}
 
-	// The newcomer learns the whole roster (themselves included) from the
-	// reply; everyone already here is told about the newcomer.
-	cmd.reply <- joinReply{self: cmd.player, roster: r.roster()}
+	// The newcomer learns the whole roster (themselves included) and the host
+	// from the reply; everyone already here is told about the newcomer.
+	cmd.reply <- joinReply{self: cmd.player, roster: r.roster(), hostID: r.hostID}
 	r.broadcastExcept(cmd.player.ID, msgPlayerJoined(cmd.player))
 }
 
@@ -163,6 +204,20 @@ func (r *Room) applyLeave(cmd leaveCmd) {
 	delete(r.members, cmd.playerID)
 	r.order = removeString(r.order, cmd.playerID)
 	r.broadcast(msgPlayerLeft(cmd.playerID))
+
+	// A game in progress can't survive its player set changing under it, so
+	// end it. (A later pass can let a game decide how to handle a mid-game
+	// departure.)
+	if r.gm != nil {
+		r.broadcast(msgGameEnded(r.gameID, "player_left"))
+		r.clearGame()
+	}
+
+	// If the host left and anyone remains, the longest-present player takes over.
+	if cmd.playerID == r.hostID && len(r.order) > 0 {
+		r.hostID = r.order[0]
+		r.broadcast(msgHostChanged(r.hostID))
+	}
 }
 
 func (r *Room) applyEcho(cmd echoCmd) {
@@ -170,6 +225,104 @@ func (r *Room) applyEcho(cmd echoCmd) {
 		return
 	}
 	r.broadcast(msgEchoResult(cmd.text, cmd.playerID))
+}
+
+// applyStartGame handles a host's StartGame. It returns an error to report back
+// to that client; nil means the game is now running.
+func (r *Room) applyStartGame(cmd startGameCmd) error {
+	if cmd.playerID != r.hostID {
+		return ErrNotHost
+	}
+	if r.gm != nil {
+		return ErrGameInProgress
+	}
+	g, ok := r.games.Lookup(cmd.gameID)
+	if !ok {
+		return ErrUnknownGame
+	}
+
+	players := make([]game.Player, 0, len(r.order))
+	for _, id := range r.order {
+		players = append(players, game.Player{ID: id, Locale: r.members[id].player.Locale})
+	}
+
+	state, effects, err := g.Init(players)
+	if err != nil {
+		return fmt.Errorf("start %q: %w", cmd.gameID, err)
+	}
+
+	r.gm, r.gameID, r.gameState = g, cmd.gameID, state
+	r.broadcast(msgGameStarted(cmd.gameID))
+	r.applyEffects(effects)
+	return nil
+}
+
+// applyGameAction feeds one player event into the running game and applies
+// whatever the game asks for in return.
+func (r *Room) applyGameAction(cmd gameActionCmd) error {
+	if r.gm == nil {
+		return ErrNoActiveGame
+	}
+	if cmd.gameID != r.gameID {
+		return ErrWrongGame
+	}
+	if _, ok := r.members[cmd.playerID]; !ok {
+		return ErrNoActiveGame // not in the room; nothing to act on
+	}
+
+	next, effects, err := r.gm.Advance(r.gameState, game.Event{PlayerID: cmd.playerID, Data: cmd.data})
+	if err != nil {
+		return err
+	}
+	r.gameState = next
+	r.applyEffects(effects)
+	return nil
+}
+
+// applyEffects carries out what a game returned from Init or Advance.
+func (r *Room) applyEffects(effects []game.Effect) {
+	for _, e := range effects {
+		switch ef := e.(type) {
+		case game.Send:
+			msg := r.wrapGameEvent(ef.Msg)
+			if msg == nil {
+				continue
+			}
+			if len(ef.To) == 0 {
+				r.broadcast(msg)
+				continue
+			}
+			for _, id := range ef.To {
+				if m, ok := r.members[id]; ok {
+					m.sender.Send(msg)
+				}
+			}
+
+		case game.EndGame:
+			r.broadcast(msgGameEnded(r.gameID, ef.Reason))
+			r.clearGame()
+		}
+	}
+}
+
+// wrapGameEvent JSON-encodes a game message and puts it in a ServerMessage.
+// Returns nil (and logs) if the message somehow won't marshal — that's a bug in
+// the game, not something a player did, so it must not crash the room.
+func (r *Room) wrapGameEvent(m proto.Message) *protocol.ServerMessage {
+	raw, err := protojson.Marshal(m)
+	if err != nil {
+		log.Printf("room %s: marshalling %q game event: %v", r.code, r.gameID, err)
+		return nil
+	}
+	return &protocol.ServerMessage{
+		Payload: &protocol.ServerMessage_GameEvent{
+			GameEvent: &protocol.GameEvent{GameId: r.gameID, Payload: string(raw)},
+		},
+	}
+}
+
+func (r *Room) clearGame() {
+	r.gm, r.gameID, r.gameState = nil, "", nil
 }
 
 // roster returns the members in join order as a fresh slice. Player is an
@@ -255,6 +408,44 @@ func (r *Room) echo(ctx context.Context, playerID, text string) error {
 	select {
 	case <-cmd.ack:
 		return nil
+	case <-r.closed:
+		return ErrRoomNotFound
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (r *Room) startGame(ctx context.Context, playerID, gameID string) error {
+	cmd := startGameCmd{playerID: playerID, gameID: gameID, reply: make(chan error, 1)}
+	select {
+	case r.cmds <- cmd:
+	case <-r.closed:
+		return ErrRoomNotFound
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	select {
+	case err := <-cmd.reply:
+		return err
+	case <-r.closed:
+		return ErrRoomNotFound
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (r *Room) gameAction(ctx context.Context, playerID, gameID string, data []byte) error {
+	cmd := gameActionCmd{playerID: playerID, gameID: gameID, data: data, reply: make(chan error, 1)}
+	select {
+	case r.cmds <- cmd:
+	case <-r.closed:
+		return ErrRoomNotFound
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	select {
+	case err := <-cmd.reply:
+		return err
 	case <-r.closed:
 		return ErrRoomNotFound
 	case <-ctx.Done():

@@ -24,5 +24,5 @@ function connection(): Connection {
 export function useConnection() {
   const c = connection();
   const snapshot = useSyncExternalStore(c.subscribe, c.getSnapshot, c.getSnapshot);
-  return { snapshot, actions: c.actions };
+  return { snapshot, actions: c.actions, onGameEvent: c.onGameEvent };
 }

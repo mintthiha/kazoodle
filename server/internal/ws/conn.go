@@ -101,24 +101,28 @@ func (c *conn) readPump(ctx context.Context) {
 func (c *conn) handle(ctx context.Context, msg *protocol.ClientMessage) {
 	switch p := msg.GetPayload().(type) {
 	case *protocol.ClientMessage_CreateRoom:
-		c.doCreate(ctx, p.CreateRoom.GetDisplayName())
+		c.doCreate(ctx, p.CreateRoom.GetDisplayName(), p.CreateRoom.GetLocale())
 	case *protocol.ClientMessage_JoinRoom:
-		c.doJoin(ctx, p.JoinRoom.GetRoomCode(), p.JoinRoom.GetDisplayName())
+		c.doJoin(ctx, p.JoinRoom.GetRoomCode(), p.JoinRoom.GetDisplayName(), p.JoinRoom.GetLocale())
 	case *protocol.ClientMessage_LeaveRoom:
 		c.doLeave(ctx)
 	case *protocol.ClientMessage_Echo:
 		c.doEcho(ctx, p.Echo.GetText())
+	case *protocol.ClientMessage_StartGame:
+		c.doStartGame(ctx, p.StartGame.GetGameId())
+	case *protocol.ClientMessage_GameAction:
+		c.doGameAction(ctx, p.GameAction.GetGameId(), p.GameAction.GetPayload())
 	default:
 		c.Send(errMsg("bad_message", "empty or unknown payload"))
 	}
 }
 
-func (c *conn) doCreate(ctx context.Context, displayName string) {
+func (c *conn) doCreate(ctx context.Context, displayName, locale string) {
 	if c.roomCode != "" {
 		c.Send(errMsg("already_in_room", "leave your current room first"))
 		return
 	}
-	res, err := c.mgr.Create(ctx, displayName, c)
+	res, err := c.mgr.Create(ctx, displayName, locale, c)
 	if err != nil {
 		c.Send(errMsg("create_failed", err.Error()))
 		return
@@ -127,12 +131,12 @@ func (c *conn) doCreate(ctx context.Context, displayName string) {
 	c.Send(roomJoinedMsg(res))
 }
 
-func (c *conn) doJoin(ctx context.Context, code, displayName string) {
+func (c *conn) doJoin(ctx context.Context, code, displayName, locale string) {
 	if c.roomCode != "" {
 		c.Send(errMsg("already_in_room", "leave your current room first"))
 		return
 	}
-	res, err := c.mgr.Join(ctx, code, displayName, c)
+	res, err := c.mgr.Join(ctx, code, displayName, locale, c)
 	if errors.Is(err, room.ErrRoomNotFound) {
 		c.Send(errMsg("room_not_found", "no room with that code"))
 		return
@@ -161,6 +165,40 @@ func (c *conn) doEcho(ctx context.Context, text string) {
 	}
 	if err := c.mgr.Echo(ctx, c.roomCode, c.playerID, text); err != nil {
 		c.Send(errMsg("echo_failed", err.Error()))
+	}
+}
+
+func (c *conn) doStartGame(ctx context.Context, gameID string) {
+	if c.roomCode == "" {
+		c.Send(errMsg("not_in_room", "join a room first"))
+		return
+	}
+	if err := c.mgr.StartGame(ctx, c.roomCode, c.playerID, gameID); err != nil {
+		c.Send(errMsg(startErrCode(err), err.Error()))
+	}
+}
+
+func (c *conn) doGameAction(ctx context.Context, gameID, payload string) {
+	if c.roomCode == "" {
+		c.Send(errMsg("not_in_room", "join a room first"))
+		return
+	}
+	if err := c.mgr.GameAction(ctx, c.roomCode, c.playerID, gameID, []byte(payload)); err != nil {
+		c.Send(errMsg("game_action_failed", err.Error()))
+	}
+}
+
+// startErrCode maps a StartGame failure to a stable client-facing code.
+func startErrCode(err error) string {
+	switch {
+	case errors.Is(err, room.ErrNotHost):
+		return "not_host"
+	case errors.Is(err, room.ErrGameInProgress):
+		return "game_in_progress"
+	case errors.Is(err, room.ErrUnknownGame):
+		return "unknown_game"
+	default:
+		return "start_failed"
 	}
 }
 
@@ -224,6 +262,7 @@ func roomJoinedMsg(res room.JoinResult) *protocol.ServerMessage {
 				RoomCode:     res.RoomCode,
 				SelfPlayerId: res.Self.ID,
 				Players:      players,
+				HostId:       res.HostID,
 			},
 		},
 	}

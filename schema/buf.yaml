@@ -1,13 +1,16 @@
 version: v2
+# A workspace with one module per protocol surface: the core session protocol,
+# and one per game. They do not import each other.
 modules:
-  - path: proto
+  - path: proto/core
+  - path: proto/games/imposter
 lint:
   use:
     - STANDARD
   except:
-    # The protocol lives in a single flat file (proto/protocol.proto) but keeps
-    # a versioned package name (kazoodle.v1) so the wire format can evolve.
-    # That trade means the file path deliberately does not mirror the package.
+    # Each module is a single flat file with a versioned package name
+    # (partygames.v1, imposter.v1), so the file path deliberately does not
+    # mirror the package.
     - PACKAGE_DIRECTORY_MATCH
 breaking:
   use:

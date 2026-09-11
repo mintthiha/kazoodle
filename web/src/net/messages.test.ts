@@ -3,18 +3,22 @@ import {
   decodeServerMessage,
   encodeCreateRoom,
   encodeEcho,
+  encodeGameAction,
   encodeJoinRoom,
   encodeLeaveRoom,
+  encodeStartGame,
 } from "./messages";
 
 describe("encode", () => {
   it("createRoom", () => {
-    expect(JSON.parse(encodeCreateRoom("Ana"))).toEqual({ createRoom: { displayName: "Ana" } });
+    expect(JSON.parse(encodeCreateRoom("Ana", "en"))).toEqual({
+      createRoom: { displayName: "Ana", locale: "en" },
+    });
   });
 
   it("joinRoom", () => {
-    expect(JSON.parse(encodeJoinRoom("ABCD", "Ben"))).toEqual({
-      joinRoom: { roomCode: "ABCD", displayName: "Ben" },
+    expect(JSON.parse(encodeJoinRoom("ABCD", "Ben", "fr"))).toEqual({
+      joinRoom: { roomCode: "ABCD", displayName: "Ben", locale: "fr" },
     });
   });
 
@@ -24,6 +28,16 @@ describe("encode", () => {
 
   it("echo", () => {
     expect(JSON.parse(encodeEcho("hi"))).toEqual({ echo: { text: "hi" } });
+  });
+
+  it("startGame", () => {
+    expect(JSON.parse(encodeStartGame("imposter"))).toEqual({ startGame: { gameId: "imposter" } });
+  });
+
+  it("gameAction wraps a game payload string verbatim", () => {
+    expect(JSON.parse(encodeGameAction("imposter", '{"markReady":{}}'))).toEqual({
+      gameAction: { gameId: "imposter", payload: '{"markReady":{}}' },
+    });
   });
 });
 

@@ -11,20 +11,20 @@ import {
   type ServerMessage,
 } from "./gen/protocol_pb";
 
-export function encodeCreateRoom(displayName: string): string {
+export function encodeCreateRoom(displayName: string, locale: string): string {
   return toJsonString(
     ClientMessageSchema,
     create(ClientMessageSchema, {
-      payload: { case: "createRoom", value: { displayName } },
+      payload: { case: "createRoom", value: { displayName, locale } },
     }),
   );
 }
 
-export function encodeJoinRoom(roomCode: string, displayName: string): string {
+export function encodeJoinRoom(roomCode: string, displayName: string, locale: string): string {
   return toJsonString(
     ClientMessageSchema,
     create(ClientMessageSchema, {
-      payload: { case: "joinRoom", value: { roomCode, displayName } },
+      payload: { case: "joinRoom", value: { roomCode, displayName, locale } },
     }),
   );
 }
@@ -43,6 +43,26 @@ export function encodeEcho(text: string): string {
     ClientMessageSchema,
     create(ClientMessageSchema, {
       payload: { case: "echo", value: { text } },
+    }),
+  );
+}
+
+export function encodeStartGame(gameId: string): string {
+  return toJsonString(
+    ClientMessageSchema,
+    create(ClientMessageSchema, {
+      payload: { case: "startGame", value: { gameId } },
+    }),
+  );
+}
+
+// payload is the proto3-JSON of a game-specific client message, produced by
+// that game's own encoder.
+export function encodeGameAction(gameId: string, payload: string): string {
+  return toJsonString(
+    ClientMessageSchema,
+    create(ClientMessageSchema, {
+      payload: { case: "gameAction", value: { gameId, payload } },
     }),
   );
 }

@@ -1,0 +1,16 @@
+version: v2
+clean: true
+inputs:
+  - directory: proto/games/imposter
+plugins:
+  # Go types -> server/internal/games/imposter/pb/imposter.pb.go
+  - local: protoc-gen-go
+    out: ../server/internal/games/imposter/pb
+    opt: paths=source_relative
+
+  # TypeScript types -> web/src/games/imposter/gen/imposter_pb.ts
+  - local: protoc-gen-es
+    out: ../web/src/games/imposter/gen
+    opt:
+      - target=ts
+      - import_extension=none

@@ -4,16 +4,18 @@ package partygames.v1;
 
 option go_package = "github.com/mintthiha/party-games/server/internal/protocol;protocol";
 
-// The wire protocol for the Kazoodle session layer.
+// The core session wire protocol: rooms, presence, and a generic envelope for
+// running games. It stays game-agnostic — a game's own messages are defined in
+// its own .proto (e.g. games/imposter.proto) and carried inside GameEvent /
+// GameAction as JSON.
 //
-// This is plumbing only: create/join a room, watch players come and go, and
-// bounce a trivial echo message off the server. No game logic lives here.
 // Messages travel over the WebSocket as proto3 canonical JSON.
 
 // ── Shared ────────────────────────────────────────────────────────────────
 
 // A connected player in a room. `id` is assigned by the server and is unique
-// within a room for the lifetime of that connection.
+// within a room for the lifetime of that connection. A player's locale is not
+// exposed to other clients; only the server uses it.
 message Player {
   string id = 1;
   string display_name = 2;
@@ -28,13 +30,18 @@ message ClientMessage {
     JoinRoom join_room = 2;
     LeaveRoom leave_room = 3;
     Echo echo = 4;
+    StartGame start_game = 5;
+    GameAction game_action = 6;
   }
 }
 
 // Ask the server to mint a new room. The server picks the room code and
-// replies with RoomJoined.
+// replies with RoomJoined. The creator becomes the room's host.
 message CreateRoom {
   string display_name = 1;
+  // BCP-47-ish tag, e.g. "en" or "fr". Used to localize server-produced,
+  // player-facing strings (a game's secret word, for one). Defaults to "en".
+  string locale = 2;
 }
 
 // Join an existing room by code. Replies with RoomJoined, or ErrorInfo if the
@@ -42,6 +49,7 @@ message CreateRoom {
 message JoinRoom {
   string room_code = 1;
   string display_name = 2;
+  string locale = 3;
 }
 
 // Leave the current room. The connection stays open; the client may create or
@@ -54,6 +62,20 @@ message Echo {
   string text = 1;
 }
 
+// Host-only: start a game in the current room. `game_id` must name a game the
+// server has registered.
+message StartGame {
+  string game_id = 1;
+}
+
+// An action within the running game. `payload` is the proto3-JSON encoding of a
+// game-specific client message (defined in that game's .proto), never a
+// hand-written shape.
+message GameAction {
+  string game_id = 1;
+  string payload = 2;
+}
+
 // ── Server → Client ───────────────────────────────────────────────────────
 
 // Every message the server sends is a ServerMessage with exactly one payload set.
@@ -64,15 +86,20 @@ message ServerMessage {
     PlayerLeft player_left = 3;
     EchoResult echo_result = 4;
     ErrorInfo error = 5;
+    HostChanged host_changed = 6;
+    GameStarted game_started = 7;
+    GameEvent game_event = 8;
+    GameEnded game_ended = 9;
   }
 }
 
 // Sent only to the player who just joined (via CreateRoom or JoinRoom):
-// their own identity plus the full current roster, themselves included.
+// their own identity, the current host, and the full current roster.
 message RoomJoined {
   string room_code = 1;
   string self_player_id = 2;
   repeated Player players = 3;
+  string host_id = 4;
 }
 
 // Broadcast to the players already in a room when someone new joins.
@@ -97,4 +124,30 @@ message ErrorInfo {
   string code = 1;
   // Human-readable detail for logs and debugging. Not localized.
   string message = 2;
+}
+
+// Broadcast when the room's host changes — the previous host left, so the
+// longest-present remaining player takes over.
+message HostChanged {
+  string host_id = 1;
+}
+
+// Broadcast when a game begins. Game-specific setup then arrives as GameEvents.
+message GameStarted {
+  string game_id = 1;
+}
+
+// A message from the running game. May be broadcast or targeted at one player
+// (the server decides who receives it). `payload` is the proto3-JSON encoding
+// of a game-specific server message defined in that game's .proto.
+message GameEvent {
+  string game_id = 1;
+  string payload = 2;
+}
+
+// Broadcast when a game stops, whether it finished or was aborted.
+message GameEnded {
+  string game_id = 1;
+  // Stable, machine-readable, e.g. "finished", "player_left", "host_ended".
+  string reason = 2;
 }

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/mintthiha/party-games/server/internal/game"
+	"github.com/mintthiha/party-games/server/internal/games/imposter"
 	"github.com/mintthiha/party-games/server/internal/room"
 	"github.com/mintthiha/party-games/server/internal/ws"
 )
@@ -30,10 +31,10 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	mgr := room.NewManager(ctx)
+	games := game.NewRegistry()
+	games.Register("imposter", imposter.New())
 
-	// The game registry exists but is empty: no games in this pass.
-	_ = game.NewRegistry()
+	mgr := room.NewManager(ctx, games)
 
 	mux := http.NewServeMux()
 	mux.Handle("/ws", ws.Handler(ctx, mgr, origins))

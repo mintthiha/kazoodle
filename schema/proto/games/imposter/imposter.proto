@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package imposter.v1;
+
+option go_package = "github.com/mintthiha/party-games/server/internal/games/imposter/pb;pb";
+
+// Wire messages for the Imposter game. Carried inside the core protocol's
+// GameEvent / GameAction envelopes as proto3 JSON.
+//
+// Ruleset (v1): exactly one imposter, who gets no word. One clue word per
+// player, one round, in a server-set order. Voted-out imposter gets one guess
+// to steal the win.
+//
+// This slice (3a) covers role assignment and the reveal phase only; the clue,
+// vote, and outcome messages are added as those phases land.
+
+// ── Server → Client ───────────────────────────────────────────────────────
+
+message ImposterServerMessage {
+  oneof body {
+    RoleAssignment role_assignment = 1;
+    RevealProgress reveal_progress = 2;
+  }
+}
+
+// Sent privately to each player at the start of a round. For the imposter,
+// `word` and `category` are empty.
+message RoleAssignment {
+  bool is_imposter = 1;
+  string word = 2;
+  string category = 3;
+}
+
+// Broadcast as players confirm they have seen their role, so every client can
+// show "3 / 5 ready".
+message RevealProgress {
+  repeated string ready_player_ids = 1;
+  int32 total = 2;
+}
+
+// ── Client → Server ───────────────────────────────────────────────────────
+
+message ImposterClientMessage {
+  oneof body {
+    MarkReady mark_ready = 1;
+  }
+}
+
+// "I have seen my role." When everyone has sent this, the round advances.
+message MarkReady {}

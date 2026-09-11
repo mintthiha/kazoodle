@@ -36,6 +36,19 @@ const en = {
   "lobby.echoNone": "No messages yet.",
   "lobby.echoFromYou": "You",
   "lobby.echoFromOther": "Someone",
+  "lobby.startImposter": "Start Imposter",
+  "lobby.needPlayers": "Need at least {min} players to start.",
+
+  "game.unknown": "This game isn’t available in your app version.",
+
+  "imposter.heading": "Your role",
+  "imposter.dealing": "Dealing roles…",
+  "imposter.youAreImposter": "You’re the IMPOSTER",
+  "imposter.imposterHint": "You don’t know the word. Give a vague clue and blend in.",
+  "imposter.crewHint": "Give a one-word clue that proves you know it — without giving it away.",
+  "imposter.gotIt": "Got it",
+  "imposter.waiting": "Waiting for the others…",
+  "imposter.readyCount": "{ready} / {total} ready",
 
   "error.room_not_found": "No room with that code.",
   "error.generic": "Something went wrong.",
@@ -74,6 +87,19 @@ const fr: Record<MessageKey, string> = {
   "lobby.echoNone": "Aucun message pour l’instant.",
   "lobby.echoFromYou": "Vous",
   "lobby.echoFromOther": "Quelqu’un",
+  "lobby.startImposter": "Lancer Imposteur",
+  "lobby.needPlayers": "Il faut au moins {min} joueurs pour commencer.",
+
+  "game.unknown": "Ce jeu n’est pas disponible dans votre version.",
+
+  "imposter.heading": "Votre rôle",
+  "imposter.dealing": "Distribution des rôles…",
+  "imposter.youAreImposter": "Vous êtes l’IMPOSTEUR",
+  "imposter.imposterHint": "Vous ne connaissez pas le mot. Donnez un indice vague et faites semblant.",
+  "imposter.crewHint": "Donnez un indice d’un mot qui prouve que vous le savez — sans le révéler.",
+  "imposter.gotIt": "Compris",
+  "imposter.waiting": "En attente des autres…",
+  "imposter.readyCount": "{ready} / {total} prêts",
 
   "error.room_not_found": "Aucun salon avec ce code.",
   "error.generic": "Une erreur est survenue.",

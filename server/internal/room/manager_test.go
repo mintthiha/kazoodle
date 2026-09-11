@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/mintthiha/party-games/server/internal/game"
 	"github.com/mintthiha/party-games/server/internal/protocol"
 )
 
@@ -66,9 +67,14 @@ func (d *discard) Send(*protocol.ServerMessage) { d.n.Add(1) }
 
 func newTestManager(t *testing.T) *Manager {
 	t.Helper()
+	return newTestManagerWithGames(t, game.NewRegistry())
+}
+
+func newTestManagerWithGames(t *testing.T, games *game.Registry) *Manager {
+	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel) // bring down any room goroutines still running
-	return NewManager(ctx)
+	return NewManager(ctx, games)
 }
 
 // ─── tests ──────────────────────────────────────────────────────────────────
@@ -77,7 +83,7 @@ func TestCreateAddsCreatorAndRoom(t *testing.T) {
 	m := newTestManager(t)
 	host := newCapture()
 
-	res, err := m.Create(context.Background(), "Ana", host)
+	res, err := m.Create(context.Background(), "Ana", "en", host)
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -100,10 +106,10 @@ func TestCreateAddsCreatorAndRoom(t *testing.T) {
 func TestJoinNotifiesExistingPlayers(t *testing.T) {
 	m := newTestManager(t)
 	host := newCapture()
-	created, _ := m.Create(context.Background(), "Ana", host)
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
 
 	guest := newCapture()
-	joined, err := m.Join(context.Background(), created.RoomCode, "Ben", guest)
+	joined, err := m.Join(context.Background(), created.RoomCode, "Ben", "en", guest)
 	if err != nil {
 		t.Fatalf("Join: %v", err)
 	}
@@ -125,7 +131,7 @@ func TestJoinNotifiesExistingPlayers(t *testing.T) {
 func TestJoinUnknownRoom(t *testing.T) {
 	m := newTestManager(t)
 
-	_, err := m.Join(context.Background(), "ZZZZ", "Ana", newCapture())
+	_, err := m.Join(context.Background(), "ZZZZ", "Ana", "en", newCapture())
 	if !errors.Is(err, ErrRoomNotFound) {
 		t.Fatalf("err = %v, want ErrRoomNotFound", err)
 	}
@@ -137,9 +143,9 @@ func TestJoinUnknownRoom(t *testing.T) {
 func TestLeaveNotifiesRemaining(t *testing.T) {
 	m := newTestManager(t)
 	host := newCapture()
-	created, _ := m.Create(context.Background(), "Ana", host)
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
 	guest := newCapture()
-	joined, _ := m.Join(context.Background(), created.RoomCode, "Ben", guest)
+	joined, _ := m.Join(context.Background(), created.RoomCode, "Ben", "en", guest)
 	_ = host.next(t) // consume the PlayerJoined from Ben joining
 
 	if err := m.Leave(context.Background(), created.RoomCode, joined.Self.ID, LeaveExplicit); err != nil {
@@ -158,9 +164,9 @@ func TestLeaveNotifiesRemaining(t *testing.T) {
 func TestDisconnectRemovesPlayer(t *testing.T) {
 	m := newTestManager(t)
 	host := newCapture()
-	created, _ := m.Create(context.Background(), "Ana", host)
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
 	guest := newCapture()
-	joined, _ := m.Join(context.Background(), created.RoomCode, "Ben", guest)
+	joined, _ := m.Join(context.Background(), created.RoomCode, "Ben", "en", guest)
 	_ = host.next(t)
 
 	// A dropped connection is a Leave with a different reason; behaviour is the
@@ -179,7 +185,7 @@ func TestDisconnectRemovesPlayer(t *testing.T) {
 func TestLastPlayerLeavingClosesRoom(t *testing.T) {
 	m := newTestManager(t)
 	host := newCapture()
-	created, _ := m.Create(context.Background(), "Ana", host)
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
 
 	if err := m.Leave(context.Background(), created.RoomCode, created.Self.ID, LeaveExplicit); err != nil {
 		t.Fatalf("Leave: %v", err)
@@ -190,7 +196,7 @@ func TestLastPlayerLeavingClosesRoom(t *testing.T) {
 		t.Errorf("RoomCount = %d, want 0 after the last player left", m.RoomCount())
 	}
 	// The code now behaves like any unknown room.
-	if _, err := m.Join(context.Background(), created.RoomCode, "Ben", newCapture()); !errors.Is(err, ErrRoomNotFound) {
+	if _, err := m.Join(context.Background(), created.RoomCode, "Ben", "en", newCapture()); !errors.Is(err, ErrRoomNotFound) {
 		t.Errorf("re-join err = %v, want ErrRoomNotFound", err)
 	}
 }
@@ -198,9 +204,9 @@ func TestLastPlayerLeavingClosesRoom(t *testing.T) {
 func TestEchoReachesEveryone(t *testing.T) {
 	m := newTestManager(t)
 	host := newCapture()
-	created, _ := m.Create(context.Background(), "Ana", host)
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
 	guest := newCapture()
-	_, _ = m.Join(context.Background(), created.RoomCode, "Ben", guest)
+	_, _ = m.Join(context.Background(), created.RoomCode, "Ben", "en", guest)
 	_ = host.next(t) // PlayerJoined
 
 	if err := m.Echo(context.Background(), created.RoomCode, created.Self.ID, "marco"); err != nil {
@@ -218,9 +224,9 @@ func TestEchoReachesEveryone(t *testing.T) {
 func TestDoubleLeaveIsHarmless(t *testing.T) {
 	m := newTestManager(t)
 	host := newCapture()
-	created, _ := m.Create(context.Background(), "Ana", host)
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
 	guest := newCapture()
-	joined, _ := m.Join(context.Background(), created.RoomCode, "Ben", guest)
+	joined, _ := m.Join(context.Background(), created.RoomCode, "Ben", "en", guest)
 	_ = host.next(t) // PlayerJoined
 	_ = m.Leave(context.Background(), created.RoomCode, joined.Self.ID, LeaveExplicit)
 	_ = host.next(t) // PlayerLeft
@@ -241,7 +247,7 @@ func TestDoubleLeaveIsHarmless(t *testing.T) {
 func TestConcurrentJoinsAndLeaves(t *testing.T) {
 	m := newTestManager(t)
 	host := &discard{}
-	created, err := m.Create(context.Background(), "host", host)
+	created, err := m.Create(context.Background(), "host", "en", host)
 	if err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -254,7 +260,7 @@ func TestConcurrentJoinsAndLeaves(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			res, err := m.Join(context.Background(), created.RoomCode, "p", &discard{})
+			res, err := m.Join(context.Background(), created.RoomCode, "p", "en", &discard{})
 			if err != nil {
 				t.Errorf("Join: %v", err)
 				return

@@ -221,3 +221,41 @@ button.danger {
   border-color: var(--accent);
   color: #fff;
 }
+
+/* Imposter — role card */
+.role-card {
+  padding: 1.5rem 1rem;
+  border-radius: 14px;
+  text-align: center;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.role-card.role-imposter {
+  border-color: var(--danger);
+}
+
+.role-label {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.role-word {
+  margin: 0.25rem 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.role-card.role-imposter .role-word {
+  color: var(--danger);
+  letter-spacing: 0.04em;
+}
+
+.role-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
