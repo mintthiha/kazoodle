@@ -50,6 +50,25 @@ const en = {
   "imposter.waiting": "Waiting for the others…",
   "imposter.readyCount": "{ready} / {total} ready",
 
+  "imposter.cluesHeading": "Clues",
+  "imposter.clueProgress": "Clue {turn} of {total}",
+  "imposter.yourClueLabel": "Your clue",
+  "imposter.yourCluePlaceholder": "One word",
+  "imposter.submitClue": "Submit",
+  "imposter.waitingForClue": "Waiting for {who}…",
+
+  "imposter.voteHeading": "Who's the imposter?",
+  "imposter.voteProgress": "{voted} / {total} voted",
+
+  "imposter.outcomeHeading": "Results",
+  "imposter.crewWon": "The crew wins!",
+  "imposter.imposterWon": "The imposter wins!",
+  "imposter.revealImposter": "The imposter was {who}.",
+  "imposter.revealWord": "The word was “{word}” ({category}).",
+  "imposter.votedOut": "{who} was voted out.",
+  "imposter.noOneVotedOut": "The vote was tied — no one was voted out.",
+  "imposter.votesHeading": "Votes",
+
   "error.room_not_found": "No room with that code.",
   "error.generic": "Something went wrong.",
 } satisfies Record<string, string>;
@@ -100,6 +119,25 @@ const fr: Record<MessageKey, string> = {
   "imposter.gotIt": "Compris",
   "imposter.waiting": "En attente des autres…",
   "imposter.readyCount": "{ready} / {total} prêts",
+
+  "imposter.cluesHeading": "Indices",
+  "imposter.clueProgress": "Indice {turn} sur {total}",
+  "imposter.yourClueLabel": "Votre indice",
+  "imposter.yourCluePlaceholder": "Un mot",
+  "imposter.submitClue": "Envoyer",
+  "imposter.waitingForClue": "En attente de {who}…",
+
+  "imposter.voteHeading": "Qui est l’imposteur ?",
+  "imposter.voteProgress": "{voted} / {total} ont voté",
+
+  "imposter.outcomeHeading": "Résultats",
+  "imposter.crewWon": "L’équipe gagne !",
+  "imposter.imposterWon": "L’imposteur gagne !",
+  "imposter.revealImposter": "L’imposteur était {who}.",
+  "imposter.revealWord": "Le mot était « {word} » ({category}).",
+  "imposter.votedOut": "{who} a été exclu(e) par le vote.",
+  "imposter.noOneVotedOut": "Le vote était à égalité — personne n’a été exclu(e).",
+  "imposter.votesHeading": "Votes",
 
   "error.room_not_found": "Aucun salon avec ce code.",
   "error.generic": "Une erreur est survenue.",

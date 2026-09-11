@@ -1,6 +1,7 @@
 package imposter
 
 import (
+	"fmt"
 	"testing"
 
 	"google.golang.org/protobuf/encoding/protojson"
@@ -8,6 +9,8 @@ import (
 	"github.com/mintthiha/party-games/server/internal/game"
 	"github.com/mintthiha/party-games/server/internal/games/imposter/pb"
 )
+
+// ─── test helpers ───────────────────────────────────────────────────────────
 
 func mkPlayers(n int, locale string) []game.Player {
 	ps := make([]game.Player, n)
@@ -17,17 +20,63 @@ func mkPlayers(n int, locale string) []game.Player {
 	return ps
 }
 
-func readyEvent(id string) game.Event {
-	raw, err := protojson.Marshal(&pb.ImposterClientMessage{
-		Body: &pb.ImposterClientMessage_MarkReady{MarkReady: &pb.MarkReady{}},
-	})
+func clientMsg(body *pb.ImposterClientMessage) []byte {
+	raw, err := protojson.Marshal(body)
 	if err != nil {
 		panic(err)
 	}
-	return game.Event{PlayerID: id, Data: raw}
+	return raw
 }
 
-// collectRoles pulls the private RoleAssignment sent to each player.
+func readyEvent(id string) game.Event {
+	return game.Event{
+		PlayerID: id,
+		Data:     clientMsg(&pb.ImposterClientMessage{Body: &pb.ImposterClientMessage_MarkReady{MarkReady: &pb.MarkReady{}}}),
+	}
+}
+
+func clueEvent(id, text string) game.Event {
+	return game.Event{
+		PlayerID: id,
+		Data:     clientMsg(&pb.ImposterClientMessage{Body: &pb.ImposterClientMessage_SubmitClue{SubmitClue: &pb.SubmitClue{Text: text}}}),
+	}
+}
+
+func voteEvent(voterID, suspectID string) game.Event {
+	return game.Event{
+		PlayerID: voterID,
+		Data:     clientMsg(&pb.ImposterClientMessage{Body: &pb.ImposterClientMessage_CastVote{CastVote: &pb.CastVote{SuspectId: suspectID}}}),
+	}
+}
+
+// readyAll drives every player's MarkReady, in order. Fails the test on error.
+func readyAll(t *testing.T, st game.State, order []string) (game.State, []game.Effect) {
+	t.Helper()
+	var effects []game.Effect
+	var err error
+	for _, id := range order {
+		st, effects, err = (Game{}).Advance(st, readyEvent(id))
+		if err != nil {
+			t.Fatalf("Advance(ready %s): %v", id, err)
+		}
+	}
+	return st, effects
+}
+
+// giveAllClues drives every player's SubmitClue, in turn order.
+func giveAllClues(t *testing.T, st game.State, order []string) (game.State, []game.Effect) {
+	t.Helper()
+	var effects []game.Effect
+	var err error
+	for i, id := range order {
+		st, effects, err = (Game{}).Advance(st, clueEvent(id, fmt.Sprintf("clue-%d", i)))
+		if err != nil {
+			t.Fatalf("Advance(clue %d, %s): %v", i, id, err)
+		}
+	}
+	return st, effects
+}
+
 func collectRoles(t *testing.T, effects []game.Effect) map[string]*pb.RoleAssignment {
 	t.Helper()
 	out := map[string]*pb.RoleAssignment{}
@@ -47,26 +96,42 @@ func collectRoles(t *testing.T, effects []game.Effect) map[string]*pb.RoleAssign
 	return out
 }
 
-// lastRevealProgress returns the last broadcast RevealProgress in effects.
-func lastRevealProgress(t *testing.T, effects []game.Effect) *pb.RevealProgress {
+// broadcastMsg returns the last broadcast (To == nil) ImposterServerMessage in
+// effects, or fails the test if there isn't one.
+func broadcastMsg(t *testing.T, effects []game.Effect) *pb.ImposterServerMessage {
 	t.Helper()
-	var got *pb.RevealProgress
+	var got *pb.ImposterServerMessage
 	for _, e := range effects {
-		s, ok := e.(game.Send)
-		if !ok || len(s.To) != 0 {
-			continue
-		}
-		if m, ok := s.Msg.(*pb.ImposterServerMessage); ok {
-			if rp := m.GetRevealProgress(); rp != nil {
-				got = rp
+		if s, ok := e.(game.Send); ok && len(s.To) == 0 {
+			if m, ok := s.Msg.(*pb.ImposterServerMessage); ok {
+				got = m
 			}
 		}
 	}
 	if got == nil {
-		t.Fatal("no RevealProgress broadcast in effects")
+		t.Fatal("no broadcast ImposterServerMessage in effects")
 	}
 	return got
 }
+
+func collectOutcomes(t *testing.T, effects []game.Effect) map[string]*pb.Outcome {
+	t.Helper()
+	out := map[string]*pb.Outcome{}
+	for _, e := range effects {
+		s, ok := e.(game.Send)
+		if !ok || len(s.To) == 0 {
+			continue
+		}
+		if m, ok := s.Msg.(*pb.ImposterServerMessage); ok {
+			if o := m.GetOutcome(); o != nil {
+				out[s.To[0]] = o
+			}
+		}
+	}
+	return out
+}
+
+// ─── reveal phase ───────────────────────────────────────────────────────────
 
 func TestInitRejectsTooFewPlayers(t *testing.T) {
 	if _, _, err := (Game{}).Init(mkPlayers(2, "en")); err == nil {
@@ -115,7 +180,10 @@ func TestInitAssignsExactlyOneImposterWithNoWord(t *testing.T) {
 
 func TestInitBroadcastsRevealProgress(t *testing.T) {
 	_, effects, _ := (Game{}).Init(mkPlayers(4, "en"))
-	rp := lastRevealProgress(t, effects)
+	rp := broadcastMsg(t, effects).GetRevealProgress()
+	if rp == nil {
+		t.Fatal("no RevealProgress broadcast")
+	}
 	if rp.GetTotal() != 4 {
 		t.Errorf("total = %d, want 4", rp.GetTotal())
 	}
@@ -161,19 +229,15 @@ func TestMarkReadyAccumulatesInTurnOrder(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Advance(%s): %v", id, err)
 		}
-		rp := lastRevealProgress(t, effects)
-		if got := rp.GetReadyPlayerIds(); len(got) != i+1 {
-			t.Fatalf("after %d readies, progress lists %v", i+1, got)
-		}
-		// ready list follows turn order
-		for j := 0; j <= i; j++ {
-			if rp.GetReadyPlayerIds()[j] != order[j] {
-				t.Errorf("ready[%d] = %q, want %q", j, rp.GetReadyPlayerIds()[j], order[j])
+		if i < len(order)-1 {
+			rp := broadcastMsg(t, effects).GetRevealProgress()
+			if rp == nil || len(rp.GetReadyPlayerIds()) != i+1 {
+				t.Fatalf("after %d readies, progress = %v", i+1, rp)
 			}
 		}
-		if rp.GetTotal() != 3 {
-			t.Errorf("total = %d, want 3", rp.GetTotal())
-		}
+	}
+	if st.(*state).phase != phaseClues {
+		t.Errorf("phase = %s, want clues once everyone is ready", st.(*state).phase)
 	}
 }
 
@@ -197,7 +261,7 @@ func TestMarkReadyIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Advance: %v", err)
 	}
-	if got := lastRevealProgress(t, effects).GetReadyPlayerIds(); len(got) != 1 {
+	if got := broadcastMsg(t, effects).GetRevealProgress().GetReadyPlayerIds(); len(got) != 1 {
 		t.Errorf("ready = %v, want one entry", got)
 	}
 }
@@ -213,5 +277,196 @@ func TestAdvanceRejectsBadInput(t *testing.T) {
 	}
 	if _, _, err := (Game{}).Advance("not-a-state", readyEvent("a")); err == nil {
 		t.Error("wrong state type: expected an error")
+	}
+}
+
+// ─── clue phase ─────────────────────────────────────────────────────────────
+
+func TestClueTurnEnforcesOrder(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	order := st.(*state).order
+	st, _ = readyAll(t, st, order)
+
+	if _, _, err := (Game{}).Advance(st, clueEvent(order[1], "out of turn")); err == nil {
+		t.Fatal("expected an error when it is not this player's turn")
+	}
+	if _, _, err := (Game{}).Advance(st, clueEvent(order[0], "in turn")); err != nil {
+		t.Fatalf("Advance: %v", err)
+	}
+}
+
+func TestSubmitClueRejectsEmptyText(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	order := st.(*state).order
+	st, _ = readyAll(t, st, order)
+
+	if _, _, err := (Game{}).Advance(st, clueEvent(order[0], "   ")); err == nil {
+		t.Fatal("expected an error for a blank clue")
+	}
+}
+
+func TestCluePhaseProgressesAndTransitionsToVote(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(4, "en"))
+	order := st.(*state).order
+	st, _ = readyAll(t, st, order)
+
+	var lastEffects []game.Effect
+	for i, id := range order {
+		var err error
+		st, lastEffects, err = (Game{}).Advance(st, clueEvent(id, fmt.Sprintf("word%d", i)))
+		if err != nil {
+			t.Fatalf("Advance(clue %d): %v", i, err)
+		}
+		if i < len(order)-1 {
+			ct := broadcastMsg(t, lastEffects).GetClueTurn()
+			if ct == nil {
+				t.Fatalf("clue %d: no ClueTurn broadcast", i)
+			}
+			if ct.GetPlayerId() != order[i+1] {
+				t.Errorf("after clue %d, turn = %s, want %s", i, ct.GetPlayerId(), order[i+1])
+			}
+			if len(ct.GetCluesSoFar()) != i+1 {
+				t.Errorf("cluesSoFar length = %d, want %d", len(ct.GetCluesSoFar()), i+1)
+			}
+		}
+	}
+
+	vp := broadcastMsg(t, lastEffects).GetVotePhase()
+	if vp == nil {
+		t.Fatal("no VotePhase broadcast after the last clue")
+	}
+	if len(vp.GetClues()) != len(order) {
+		t.Errorf("vote phase clue recap has %d entries, want %d", len(vp.GetClues()), len(order))
+	}
+	if len(vp.GetCandidateIds()) != len(order) {
+		t.Errorf("candidates = %v, want all %d players", vp.GetCandidateIds(), len(order))
+	}
+	if st.(*state).phase != phaseVote {
+		t.Fatalf("phase = %s, want vote", st.(*state).phase)
+	}
+}
+
+// ─── vote phase ─────────────────────────────────────────────────────────────
+
+func TestVoteTallyDeclaresCrewWinnerWhenImposterCaught(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	s := st.(*state)
+	order, imposter := s.order, s.imposterID
+
+	st, _ = readyAll(t, st, order)
+	st, _ = giveAllClues(t, st, order)
+
+	var effects []game.Effect
+	var err error
+	for _, id := range order {
+		st, effects, err = (Game{}).Advance(st, voteEvent(id, imposter))
+		if err != nil {
+			t.Fatalf("Advance(vote %s): %v", id, err)
+		}
+	}
+
+	tally := broadcastMsg(t, effects).GetVoteTally()
+	if tally == nil {
+		t.Fatal("no VoteTally broadcast")
+	}
+	if tally.GetVotedOutId() != imposter {
+		t.Errorf("voted out = %s, want the imposter %s", tally.GetVotedOutId(), imposter)
+	}
+
+	outcomes := collectOutcomes(t, effects)
+	if len(outcomes) != len(order) {
+		t.Fatalf("got %d private outcomes, want %d", len(outcomes), len(order))
+	}
+	for id, o := range outcomes {
+		if !o.GetCrewWon() {
+			t.Errorf("player %s: crewWon = false, want true", id)
+		}
+		if o.GetImposterId() != imposter {
+			t.Errorf("player %s: imposterId = %s, want %s", id, o.GetImposterId(), imposter)
+		}
+	}
+	if st.(*state).phase != phaseOutcome {
+		t.Errorf("phase = %s, want outcome", st.(*state).phase)
+	}
+	for _, e := range effects {
+		if _, ok := e.(game.EndGame); ok {
+			t.Error("Advance emitted EndGame; the round should stay visible until a later slice adds play-again")
+		}
+	}
+}
+
+func TestVoteTieMeansImposterEscapes(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	order := st.(*state).order
+
+	st, _ = readyAll(t, st, order)
+	st, _ = giveAllClues(t, st, order)
+
+	// A three-way tie: each player votes for the next one, round-robin.
+	var effects []game.Effect
+	var err error
+	for i, id := range order {
+		suspect := order[(i+1)%len(order)]
+		st, effects, err = (Game{}).Advance(st, voteEvent(id, suspect))
+		if err != nil {
+			t.Fatalf("Advance(vote %s): %v", id, err)
+		}
+	}
+
+	tally := broadcastMsg(t, effects).GetVoteTally()
+	if tally == nil {
+		t.Fatal("no VoteTally broadcast")
+	}
+	if tally.GetVotedOutId() != "" {
+		t.Errorf("voted out = %q, want empty (tie)", tally.GetVotedOutId())
+	}
+	for id, o := range collectOutcomes(t, effects) {
+		if o.GetCrewWon() {
+			t.Errorf("player %s: crewWon = true, want false on a tie", id)
+		}
+	}
+}
+
+func TestVoteChangeBeforeEveryoneHasVoted(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	order := st.(*state).order
+	st, _ = readyAll(t, st, order)
+	st, _ = giveAllClues(t, st, order)
+
+	st, effects, err := (Game{}).Advance(st, voteEvent(order[0], order[1]))
+	if err != nil {
+		t.Fatalf("Advance: %v", err)
+	}
+	if vp := broadcastMsg(t, effects).GetVoteProgress(); vp == nil || len(vp.GetVotedPlayerIds()) != 1 {
+		t.Fatalf("vote progress = %v, want one voter", vp)
+	}
+
+	// Changing a vote before the round completes must not double count.
+	_, effects, err = (Game{}).Advance(st, voteEvent(order[0], order[2]))
+	if err != nil {
+		t.Fatalf("Advance (changed vote): %v", err)
+	}
+	if vp := broadcastMsg(t, effects).GetVoteProgress(); vp == nil || len(vp.GetVotedPlayerIds()) != 1 {
+		t.Fatalf("vote progress after change = %v, want still one voter", vp)
+	}
+}
+
+func TestCastVoteRejectsUnknownSuspect(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	order := st.(*state).order
+	st, _ = readyAll(t, st, order)
+	st, _ = giveAllClues(t, st, order)
+
+	if _, _, err := (Game{}).Advance(st, voteEvent(order[0], "not-a-player")); err == nil {
+		t.Fatal("expected an error for an unknown suspect")
+	}
+}
+
+func TestCastVoteRejectedOutsideVotePhase(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	order := st.(*state).order // still in the reveal phase
+
+	if _, _, err := (Game{}).Advance(st, voteEvent(order[0], order[1])); err == nil {
+		t.Fatal("expected an error when voting before the vote phase")
 	}
 }

@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file imposter.proto.
  */
 export const file_imposter: GenFile = /*@__PURE__*/
-  fileDesc("Cg5pbXBvc3Rlci5wcm90bxILaW1wb3N0ZXIudjEijwEKFUltcG9zdGVyU2VydmVyTWVzc2FnZRI2Cg9yb2xlX2Fzc2lnbm1lbnQYASABKAsyGy5pbXBvc3Rlci52MS5Sb2xlQXNzaWdubWVudEgAEjYKD3JldmVhbF9wcm9ncmVzcxgCIAEoCzIbLmltcG9zdGVyLnYxLlJldmVhbFByb2dyZXNzSABCBgoEYm9keSJFCg5Sb2xlQXNzaWdubWVudBITCgtpc19pbXBvc3RlchgBIAEoCBIMCgR3b3JkGAIgASgJEhAKCGNhdGVnb3J5GAMgASgJIjkKDlJldmVhbFByb2dyZXNzEhgKEHJlYWR5X3BsYXllcl9pZHMYASADKAkSDQoFdG90YWwYAiABKAUiTQoVSW1wb3N0ZXJDbGllbnRNZXNzYWdlEiwKCm1hcmtfcmVhZHkYASABKAsyFi5pbXBvc3Rlci52MS5NYXJrUmVhZHlIAEIGCgRib2R5IgsKCU1hcmtSZWFkeUJHWkVnaXRodWIuY29tL21pbnR0aGloYS9wYXJ0eS1nYW1lcy9zZXJ2ZXIvaW50ZXJuYWwvZ2FtZXMvaW1wb3N0ZXIvcGI7cGJiBnByb3RvMw");
+  fileDesc("Cg5pbXBvc3Rlci5wcm90bxILaW1wb3N0ZXIudjEi9AIKFUltcG9zdGVyU2VydmVyTWVzc2FnZRI2Cg9yb2xlX2Fzc2lnbm1lbnQYASABKAsyGy5pbXBvc3Rlci52MS5Sb2xlQXNzaWdubWVudEgAEjYKD3JldmVhbF9wcm9ncmVzcxgCIAEoCzIbLmltcG9zdGVyLnYxLlJldmVhbFByb2dyZXNzSAASKgoJY2x1ZV90dXJuGAMgASgLMhUuaW1wb3N0ZXIudjEuQ2x1ZVR1cm5IABIsCgp2b3RlX3BoYXNlGAQgASgLMhYuaW1wb3N0ZXIudjEuVm90ZVBoYXNlSAASMgoNdm90ZV9wcm9ncmVzcxgFIAEoCzIZLmltcG9zdGVyLnYxLlZvdGVQcm9ncmVzc0gAEiwKCnZvdGVfdGFsbHkYBiABKAsyFi5pbXBvc3Rlci52MS5Wb3RlVGFsbHlIABInCgdvdXRjb21lGAcgASgLMhQuaW1wb3N0ZXIudjEuT3V0Y29tZUgAQgYKBGJvZHkiRQoOUm9sZUFzc2lnbm1lbnQSEwoLaXNfaW1wb3N0ZXIYASABKAgSDAoEd29yZBgCIAEoCRIQCghjYXRlZ29yeRgDIAEoCSI5Cg5SZXZlYWxQcm9ncmVzcxIYChByZWFkeV9wbGF5ZXJfaWRzGAEgAygJEg0KBXRvdGFsGAIgASgFIiwKCUNsdWVFbnRyeRIRCglwbGF5ZXJfaWQYASABKAkSDAoEdGV4dBgCIAEoCSJuCghDbHVlVHVybhIRCglwbGF5ZXJfaWQYASABKAkSEgoKdHVybl9pbmRleBgCIAEoBRINCgV0b3RhbBgDIAEoBRIsCgxjbHVlc19zb19mYXIYBCADKAsyFi5pbXBvc3Rlci52MS5DbHVlRW50cnkiSQoJVm90ZVBoYXNlEiUKBWNsdWVzGAEgAygLMhYuaW1wb3N0ZXIudjEuQ2x1ZUVudHJ5EhUKDWNhbmRpZGF0ZV9pZHMYAiADKAkiNwoMVm90ZVByb2dyZXNzEhgKEHZvdGVkX3BsYXllcl9pZHMYASADKAkSDQoFdG90YWwYAiABKAUiLQoJVm90ZUNvdW50EhEKCXBsYXllcl9pZBgBIAEoCRINCgV2b3RlcxgCIAEoBSJJCglWb3RlVGFsbHkSJgoGY291bnRzGAEgAygLMhYuaW1wb3N0ZXIudjEuVm90ZUNvdW50EhQKDHZvdGVkX291dF9pZBgCIAEoCSJmCgdPdXRjb21lEhMKC2ltcG9zdGVyX2lkGAEgASgJEgwKBHdvcmQYAiABKAkSEAoIY2F0ZWdvcnkYAyABKAkSEAoIY3Jld193b24YBCABKAgSFAoMdm90ZWRfb3V0X2lkGAUgASgJIqkBChVJbXBvc3RlckNsaWVudE1lc3NhZ2USLAoKbWFya19yZWFkeRgBIAEoCzIWLmltcG9zdGVyLnYxLk1hcmtSZWFkeUgAEi4KC3N1Ym1pdF9jbHVlGAIgASgLMhcuaW1wb3N0ZXIudjEuU3VibWl0Q2x1ZUgAEioKCWNhc3Rfdm90ZRgDIAEoCzIVLmltcG9zdGVyLnYxLkNhc3RWb3RlSABCBgoEYm9keSILCglNYXJrUmVhZHkiGgoKU3VibWl0Q2x1ZRIMCgR0ZXh0GAEgASgJIh4KCENhc3RWb3RlEhIKCnN1c3BlY3RfaWQYASABKAlCR1pFZ2l0aHViLmNvbS9taW50dGhpaGEvcGFydHktZ2FtZXMvc2VydmVyL2ludGVybmFsL2dhbWVzL2ltcG9zdGVyL3BiO3BiYgZwcm90bzM");
 
 /**
  * @generated from message imposter.v1.ImposterServerMessage
@@ -31,6 +31,36 @@ export type ImposterServerMessage = Message<"imposter.v1.ImposterServerMessage">
      */
     value: RevealProgress;
     case: "revealProgress";
+  } | {
+    /**
+     * @generated from field: imposter.v1.ClueTurn clue_turn = 3;
+     */
+    value: ClueTurn;
+    case: "clueTurn";
+  } | {
+    /**
+     * @generated from field: imposter.v1.VotePhase vote_phase = 4;
+     */
+    value: VotePhase;
+    case: "votePhase";
+  } | {
+    /**
+     * @generated from field: imposter.v1.VoteProgress vote_progress = 5;
+     */
+    value: VoteProgress;
+    case: "voteProgress";
+  } | {
+    /**
+     * @generated from field: imposter.v1.VoteTally vote_tally = 6;
+     */
+    value: VoteTally;
+    case: "voteTally";
+  } | {
+    /**
+     * @generated from field: imposter.v1.Outcome outcome = 7;
+     */
+    value: Outcome;
+    case: "outcome";
   } | { case: undefined; value?: undefined };
 };
 
@@ -97,6 +127,211 @@ export const RevealProgressSchema: GenMessage<RevealProgress> = /*@__PURE__*/
   messageDesc(file_imposter, 2);
 
 /**
+ * One player's clue, in the order it was given.
+ *
+ * @generated from message imposter.v1.ClueEntry
+ */
+export type ClueEntry = Message<"imposter.v1.ClueEntry"> & {
+  /**
+   * @generated from field: string player_id = 1;
+   */
+  playerId: string;
+
+  /**
+   * @generated from field: string text = 2;
+   */
+  text: string;
+};
+
+/**
+ * Describes the message imposter.v1.ClueEntry.
+ * Use `create(ClueEntrySchema)` to create a new message.
+ */
+export const ClueEntrySchema: GenMessage<ClueEntry> = /*@__PURE__*/
+  messageDesc(file_imposter, 3);
+
+/**
+ * Broadcast whenever the clue phase advances: at its start, and again after
+ * each clue. `player_id` is whose turn it is now.
+ *
+ * @generated from message imposter.v1.ClueTurn
+ */
+export type ClueTurn = Message<"imposter.v1.ClueTurn"> & {
+  /**
+   * @generated from field: string player_id = 1;
+   */
+  playerId: string;
+
+  /**
+   * 0-based
+   *
+   * @generated from field: int32 turn_index = 2;
+   */
+  turnIndex: number;
+
+  /**
+   * total clues expected this round
+   *
+   * @generated from field: int32 total = 3;
+   */
+  total: number;
+
+  /**
+   * @generated from field: repeated imposter.v1.ClueEntry clues_so_far = 4;
+   */
+  cluesSoFar: ClueEntry[];
+};
+
+/**
+ * Describes the message imposter.v1.ClueTurn.
+ * Use `create(ClueTurnSchema)` to create a new message.
+ */
+export const ClueTurnSchema: GenMessage<ClueTurn> = /*@__PURE__*/
+  messageDesc(file_imposter, 4);
+
+/**
+ * Broadcast once, when every player has given a clue and voting opens.
+ *
+ * @generated from message imposter.v1.VotePhase
+ */
+export type VotePhase = Message<"imposter.v1.VotePhase"> & {
+  /**
+   * the full recap, in turn order
+   *
+   * @generated from field: repeated imposter.v1.ClueEntry clues = 1;
+   */
+  clues: ClueEntry[];
+
+  /**
+   * who can be voted for, in turn order
+   *
+   * @generated from field: repeated string candidate_ids = 2;
+   */
+  candidateIds: string[];
+};
+
+/**
+ * Describes the message imposter.v1.VotePhase.
+ * Use `create(VotePhaseSchema)` to create a new message.
+ */
+export const VotePhaseSchema: GenMessage<VotePhase> = /*@__PURE__*/
+  messageDesc(file_imposter, 5);
+
+/**
+ * Broadcast as votes come in, so clients can show "2 / 5 voted".
+ *
+ * @generated from message imposter.v1.VoteProgress
+ */
+export type VoteProgress = Message<"imposter.v1.VoteProgress"> & {
+  /**
+   * @generated from field: repeated string voted_player_ids = 1;
+   */
+  votedPlayerIds: string[];
+
+  /**
+   * @generated from field: int32 total = 2;
+   */
+  total: number;
+};
+
+/**
+ * Describes the message imposter.v1.VoteProgress.
+ * Use `create(VoteProgressSchema)` to create a new message.
+ */
+export const VoteProgressSchema: GenMessage<VoteProgress> = /*@__PURE__*/
+  messageDesc(file_imposter, 6);
+
+/**
+ * @generated from message imposter.v1.VoteCount
+ */
+export type VoteCount = Message<"imposter.v1.VoteCount"> & {
+  /**
+   * @generated from field: string player_id = 1;
+   */
+  playerId: string;
+
+  /**
+   * @generated from field: int32 votes = 2;
+   */
+  votes: number;
+};
+
+/**
+ * Describes the message imposter.v1.VoteCount.
+ * Use `create(VoteCountSchema)` to create a new message.
+ */
+export const VoteCountSchema: GenMessage<VoteCount> = /*@__PURE__*/
+  messageDesc(file_imposter, 7);
+
+/**
+ * Broadcast once everyone has voted.
+ *
+ * @generated from message imposter.v1.VoteTally
+ */
+export type VoteTally = Message<"imposter.v1.VoteTally"> & {
+  /**
+   * @generated from field: repeated imposter.v1.VoteCount counts = 1;
+   */
+  counts: VoteCount[];
+
+  /**
+   * Empty if the top vote count was tied — nobody is removed in that case.
+   *
+   * @generated from field: string voted_out_id = 2;
+   */
+  votedOutId: string;
+};
+
+/**
+ * Describes the message imposter.v1.VoteTally.
+ * Use `create(VoteTallySchema)` to create a new message.
+ */
+export const VoteTallySchema: GenMessage<VoteTally> = /*@__PURE__*/
+  messageDesc(file_imposter, 8);
+
+/**
+ * Sent privately to each player once voting closes. word/category are
+ * localized per recipient, which is why this isn't a broadcast.
+ *
+ * @generated from message imposter.v1.Outcome
+ */
+export type Outcome = Message<"imposter.v1.Outcome"> & {
+  /**
+   * @generated from field: string imposter_id = 1;
+   */
+  imposterId: string;
+
+  /**
+   * @generated from field: string word = 2;
+   */
+  word: string;
+
+  /**
+   * @generated from field: string category = 3;
+   */
+  category: string;
+
+  /**
+   * @generated from field: bool crew_won = 4;
+   */
+  crewWon: boolean;
+
+  /**
+   * empty if the vote was tied
+   *
+   * @generated from field: string voted_out_id = 5;
+   */
+  votedOutId: string;
+};
+
+/**
+ * Describes the message imposter.v1.Outcome.
+ * Use `create(OutcomeSchema)` to create a new message.
+ */
+export const OutcomeSchema: GenMessage<Outcome> = /*@__PURE__*/
+  messageDesc(file_imposter, 9);
+
+/**
  * @generated from message imposter.v1.ImposterClientMessage
  */
 export type ImposterClientMessage = Message<"imposter.v1.ImposterClientMessage"> & {
@@ -109,6 +344,18 @@ export type ImposterClientMessage = Message<"imposter.v1.ImposterClientMessage">
      */
     value: MarkReady;
     case: "markReady";
+  } | {
+    /**
+     * @generated from field: imposter.v1.SubmitClue submit_clue = 2;
+     */
+    value: SubmitClue;
+    case: "submitClue";
+  } | {
+    /**
+     * @generated from field: imposter.v1.CastVote cast_vote = 3;
+     */
+    value: CastVote;
+    case: "castVote";
   } | { case: undefined; value?: undefined };
 };
 
@@ -117,7 +364,7 @@ export type ImposterClientMessage = Message<"imposter.v1.ImposterClientMessage">
  * Use `create(ImposterClientMessageSchema)` to create a new message.
  */
 export const ImposterClientMessageSchema: GenMessage<ImposterClientMessage> = /*@__PURE__*/
-  messageDesc(file_imposter, 3);
+  messageDesc(file_imposter, 10);
 
 /**
  * "I have seen my role." When everyone has sent this, the round advances.
@@ -132,5 +379,44 @@ export type MarkReady = Message<"imposter.v1.MarkReady"> & {
  * Use `create(MarkReadySchema)` to create a new message.
  */
 export const MarkReadySchema: GenMessage<MarkReady> = /*@__PURE__*/
-  messageDesc(file_imposter, 4);
+  messageDesc(file_imposter, 11);
+
+/**
+ * One player's clue. Only accepted from whoever's turn it currently is.
+ *
+ * @generated from message imposter.v1.SubmitClue
+ */
+export type SubmitClue = Message<"imposter.v1.SubmitClue"> & {
+  /**
+   * @generated from field: string text = 1;
+   */
+  text: string;
+};
+
+/**
+ * Describes the message imposter.v1.SubmitClue.
+ * Use `create(SubmitClueSchema)` to create a new message.
+ */
+export const SubmitClueSchema: GenMessage<SubmitClue> = /*@__PURE__*/
+  messageDesc(file_imposter, 12);
+
+/**
+ * One player's vote. Accepted (and replaceable) from anyone until everyone
+ * has voted.
+ *
+ * @generated from message imposter.v1.CastVote
+ */
+export type CastVote = Message<"imposter.v1.CastVote"> & {
+  /**
+   * @generated from field: string suspect_id = 1;
+   */
+  suspectId: string;
+};
+
+/**
+ * Describes the message imposter.v1.CastVote.
+ * Use `create(CastVoteSchema)` to create a new message.
+ */
+export const CastVoteSchema: GenMessage<CastVote> = /*@__PURE__*/
+  messageDesc(file_imposter, 13);
 

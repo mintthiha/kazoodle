@@ -14,10 +14,27 @@ export function decodeImposterEvent(payload: string): ImposterServerMessage {
   return fromJsonString(ImposterServerMessageSchema, payload);
 }
 
-/** "I have seen my role." Returned as a payload string for GameAction. */
+/** "I have seen my role." */
 export function encodeMarkReady(): string {
   return toJsonString(
     ImposterClientMessageSchema,
     create(ImposterClientMessageSchema, { body: { case: "markReady", value: {} } }),
+  );
+}
+
+/** One clue word, sent on this player's turn. */
+export function encodeSubmitClue(text: string): string {
+  return toJsonString(
+    ImposterClientMessageSchema,
+    create(ImposterClientMessageSchema, { body: { case: "submitClue", value: { text } } }),
+  );
+}
+
+/** A vote for who the imposter is. Sending again before everyone has voted
+ * replaces this player's previous vote. */
+export function encodeCastVote(suspectId: string): string {
+  return toJsonString(
+    ImposterClientMessageSchema,
+    create(ImposterClientMessageSchema, { body: { case: "castVote", value: { suspectId } } }),
   );
 }

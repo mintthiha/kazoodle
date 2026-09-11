@@ -8,11 +8,9 @@ option go_package = "github.com/mintthiha/party-games/server/internal/games/impo
 // GameEvent / GameAction envelopes as proto3 JSON.
 //
 // Ruleset (v1): exactly one imposter, who gets no word. One clue word per
-// player, one round, in a server-set order. Voted-out imposter gets one guess
-// to steal the win.
-//
-// This slice (3a) covers role assignment and the reveal phase only; the clue,
-// vote, and outcome messages are added as those phases land.
+// player, one round, in a server-set order. Everyone then votes; a tie means
+// no one is removed and the imposter escapes. There is no steal-the-win guess
+// yet, and no "play again" — a finished round just shows its Outcome.
 
 // ── Server → Client ───────────────────────────────────────────────────────
 
@@ -20,6 +18,11 @@ message ImposterServerMessage {
   oneof body {
     RoleAssignment role_assignment = 1;
     RevealProgress reveal_progress = 2;
+    ClueTurn clue_turn = 3;
+    VotePhase vote_phase = 4;
+    VoteProgress vote_progress = 5;
+    VoteTally vote_tally = 6;
+    Outcome outcome = 7;
   }
 }
 
@@ -38,13 +41,75 @@ message RevealProgress {
   int32 total = 2;
 }
 
+// One player's clue, in the order it was given.
+message ClueEntry {
+  string player_id = 1;
+  string text = 2;
+}
+
+// Broadcast whenever the clue phase advances: at its start, and again after
+// each clue. `player_id` is whose turn it is now.
+message ClueTurn {
+  string player_id = 1;
+  int32 turn_index = 2; // 0-based
+  int32 total = 3;      // total clues expected this round
+  repeated ClueEntry clues_so_far = 4;
+}
+
+// Broadcast once, when every player has given a clue and voting opens.
+message VotePhase {
+  repeated ClueEntry clues = 1;      // the full recap, in turn order
+  repeated string candidate_ids = 2; // who can be voted for, in turn order
+}
+
+// Broadcast as votes come in, so clients can show "2 / 5 voted".
+message VoteProgress {
+  repeated string voted_player_ids = 1;
+  int32 total = 2;
+}
+
+message VoteCount {
+  string player_id = 1;
+  int32 votes = 2;
+}
+
+// Broadcast once everyone has voted.
+message VoteTally {
+  repeated VoteCount counts = 1;
+  // Empty if the top vote count was tied — nobody is removed in that case.
+  string voted_out_id = 2;
+}
+
+// Sent privately to each player once voting closes. word/category are
+// localized per recipient, which is why this isn't a broadcast.
+message Outcome {
+  string imposter_id = 1;
+  string word = 2;
+  string category = 3;
+  bool crew_won = 4;
+  string voted_out_id = 5; // empty if the vote was tied
+}
+
 // ── Client → Server ───────────────────────────────────────────────────────
 
 message ImposterClientMessage {
   oneof body {
     MarkReady mark_ready = 1;
+    SubmitClue submit_clue = 2;
+    CastVote cast_vote = 3;
   }
 }
 
 // "I have seen my role." When everyone has sent this, the round advances.
 message MarkReady {}
+
+// One player's clue. Only accepted from whoever's turn it currently is.
+message SubmitClue {
+  string text = 1;
+}
+
+// One player's vote. Accepted (and replaceable) from anyone until everyone
+// has voted.
+message CastVote {
+  string suspect_id = 1;
+}
