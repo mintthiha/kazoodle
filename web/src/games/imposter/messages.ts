@@ -48,6 +48,14 @@ export function encodeCastVote(suspectId: string): string {
   );
 }
 
+/** "I'm not accusing anyone this round." Also replaceable, same as a vote. */
+export function encodeAbstain(): string {
+  return toJsonString(
+    ImposterClientMessageSchema,
+    create(ImposterClientMessageSchema, { body: { case: "castVote", value: { abstain: true } } }),
+  );
+}
+
 /** The caught imposter's one blind guess at the secret word. */
 export function encodeGuessWord(text: string): string {
   return toJsonString(

@@ -60,6 +60,11 @@ export function OutcomeView({ tally, outcome, players, isHost, onPlayAgain }: Pr
                 {nameFor(players, c.playerId)} — {c.votes}
               </li>
             ))}
+            {tally.abstainCount > 0 && (
+              <li>
+                {t("imposter.abstain")} — {tally.abstainCount}
+              </li>
+            )}
           </ul>
         </section>
       )}

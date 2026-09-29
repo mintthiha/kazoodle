@@ -77,6 +77,7 @@ message ClueTurn {
 message VotePhase {
   repeated ClueEntry clues = 1;      // the full recap, in turn order
   repeated string candidate_ids = 2; // who can be voted for, in turn order
+  int32 vote_seconds = 3;            // how long clients should run their countdown before auto-submitting
 }
 
 // Broadcast as votes come in, so clients can show "2 / 5 voted".
@@ -95,6 +96,7 @@ message VoteTally {
   repeated VoteCount counts = 1;
   // Empty if the top vote count was tied — nobody is removed in that case.
   string voted_out_id = 2;
+  int32 abstain_count = 3;
 }
 
 // Broadcast once, instead of Outcome, when the vote catches the imposter.
@@ -141,9 +143,11 @@ message SubmitClue {
 }
 
 // One player's vote. Accepted (and replaceable) from anyone until everyone
-// has voted.
+// has voted. abstain and a non-empty suspect_id are mutually exclusive; if
+// abstain is set, suspect_id is ignored.
 message CastVote {
   string suspect_id = 1;
+  bool abstain = 2;
 }
 
 // The caught imposter's one blind guess at the secret word. Only accepted

@@ -60,6 +60,13 @@ func voteEvent(voterID, suspectID string) game.Event {
 	}
 }
 
+func abstainEvent(voterID string) game.Event {
+	return game.Event{
+		PlayerID: voterID,
+		Data:     clientMsg(&pb.ImposterClientMessage{Body: &pb.ImposterClientMessage_CastVote{CastVote: &pb.CastVote{Abstain: true}}}),
+	}
+}
+
 func guessEvent(id, text string) game.Event {
 	return game.Event{
 		PlayerID: id,
@@ -557,6 +564,57 @@ func TestCastVoteRejectsUnknownSuspect(t *testing.T) {
 
 	if _, _, err := (Game{}).Advance(st, voteEvent(order[0], "not-a-player")); err == nil {
 		t.Fatal("expected an error for an unknown suspect")
+	}
+}
+
+func TestCastVoteRejectsEmptySuspectWithoutAbstain(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
+	order := st.(*state).order
+	st, _ = readyAll(t, st, order)
+	st, _ = giveAllClues(t, st, order)
+
+	if _, _, err := (Game{}).Advance(st, voteEvent(order[0], "")); err == nil {
+		t.Fatal("expected an error for an empty suspect id with abstain not set")
+	}
+}
+
+func TestAbstainDoesNotCountTowardAnySuspect(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
+	order := st.(*state).order
+	st, _ = readyAll(t, st, order)
+	st, _ = giveAllClues(t, st, order)
+
+	// Everyone abstains. Nobody is removed and no suspect gets any votes.
+	var effects []game.Effect
+	var err error
+	for _, id := range order {
+		st, effects, err = (Game{}).Advance(st, abstainEvent(id))
+		if err != nil {
+			t.Fatalf("Advance(abstain %s): %v", id, err)
+		}
+	}
+
+	tally := findVoteTally(t, effects)
+	if tally.GetVotedOutId() != "" {
+		t.Errorf("voted out = %q, want empty when everyone abstains", tally.GetVotedOutId())
+	}
+	if tally.GetAbstainCount() != int32(len(order)) {
+		t.Errorf("abstain count = %d, want %d", tally.GetAbstainCount(), len(order))
+	}
+	if len(tally.GetCounts()) != 0 {
+		t.Errorf("counts = %v, want none — every vote was an abstain", tally.GetCounts())
+	}
+}
+
+func TestVotePhaseAdvertisesVoteSeconds(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
+	order := st.(*state).order
+	st, _ = readyAll(t, st, order)
+	_, effects := giveAllClues(t, st, order)
+
+	vp := broadcastMsg(t, effects).GetVotePhase()
+	if vp.GetVoteSeconds() != voteSeconds {
+		t.Errorf("voteSeconds = %d, want %d", vp.GetVoteSeconds(), voteSeconds)
 	}
 }
 

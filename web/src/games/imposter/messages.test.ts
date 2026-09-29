@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   decodeImposterEvent,
+  encodeAbstain,
   encodeCastVote,
   encodeGuessWord,
   encodeMarkReady,
@@ -20,6 +21,10 @@ describe("imposter messages: encode", () => {
 
   it("castVote", () => {
     expect(JSON.parse(encodeCastVote("p2"))).toEqual({ castVote: { suspectId: "p2" } });
+  });
+
+  it("abstain", () => {
+    expect(JSON.parse(encodeAbstain())).toEqual({ castVote: { abstain: true } });
   });
 
   it("guessWord", () => {
@@ -88,22 +93,25 @@ describe("imposter messages: decode", () => {
         votePhase: {
           clues: [{ playerId: "p1", text: "sand" }],
           candidateIds: ["p1", "p2", "p3"],
+          voteSeconds: 30,
         },
       }),
     );
     if (msg.body.case !== "votePhase") throw new Error("unreachable");
     expect(msg.body.value.candidateIds).toEqual(["p1", "p2", "p3"]);
+    expect(msg.body.value.voteSeconds).toBe(30);
   });
 
   it("voteTally", () => {
     const msg = decodeImposterEvent(
       JSON.stringify({
-        voteTally: { counts: [{ playerId: "p2", votes: 2 }], votedOutId: "p2" },
+        voteTally: { counts: [{ playerId: "p2", votes: 2 }], votedOutId: "p2", abstainCount: 1 },
       }),
     );
     if (msg.body.case !== "voteTally") throw new Error("unreachable");
     expect(msg.body.value.votedOutId).toBe("p2");
     expect(msg.body.value.counts[0].votes).toBe(2);
+    expect(msg.body.value.abstainCount).toBe(1);
   });
 
   it("outcome", () => {

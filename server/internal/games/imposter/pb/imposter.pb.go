@@ -492,6 +492,7 @@ type VotePhase struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Clues         []*ClueEntry           `protobuf:"bytes,1,rep,name=clues,proto3" json:"clues,omitempty"`                                   // the full recap, in turn order
 	CandidateIds  []string               `protobuf:"bytes,2,rep,name=candidate_ids,json=candidateIds,proto3" json:"candidate_ids,omitempty"` // who can be voted for, in turn order
+	VoteSeconds   int32                  `protobuf:"varint,3,opt,name=vote_seconds,json=voteSeconds,proto3" json:"vote_seconds,omitempty"`   // how long clients should run their countdown before auto-submitting
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -538,6 +539,13 @@ func (x *VotePhase) GetCandidateIds() []string {
 		return x.CandidateIds
 	}
 	return nil
+}
+
+func (x *VotePhase) GetVoteSeconds() int32 {
+	if x != nil {
+		return x.VoteSeconds
+	}
+	return 0
 }
 
 // Broadcast as votes come in, so clients can show "2 / 5 voted".
@@ -651,6 +659,7 @@ type VoteTally struct {
 	Counts []*VoteCount           `protobuf:"bytes,1,rep,name=counts,proto3" json:"counts,omitempty"`
 	// Empty if the top vote count was tied — nobody is removed in that case.
 	VotedOutId    string `protobuf:"bytes,2,opt,name=voted_out_id,json=votedOutId,proto3" json:"voted_out_id,omitempty"`
+	AbstainCount  int32  `protobuf:"varint,3,opt,name=abstain_count,json=abstainCount,proto3" json:"abstain_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -697,6 +706,13 @@ func (x *VoteTally) GetVotedOutId() string {
 		return x.VotedOutId
 	}
 	return ""
+}
+
+func (x *VoteTally) GetAbstainCount() int32 {
+	if x != nil {
+		return x.AbstainCount
+	}
+	return 0
 }
 
 // Broadcast once, instead of Outcome, when the vote catches the imposter.
@@ -1063,10 +1079,12 @@ func (x *SubmitClue) GetText() string {
 }
 
 // One player's vote. Accepted (and replaceable) from anyone until everyone
-// has voted.
+// has voted. abstain and a non-empty suspect_id are mutually exclusive; if
+// abstain is set, suspect_id is ignored.
 type CastVote struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SuspectId     string                 `protobuf:"bytes,1,opt,name=suspect_id,json=suspectId,proto3" json:"suspect_id,omitempty"`
+	Abstain       bool                   `protobuf:"varint,2,opt,name=abstain,proto3" json:"abstain,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1106,6 +1124,13 @@ func (x *CastVote) GetSuspectId() string {
 		return x.SuspectId
 	}
 	return ""
+}
+
+func (x *CastVote) GetAbstain() bool {
+	if x != nil {
+		return x.Abstain
+	}
+	return false
 }
 
 // The caught imposter's one blind guess at the secret word. Only accepted
@@ -1228,20 +1253,22 @@ const file_imposter_proto_rawDesc = "" +
 	"turn_index\x18\x02 \x01(\x05R\tturnIndex\x12\x14\n" +
 	"\x05total\x18\x03 \x01(\x05R\x05total\x128\n" +
 	"\fclues_so_far\x18\x04 \x03(\v2\x16.imposter.v1.ClueEntryR\n" +
-	"cluesSoFar\"^\n" +
+	"cluesSoFar\"\x81\x01\n" +
 	"\tVotePhase\x12,\n" +
 	"\x05clues\x18\x01 \x03(\v2\x16.imposter.v1.ClueEntryR\x05clues\x12#\n" +
-	"\rcandidate_ids\x18\x02 \x03(\tR\fcandidateIds\"N\n" +
+	"\rcandidate_ids\x18\x02 \x03(\tR\fcandidateIds\x12!\n" +
+	"\fvote_seconds\x18\x03 \x01(\x05R\vvoteSeconds\"N\n" +
 	"\fVoteProgress\x12(\n" +
 	"\x10voted_player_ids\x18\x01 \x03(\tR\x0evotedPlayerIds\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\">\n" +
 	"\tVoteCount\x12\x1b\n" +
 	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x12\x14\n" +
-	"\x05votes\x18\x02 \x01(\x05R\x05votes\"]\n" +
+	"\x05votes\x18\x02 \x01(\x05R\x05votes\"\x82\x01\n" +
 	"\tVoteTally\x12.\n" +
 	"\x06counts\x18\x01 \x03(\v2\x16.imposter.v1.VoteCountR\x06counts\x12 \n" +
 	"\fvoted_out_id\x18\x02 \x01(\tR\n" +
-	"votedOutId\".\n" +
+	"votedOutId\x12#\n" +
+	"\rabstain_count\x18\x03 \x01(\x05R\fabstainCount\".\n" +
 	"\vStealPrompt\x12\x1f\n" +
 	"\vimposter_id\x18\x01 \x01(\tR\n" +
 	"imposterId\"\x86\x02\n" +
@@ -1271,10 +1298,11 @@ const file_imposter_proto_rawDesc = "" +
 	"\tMarkReady\" \n" +
 	"\n" +
 	"SubmitClue\x12\x12\n" +
-	"\x04text\x18\x01 \x01(\tR\x04text\")\n" +
+	"\x04text\x18\x01 \x01(\tR\x04text\"C\n" +
 	"\bCastVote\x12\x1d\n" +
 	"\n" +
-	"suspect_id\x18\x01 \x01(\tR\tsuspectId\"\x1f\n" +
+	"suspect_id\x18\x01 \x01(\tR\tsuspectId\x12\x18\n" +
+	"\aabstain\x18\x02 \x01(\bR\aabstain\"\x1f\n" +
 	"\tGuessWord\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\"\v\n" +
 	"\tPlayAgainBGZEgithub.com/mintthiha/party-games/server/internal/games/imposter/pb;pbb\x06proto3"

@@ -3,6 +3,7 @@ import { useConnection } from "../../net/useConnection";
 import type { GameViewProps } from "../registry";
 import {
   decodeImposterEvent,
+  encodeAbstain,
   encodeCastVote,
   encodeGuessWord,
   encodeMarkReady,
@@ -21,7 +22,7 @@ import type {
 } from "./gen/imposter_pb";
 import { RoleView } from "./RoleView";
 import { ClueView } from "./ClueView";
-import { VoteView } from "./VoteView";
+import { VoteView, type VoteChoice } from "./VoteView";
 import { StealView } from "./StealView";
 import { OutcomeView } from "./OutcomeView";
 
@@ -44,7 +45,7 @@ export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
 
   const [votePhase, setVotePhase] = useState<VotePhase | null>(null);
   const [voteProgress, setVoteProgress] = useState<VoteProgress | null>(null);
-  const [myVote, setMyVote] = useState<string | null>(null);
+  const [myVote, setMyVote] = useState<VoteChoice | null>(null);
 
   const [voteTally, setVoteTally] = useState<VoteTally | null>(null);
   const [stealPrompt, setStealPrompt] = useState<StealPrompt | null>(null);
@@ -101,9 +102,13 @@ export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
     setMyClue("");
   }
 
-  function castVote(suspectId: string) {
-    setMyVote(suspectId);
-    actions.gameAction("imposter", encodeCastVote(suspectId));
+  function lockInVote(choice: VoteChoice) {
+    setMyVote(choice);
+    if (choice.kind === "abstain") {
+      actions.gameAction("imposter", encodeAbstain());
+    } else {
+      actions.gameAction("imposter", encodeCastVote(choice.id));
+    }
   }
 
   function sendGuess() {
@@ -151,7 +156,7 @@ export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
           votePhase={votePhase}
           progress={voteProgress}
           myVote={myVote}
-          onVote={castVote}
+          onLockIn={lockInVote}
         />
       );
     case "steal":

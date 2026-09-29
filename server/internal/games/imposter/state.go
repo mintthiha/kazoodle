@@ -50,7 +50,7 @@ type state struct {
 	turn  int         // clue phase: index into order of whose turn it is
 	clues []clueEntry // clue phase: submitted so far, in turn order
 
-	votes map[string]string // vote phase: voter id -> suspect id
+	votes map[string]string // vote phase: voter id -> suspect id, or "" for an abstain
 }
 
 // clone returns a copy safe to mutate. order and locales are never changed

@@ -61,6 +61,12 @@ const en = {
 
   "imposter.voteHeading": "Who's the imposter?",
   "imposter.voteProgress": "{voted} / {total} voted",
+  "imposter.abstain": "Abstain",
+  "imposter.lockIn": "Lock in",
+  "imposter.changeVote": "Change vote",
+  "imposter.voteLockedIn": "Locked in: {who}",
+  "imposter.voteTimeLeft": "{seconds}s left to decide",
+  "imposter.voteTimeUp": "Time's up — your pick was locked in.",
 
   "imposter.stealHeading": "Caught!",
   "imposter.stealHintImposter": "You were caught — but you get one guess at the word to steal the win.",
@@ -145,6 +151,12 @@ const fr: Record<MessageKey, string> = {
 
   "imposter.voteHeading": "Qui est l’imposteur ?",
   "imposter.voteProgress": "{voted} / {total} ont voté",
+  "imposter.abstain": "S’abstenir",
+  "imposter.lockIn": "Verrouiller",
+  "imposter.changeVote": "Changer de vote",
+  "imposter.voteLockedIn": "Verrouillé : {who}",
+  "imposter.voteTimeLeft": "{seconds} s pour décider",
+  "imposter.voteTimeUp": "Temps écoulé — votre choix a été verrouillé.",
 
   "imposter.stealHeading": "Démasqué !",
   "imposter.stealHintImposter": "Vous avez été démasqué — mais vous avez une chance de deviner le mot pour voler la victoire.",

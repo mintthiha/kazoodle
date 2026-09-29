@@ -15,6 +15,13 @@ import (
 // at least two others to give clues.
 const minPlayers = 3
 
+// voteSeconds is how long clients should run their countdown before
+// auto-submitting whatever is currently selected (or abstaining). The timer
+// itself lives entirely on the client — see VoteView.tsx — the same trust
+// level as any other vote: a player who never sends anything just leaves the
+// round waiting on them, exactly as before this existed.
+const voteSeconds = 30
+
 var unmarshal = protojson.UnmarshalOptions{DiscardUnknown: true}
 
 // Game is the Imposter game. It holds no state of its own — a round's state
@@ -87,7 +94,7 @@ func (Game) Advance(current game.State, ev game.Event) (game.State, []game.Effec
 	case *pb.ImposterClientMessage_SubmitClue:
 		return advanceClue(st, ev.PlayerID, body.SubmitClue.GetText())
 	case *pb.ImposterClientMessage_CastVote:
-		return advanceVote(st, ev.PlayerID, body.CastVote.GetSuspectId())
+		return advanceVote(st, ev.PlayerID, body.CastVote.GetSuspectId(), body.CastVote.GetAbstain())
 	case *pb.ImposterClientMessage_GuessWord:
 		return advanceSteal(st, ev.PlayerID, body.GuessWord.GetText())
 	case *pb.ImposterClientMessage_PlayAgain:
@@ -136,16 +143,23 @@ func advanceClue(st *state, playerID, text string) (game.State, []game.Effect, e
 	return next, []game.Effect{game.Send{Msg: clueTurn(next)}}, nil
 }
 
-// advanceVote handles one player's vote (or changed vote). Once everyone has
-// voted, it tallies the result. If the vote caught the imposter, they get one
-// steal guess before the round resolves; otherwise the Outcome is final
-// immediately.
-func advanceVote(st *state, voterID, suspectID string) (game.State, []game.Effect, error) {
+// advanceVote handles one player's vote, abstain, or changed mind. Once
+// everyone has voted (or abstained), it tallies the result. If the vote
+// caught the imposter, they get one steal guess before the round resolves;
+// otherwise the Outcome is final immediately.
+func advanceVote(st *state, voterID, suspectID string, abstain bool) (game.State, []game.Effect, error) {
 	if st.phase != phaseVote {
 		return st, nil, fmt.Errorf("imposter: voting is not open right now")
 	}
-	if !contains(st.order, suspectID) {
-		return st, nil, fmt.Errorf("imposter: %q is not a player in this room", suspectID)
+	if abstain {
+		suspectID = "" // the sentinel stored in state.votes for "no suspect"
+	} else {
+		if suspectID == "" {
+			return st, nil, fmt.Errorf("imposter: must vote for a suspect or abstain")
+		}
+		if !contains(st.order, suspectID) {
+			return st, nil, fmt.Errorf("imposter: %q is not a player in this room", suspectID)
+		}
 	}
 
 	next := st.clone()
@@ -218,10 +232,14 @@ func normalizeGuess(s string) string {
 // tally returns who the room voted to remove and whether that was the
 // imposter (caught, not yet whether the crew ultimately wins — a catch still
 // gives the imposter a steal guess). A tie for the most votes means no one is
-// removed and the imposter escapes.
+// removed and the imposter escapes. Abstains (the "" sentinel) never count
+// toward anyone and can't cause a catch by themselves.
 func tally(st *state) (votedOutID string, caught bool) {
 	counts := make(map[string]int, len(st.order))
 	for _, suspect := range st.votes {
+		if suspect == "" {
+			continue
+		}
 		counts[suspect]++
 	}
 
@@ -300,6 +318,7 @@ func votePhase(st *state) *pb.ImposterServerMessage {
 			VotePhase: &pb.VotePhase{
 				Clues:        clueEntries(st),
 				CandidateIds: append([]string(nil), st.order...),
+				VoteSeconds:  voteSeconds,
 			},
 		},
 	}
@@ -323,7 +342,12 @@ func voteProgress(st *state) *pb.ImposterServerMessage {
 // voteTally reports how the vote broke down and who (if anyone) was removed.
 func voteTally(st *state, votedOutID string) *pb.ImposterServerMessage {
 	counts := make(map[string]int32, len(st.order))
+	var abstains int32
 	for _, suspect := range st.votes {
+		if suspect == "" {
+			abstains++
+			continue
+		}
 		counts[suspect]++
 	}
 	out := make([]*pb.VoteCount, 0, len(counts))
@@ -334,7 +358,7 @@ func voteTally(st *state, votedOutID string) *pb.ImposterServerMessage {
 	}
 	return &pb.ImposterServerMessage{
 		Body: &pb.ImposterServerMessage_VoteTally{
-			VoteTally: &pb.VoteTally{Counts: out, VotedOutId: votedOutID},
+			VoteTally: &pb.VoteTally{Counts: out, VotedOutId: votedOutID, AbstainCount: abstains},
 		},
 	}
 }
