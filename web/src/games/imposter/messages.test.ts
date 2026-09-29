@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { decodeImposterEvent, encodeCastVote, encodeMarkReady, encodeSubmitClue } from "./messages";
+import {
+  decodeImposterEvent,
+  encodeCastVote,
+  encodeGuessWord,
+  encodeMarkReady,
+  encodePlayAgain,
+  encodeSubmitClue,
+} from "./messages";
 
 describe("imposter messages: encode", () => {
   it("markReady as a canonical-JSON envelope body", () => {
@@ -12,6 +19,14 @@ describe("imposter messages: encode", () => {
 
   it("castVote", () => {
     expect(JSON.parse(encodeCastVote("p2"))).toEqual({ castVote: { suspectId: "p2" } });
+  });
+
+  it("guessWord", () => {
+    expect(JSON.parse(encodeGuessWord("beach"))).toEqual({ guessWord: { text: "beach" } });
+  });
+
+  it("playAgain", () => {
+    expect(JSON.parse(encodePlayAgain())).toEqual({ playAgain: {} });
   });
 });
 
@@ -97,6 +112,34 @@ describe("imposter messages: decode", () => {
     if (msg.body.case !== "outcome") throw new Error("unreachable");
     expect(msg.body.value.crewWon).toBe(true);
     expect(msg.body.value.word).toBe("Beach");
+  });
+
+  it("outcome with a steal attempt", () => {
+    const msg = decodeImposterEvent(
+      JSON.stringify({
+        outcome: {
+          imposterId: "p2",
+          word: "Beach",
+          category: "Places",
+          crewWon: false,
+          votedOutId: "p2",
+          stealAttempted: true,
+          stealGuess: "Beach",
+          stealCorrect: true,
+        },
+      }),
+    );
+    if (msg.body.case !== "outcome") throw new Error("unreachable");
+    expect(msg.body.value.crewWon).toBe(false);
+    expect(msg.body.value.stealAttempted).toBe(true);
+    expect(msg.body.value.stealGuess).toBe("Beach");
+    expect(msg.body.value.stealCorrect).toBe(true);
+  });
+
+  it("stealPrompt", () => {
+    const msg = decodeImposterEvent(JSON.stringify({ stealPrompt: { imposterId: "p2" } }));
+    if (msg.body.case !== "stealPrompt") throw new Error("unreachable");
+    expect(msg.body.value.imposterId).toBe("p2");
   });
 
   it("throws on a malformed payload", () => {

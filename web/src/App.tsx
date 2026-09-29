@@ -16,7 +16,11 @@ export function App() {
   if (snapshot.room && snapshot.game) {
     const GameView = gameViews[snapshot.game.id];
     content = GameView ? (
-      <GameView selfId={snapshot.room.selfId} players={snapshot.room.players} />
+      <GameView
+        selfId={snapshot.room.selfId}
+        players={snapshot.room.players}
+        isHost={snapshot.room.hostId === snapshot.room.selfId}
+      />
     ) : (
       <main className="screen">
         <p className="hint">{t("game.unknown")}</p>

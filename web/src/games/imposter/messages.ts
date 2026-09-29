@@ -38,3 +38,19 @@ export function encodeCastVote(suspectId: string): string {
     create(ImposterClientMessageSchema, { body: { case: "castVote", value: { suspectId } } }),
   );
 }
+
+/** The caught imposter's one blind guess at the secret word. */
+export function encodeGuessWord(text: string): string {
+  return toJsonString(
+    ImposterClientMessageSchema,
+    create(ImposterClientMessageSchema, { body: { case: "guessWord", value: { text } } }),
+  );
+}
+
+/** "Start a new round." Only accepted once the round has reached its outcome. */
+export function encodePlayAgain(): string {
+  return toJsonString(
+    ImposterClientMessageSchema,
+    create(ImposterClientMessageSchema, { body: { case: "playAgain", value: {} } }),
+  );
+}

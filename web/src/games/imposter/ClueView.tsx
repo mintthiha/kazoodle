@@ -18,7 +18,7 @@ export function ClueView({ turn, value, onChange, onSubmit, selfId, players }: P
   if (!turn) {
     return (
       <main className="screen">
-        <p className="hint">{t("imposter.dealing")}</p>
+        <p className="status">{t("imposter.dealing")}</p>
       </main>
     );
   }
@@ -28,7 +28,7 @@ export function ClueView({ turn, value, onChange, onSubmit, selfId, players }: P
   return (
     <main className="screen">
       <h1>{t("imposter.cluesHeading")}</h1>
-      <p className="hint">
+      <p className="status">
         {t("imposter.clueProgress", { turn: turn.turnIndex + 1, total: turn.total })}
       </p>
 
@@ -60,7 +60,7 @@ export function ClueView({ turn, value, onChange, onSubmit, selfId, players }: P
           </button>
         </section>
       ) : (
-        <p className="hint">{t("imposter.waitingForClue", { who: nameFor(players, turn.playerId) })}</p>
+        <p className="status">{t("imposter.waitingForClue", { who: nameFor(players, turn.playerId) })}</p>
       )}
     </main>
   );

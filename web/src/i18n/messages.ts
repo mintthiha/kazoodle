@@ -60,6 +60,14 @@ const en = {
   "imposter.voteHeading": "Who's the imposter?",
   "imposter.voteProgress": "{voted} / {total} voted",
 
+  "imposter.stealHeading": "Caught!",
+  "imposter.stealHintImposter": "You were caught — but you get one guess at the word to steal the win.",
+  "imposter.stealHintOther": "{who} was caught. They get one guess at the word to steal the win back.",
+  "imposter.stealGuessLabel": "Your guess",
+  "imposter.stealGuessPlaceholder": "The secret word",
+  "imposter.stealSubmit": "Guess",
+  "imposter.stealWaiting": "Waiting for {who} to guess…",
+
   "imposter.outcomeHeading": "Results",
   "imposter.crewWon": "The crew wins!",
   "imposter.imposterWon": "The imposter wins!",
@@ -67,7 +75,11 @@ const en = {
   "imposter.revealWord": "The word was “{word}” ({category}).",
   "imposter.votedOut": "{who} was voted out.",
   "imposter.noOneVotedOut": "The vote was tied — no one was voted out.",
+  "imposter.stealSucceeded": "{who} guessed “{guess}” — exactly right. Stolen!",
+  "imposter.stealFailed": "{who} guessed “{guess}” — not quite.",
   "imposter.votesHeading": "Votes",
+  "imposter.playAgain": "Play again",
+  "imposter.waitingForHost": "Waiting for the host to start another round…",
 
   "error.room_not_found": "No room with that code.",
   "error.generic": "Something went wrong.",
@@ -130,6 +142,14 @@ const fr: Record<MessageKey, string> = {
   "imposter.voteHeading": "Qui est l’imposteur ?",
   "imposter.voteProgress": "{voted} / {total} ont voté",
 
+  "imposter.stealHeading": "Démasqué !",
+  "imposter.stealHintImposter": "Vous avez été démasqué — mais vous avez une chance de deviner le mot pour voler la victoire.",
+  "imposter.stealHintOther": "{who} a été démasqué. Une dernière chance de deviner le mot pour voler la victoire.",
+  "imposter.stealGuessLabel": "Votre réponse",
+  "imposter.stealGuessPlaceholder": "Le mot secret",
+  "imposter.stealSubmit": "Deviner",
+  "imposter.stealWaiting": "En attente de la réponse de {who}…",
+
   "imposter.outcomeHeading": "Résultats",
   "imposter.crewWon": "L’équipe gagne !",
   "imposter.imposterWon": "L’imposteur gagne !",
@@ -137,7 +157,11 @@ const fr: Record<MessageKey, string> = {
   "imposter.revealWord": "Le mot était « {word} » ({category}).",
   "imposter.votedOut": "{who} a été exclu(e) par le vote.",
   "imposter.noOneVotedOut": "Le vote était à égalité — personne n’a été exclu(e).",
+  "imposter.stealSucceeded": "{who} a deviné « {guess} » — en plein dans le mille. Volé !",
+  "imposter.stealFailed": "{who} a deviné « {guess} » — pas tout à fait.",
   "imposter.votesHeading": "Votes",
+  "imposter.playAgain": "Rejouer",
+  "imposter.waitingForHost": "En attente que l’hôte relance une manche…",
 
   "error.room_not_found": "Aucun salon avec ce code.",
   "error.generic": "Une erreur est survenue.",

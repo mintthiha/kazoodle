@@ -9,8 +9,11 @@ option go_package = "github.com/mintthiha/party-games/server/internal/games/impo
 //
 // Ruleset (v1): exactly one imposter, who gets no word. One clue word per
 // player, one round, in a server-set order. Everyone then votes; a tie means
-// no one is removed and the imposter escapes. There is no steal-the-win guess
-// yet, and no "play again" — a finished round just shows its Outcome.
+// no one is removed and the imposter escapes. If the vote catches the
+// imposter, they get one blind guess at the secret word to steal the win
+// before the round's Outcome is revealed. A finished round stays on everyone's
+// screen until a player sends PlayAgain, which ends it so the host can start
+// a fresh one.
 
 // ── Server → Client ───────────────────────────────────────────────────────
 
@@ -23,6 +26,7 @@ message ImposterServerMessage {
     VoteProgress vote_progress = 5;
     VoteTally vote_tally = 6;
     Outcome outcome = 7;
+    StealPrompt steal_prompt = 8;
   }
 }
 
@@ -80,14 +84,27 @@ message VoteTally {
   string voted_out_id = 2;
 }
 
-// Sent privately to each player once voting closes. word/category are
-// localized per recipient, which is why this isn't a broadcast.
+// Broadcast once, instead of Outcome, when the vote catches the imposter.
+// Everyone waits while the imposter gets one blind guess at the word.
+message StealPrompt {
+  string imposter_id = 1;
+}
+
+// Sent privately to each player once the round is fully decided — right after
+// VoteTally if the imposter wasn't caught, or after their steal guess if they
+// were. word/category are localized per recipient, which is why this isn't a
+// broadcast.
 message Outcome {
   string imposter_id = 1;
   string word = 2;
   string category = 3;
   bool crew_won = 4;
   string voted_out_id = 5; // empty if the vote was tied
+
+  // Set only when the imposter was caught and got a steal guess.
+  bool steal_attempted = 6;
+  string steal_guess = 7;
+  bool steal_correct = 8;
 }
 
 // ── Client → Server ───────────────────────────────────────────────────────
@@ -97,6 +114,8 @@ message ImposterClientMessage {
     MarkReady mark_ready = 1;
     SubmitClue submit_clue = 2;
     CastVote cast_vote = 3;
+    GuessWord guess_word = 4;
+    PlayAgain play_again = 5;
   }
 }
 
@@ -113,3 +132,13 @@ message SubmitClue {
 message CastVote {
   string suspect_id = 1;
 }
+
+// The caught imposter's one blind guess at the secret word. Only accepted
+// from the imposter, and only while the steal phase is open.
+message GuessWord {
+  string text = 1;
+}
+
+// "Start a new round." Only accepted once the current round has reached its
+// Outcome. Ends the round; the host starts the next one from the lobby.
+message PlayAgain {}

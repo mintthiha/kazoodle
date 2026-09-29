@@ -78,6 +78,10 @@ func (Game) Advance(current game.State, ev game.Event) (game.State, []game.Effec
 		return advanceClue(st, ev.PlayerID, body.SubmitClue.GetText())
 	case *pb.ImposterClientMessage_CastVote:
 		return advanceVote(st, ev.PlayerID, body.CastVote.GetSuspectId())
+	case *pb.ImposterClientMessage_GuessWord:
+		return advanceSteal(st, ev.PlayerID, body.GuessWord.GetText())
+	case *pb.ImposterClientMessage_PlayAgain:
+		return advancePlayAgain(st)
 	default:
 		return current, nil, fmt.Errorf("imposter: unsupported message in phase %s", st.phase)
 	}
@@ -123,7 +127,9 @@ func advanceClue(st *state, playerID, text string) (game.State, []game.Effect, e
 }
 
 // advanceVote handles one player's vote (or changed vote). Once everyone has
-// voted, it tallies the result and privately tells each player the Outcome.
+// voted, it tallies the result. If the vote caught the imposter, they get one
+// steal guess before the round resolves; otherwise the Outcome is final
+// immediately.
 func advanceVote(st *state, voterID, suspectID string) (game.State, []game.Effect, error) {
 	if st.phase != phaseVote {
 		return st, nil, fmt.Errorf("imposter: voting is not open right now")
@@ -138,24 +144,72 @@ func advanceVote(st *state, voterID, suspectID string) (game.State, []game.Effec
 		return next, []game.Effect{game.Send{Msg: voteProgress(next)}}, nil
 	}
 
-	next.phase = phaseOutcome
-	votedOutID, crewWon := tally(next)
+	votedOutID, caught := tally(next)
+	effects := []game.Effect{game.Send{Msg: voteTally(next, votedOutID)}}
 
-	effects := make([]game.Effect, 0, len(next.order)+1)
-	effects = append(effects, game.Send{Msg: voteTally(next, votedOutID)})
-	for _, id := range next.order {
-		effects = append(effects, game.Send{To: []string{id}, Msg: outcomeFor(next, id, votedOutID, crewWon)})
+	if caught {
+		next.phase = phaseSteal
+		return next, append(effects, game.Send{Msg: stealPrompt(next)}), nil
 	}
-	// No EndGame effect here on purpose: the round's result should stay on
-	// screen until a later slice adds a "play again" action that explicitly
-	// starts the next one.
+
+	next.phase = phaseOutcome
+	for _, id := range next.order {
+		effects = append(effects, game.Send{To: []string{id}, Msg: outcomeFor(next, id, votedOutID, false, false, "", false)})
+	}
+	// No EndGame effect here on purpose: the round's result stays on screen
+	// until a player sends PlayAgain.
 	return next, effects, nil
 }
 
+// advanceSteal handles the caught imposter's one blind guess at the secret
+// word. A correct guess steals the win back for the imposter; anything else
+// leaves the crew's win standing. Either way the round is now final.
+func advanceSteal(st *state, playerID, guess string) (game.State, []game.Effect, error) {
+	if st.phase != phaseSteal {
+		return st, nil, fmt.Errorf("imposter: there is no steal guess to make right now")
+	}
+	if playerID != st.imposterID {
+		return st, nil, fmt.Errorf("imposter: only the imposter gets a steal guess")
+	}
+	guess = strings.TrimSpace(guess)
+	if guess == "" {
+		return st, nil, fmt.Errorf("imposter: a guess can't be empty")
+	}
+
+	next := st.clone()
+	next.phase = phaseOutcome
+	votedOutID, _ := tally(next) // still the imposter; votes are unchanged since the catch
+	correct := normalizeGuess(guess) == normalizeGuess(next.entry.word.forLocale(next.locales[playerID]))
+	crewWon := !correct
+
+	effects := make([]game.Effect, 0, len(next.order))
+	for _, id := range next.order {
+		effects = append(effects, game.Send{To: []string{id}, Msg: outcomeFor(next, id, votedOutID, crewWon, true, guess, correct)})
+	}
+	return next, effects, nil
+}
+
+// advancePlayAgain ends a finished round so the host can start a fresh one.
+// It is a no-op error outside the outcome phase, so a stray or duplicate
+// PlayAgain from a slow client can't restart a round still in progress.
+func advancePlayAgain(st *state) (game.State, []game.Effect, error) {
+	if st.phase != phaseOutcome {
+		return st, nil, fmt.Errorf("imposter: the round isn't over yet")
+	}
+	return st, []game.Effect{game.EndGame{Reason: "finished"}}, nil
+}
+
+// normalizeGuess makes a steal guess forgiving of case and surrounding
+// whitespace without changing what counts as a match otherwise.
+func normalizeGuess(s string) string {
+	return strings.ToLower(strings.TrimSpace(s))
+}
+
 // tally returns who the room voted to remove and whether that was the
-// imposter. A tie for the most votes means no one is removed and the imposter
-// escapes.
-func tally(st *state) (votedOutID string, crewWon bool) {
+// imposter (caught, not yet whether the crew ultimately wins — a catch still
+// gives the imposter a steal guess). A tie for the most votes means no one is
+// removed and the imposter escapes.
+func tally(st *state) (votedOutID string, caught bool) {
 	counts := make(map[string]int, len(st.order))
 	for _, suspect := range st.votes {
 		counts[suspect]++
@@ -273,17 +327,30 @@ func voteTally(st *state, votedOutID string) *pb.ImposterServerMessage {
 }
 
 // outcomeFor builds the private, locale-appropriate Outcome for one player.
-func outcomeFor(st *state, playerID, votedOutID string, crewWon bool) *pb.ImposterServerMessage {
+func outcomeFor(st *state, playerID, votedOutID string, crewWon, stealAttempted bool, stealGuess string, stealCorrect bool) *pb.ImposterServerMessage {
 	locale := st.locales[playerID]
 	return &pb.ImposterServerMessage{
 		Body: &pb.ImposterServerMessage_Outcome{
 			Outcome: &pb.Outcome{
-				ImposterId: st.imposterID,
-				Word:       st.entry.word.forLocale(locale),
-				Category:   st.entry.category.forLocale(locale),
-				CrewWon:    crewWon,
-				VotedOutId: votedOutID,
+				ImposterId:     st.imposterID,
+				Word:           st.entry.word.forLocale(locale),
+				Category:       st.entry.category.forLocale(locale),
+				CrewWon:        crewWon,
+				VotedOutId:     votedOutID,
+				StealAttempted: stealAttempted,
+				StealGuess:     stealGuess,
+				StealCorrect:   stealCorrect,
 			},
+		},
+	}
+}
+
+// stealPrompt announces that the vote caught the imposter, who now gets one
+// blind guess at the word before the round resolves.
+func stealPrompt(st *state) *pb.ImposterServerMessage {
+	return &pb.ImposterServerMessage{
+		Body: &pb.ImposterServerMessage_StealPrompt{
+			StealPrompt: &pb.StealPrompt{ImposterId: st.imposterID},
 		},
 	}
 }

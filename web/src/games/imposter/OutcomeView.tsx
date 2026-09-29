@@ -6,17 +6,20 @@ import { nameFor } from "./nameFor";
 interface Props extends GameViewProps {
   tally: VoteTally | null;
   outcome: Outcome | null;
+  isHost: boolean;
+  onPlayAgain: () => void;
 }
 
-// The final screen: who won, who the imposter was, the word, and the vote
-// breakdown. There's no "play again" yet — the round just stays here.
-export function OutcomeView({ tally, outcome, players }: Props) {
+// The final screen: who won, who the imposter was, the word, the steal
+// attempt (if there was one), and the vote breakdown. The host gets a "play
+// again" button; everyone else just waits for it.
+export function OutcomeView({ tally, outcome, players, isHost, onPlayAgain }: Props) {
   const { t } = useT();
 
   if (!outcome) {
     return (
       <main className="screen">
-        <p className="hint">{t("imposter.dealing")}</p>
+        <p className="status">{t("imposter.dealing")}</p>
       </main>
     );
   }
@@ -38,6 +41,14 @@ export function OutcomeView({ tally, outcome, players }: Props) {
             ? t("imposter.votedOut", { who: nameFor(players, outcome.votedOutId) })
             : t("imposter.noOneVotedOut")}
         </p>
+        {outcome.stealAttempted && (
+          <p className="role-hint">
+            {t(outcome.stealCorrect ? "imposter.stealSucceeded" : "imposter.stealFailed", {
+              who: nameFor(players, outcome.imposterId),
+              guess: outcome.stealGuess,
+            })}
+          </p>
+        )}
       </section>
 
       {tally && (
@@ -51,6 +62,14 @@ export function OutcomeView({ tally, outcome, players }: Props) {
             ))}
           </ul>
         </section>
+      )}
+
+      {isHost ? (
+        <button className="primary" onClick={onPlayAgain}>
+          {t("imposter.playAgain")}
+        </button>
+      ) : (
+        <p className="status">{t("imposter.waitingForHost")}</p>
       )}
     </main>
   );

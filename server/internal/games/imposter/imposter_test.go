@@ -2,6 +2,7 @@ package imposter
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"google.golang.org/protobuf/encoding/protojson"
@@ -46,6 +47,20 @@ func voteEvent(voterID, suspectID string) game.Event {
 	return game.Event{
 		PlayerID: voterID,
 		Data:     clientMsg(&pb.ImposterClientMessage{Body: &pb.ImposterClientMessage_CastVote{CastVote: &pb.CastVote{SuspectId: suspectID}}}),
+	}
+}
+
+func guessEvent(id, text string) game.Event {
+	return game.Event{
+		PlayerID: id,
+		Data:     clientMsg(&pb.ImposterClientMessage{Body: &pb.ImposterClientMessage_GuessWord{GuessWord: &pb.GuessWord{Text: text}}}),
+	}
+}
+
+func playAgainEvent(id string) game.Event {
+	return game.Event{
+		PlayerID: id,
+		Data:     clientMsg(&pb.ImposterClientMessage{Body: &pb.ImposterClientMessage_PlayAgain{PlayAgain: &pb.PlayAgain{}}}),
 	}
 }
 
@@ -112,6 +127,56 @@ func broadcastMsg(t *testing.T, effects []game.Effect) *pb.ImposterServerMessage
 		t.Fatal("no broadcast ImposterServerMessage in effects")
 	}
 	return got
+}
+
+// broadcasts returns every broadcast (To == nil) ImposterServerMessage in
+// effects, in order. A vote that catches the imposter emits two — VoteTally
+// then StealPrompt — so callers that care about one specific kind should
+// search this list rather than assume it's the last one.
+func broadcasts(t *testing.T, effects []game.Effect) []*pb.ImposterServerMessage {
+	t.Helper()
+	var got []*pb.ImposterServerMessage
+	for _, e := range effects {
+		if s, ok := e.(game.Send); ok && len(s.To) == 0 {
+			if m, ok := s.Msg.(*pb.ImposterServerMessage); ok {
+				got = append(got, m)
+			}
+		}
+	}
+	return got
+}
+
+func findVoteTally(t *testing.T, effects []game.Effect) *pb.VoteTally {
+	t.Helper()
+	for _, m := range broadcasts(t, effects) {
+		if tally := m.GetVoteTally(); tally != nil {
+			return tally
+		}
+	}
+	t.Fatal("no VoteTally broadcast in effects")
+	return nil
+}
+
+func findStealPrompt(effects []game.Effect) *pb.StealPrompt {
+	for _, e := range effects {
+		if s, ok := e.(game.Send); ok && len(s.To) == 0 {
+			if m, ok := s.Msg.(*pb.ImposterServerMessage); ok {
+				if sp := m.GetStealPrompt(); sp != nil {
+					return sp
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func hasEndGame(effects []game.Effect) bool {
+	for _, e := range effects {
+		if _, ok := e.(game.EndGame); ok {
+			return true
+		}
+	}
+	return false
 }
 
 func collectOutcomes(t *testing.T, effects []game.Effect) map[string]*pb.Outcome {
@@ -348,7 +413,7 @@ func TestCluePhaseProgressesAndTransitionsToVote(t *testing.T) {
 
 // ─── vote phase ─────────────────────────────────────────────────────────────
 
-func TestVoteTallyDeclaresCrewWinnerWhenImposterCaught(t *testing.T) {
+func TestVoteCatchingImposterOpensStealPhaseInsteadOfOutcome(t *testing.T) {
 	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
 	s := st.(*state)
 	order, imposter := s.order, s.imposterID
@@ -365,33 +430,19 @@ func TestVoteTallyDeclaresCrewWinnerWhenImposterCaught(t *testing.T) {
 		}
 	}
 
-	tally := broadcastMsg(t, effects).GetVoteTally()
-	if tally == nil {
-		t.Fatal("no VoteTally broadcast")
-	}
+	tally := findVoteTally(t, effects)
 	if tally.GetVotedOutId() != imposter {
 		t.Errorf("voted out = %s, want the imposter %s", tally.GetVotedOutId(), imposter)
 	}
-
-	outcomes := collectOutcomes(t, effects)
-	if len(outcomes) != len(order) {
-		t.Fatalf("got %d private outcomes, want %d", len(outcomes), len(order))
+	if sp := findStealPrompt(effects); sp == nil || sp.GetImposterId() != imposter {
+		t.Fatalf("StealPrompt = %v, want one naming the imposter %s", sp, imposter)
 	}
-	for id, o := range outcomes {
-		if !o.GetCrewWon() {
-			t.Errorf("player %s: crewWon = false, want true", id)
-		}
-		if o.GetImposterId() != imposter {
-			t.Errorf("player %s: imposterId = %s, want %s", id, o.GetImposterId(), imposter)
-		}
+	// No Outcome yet — the imposter's steal guess still decides it.
+	if outcomes := collectOutcomes(t, effects); len(outcomes) != 0 {
+		t.Errorf("got %d private outcomes before the steal guess, want 0", len(outcomes))
 	}
-	if st.(*state).phase != phaseOutcome {
-		t.Errorf("phase = %s, want outcome", st.(*state).phase)
-	}
-	for _, e := range effects {
-		if _, ok := e.(game.EndGame); ok {
-			t.Error("Advance emitted EndGame; the round should stay visible until a later slice adds play-again")
-		}
+	if st.(*state).phase != phaseSteal {
+		t.Errorf("phase = %s, want steal", st.(*state).phase)
 	}
 }
 
@@ -468,5 +519,137 @@ func TestCastVoteRejectedOutsideVotePhase(t *testing.T) {
 
 	if _, _, err := (Game{}).Advance(st, voteEvent(order[0], order[1])); err == nil {
 		t.Fatal("expected an error when voting before the vote phase")
+	}
+}
+
+// ─── steal phase ────────────────────────────────────────────────────────────
+
+// reachStealPhase drives a fresh 3-player round through reveal, clues, and a
+// unanimous vote for the imposter, landing on the steal phase.
+func reachStealPhase(t *testing.T) (st game.State, order []string, imposter string) {
+	t.Helper()
+	st, _, _ = (Game{}).Init(mkPlayers(3, "en"))
+	s := st.(*state)
+	order, imposter = s.order, s.imposterID
+
+	st, _ = readyAll(t, st, order)
+	st, _ = giveAllClues(t, st, order)
+
+	var err error
+	for _, id := range order {
+		st, _, err = (Game{}).Advance(st, voteEvent(id, imposter))
+		if err != nil {
+			t.Fatalf("Advance(vote %s): %v", id, err)
+		}
+	}
+	if st.(*state).phase != phaseSteal {
+		t.Fatalf("setup: phase = %s, want steal", st.(*state).phase)
+	}
+	return st, order, imposter
+}
+
+func TestStealGuessCorrectStealsTheWinForTheImposter(t *testing.T) {
+	st, order, imposter := reachStealPhase(t)
+	word := st.(*state).entry.word.forLocale("en")
+
+	// Mixed case and surrounding whitespace still count as correct.
+	st, effects, err := (Game{}).Advance(st, guessEvent(imposter, "  "+strings.ToUpper(word)+"  "))
+	if err != nil {
+		t.Fatalf("Advance(guess): %v", err)
+	}
+
+	outcomes := collectOutcomes(t, effects)
+	if len(outcomes) != len(order) {
+		t.Fatalf("got %d private outcomes, want %d", len(outcomes), len(order))
+	}
+	for id, o := range outcomes {
+		if o.GetCrewWon() {
+			t.Errorf("player %s: crewWon = true, want false — the imposter stole it", id)
+		}
+		if !o.GetStealAttempted() || !o.GetStealCorrect() {
+			t.Errorf("player %s: stealAttempted=%v stealCorrect=%v, want true/true", id, o.GetStealAttempted(), o.GetStealCorrect())
+		}
+		if o.GetStealGuess() != strings.ToUpper(word) {
+			t.Errorf("player %s: stealGuess = %q, want the trimmed guess text echoed back", id, o.GetStealGuess())
+		}
+	}
+	if st.(*state).phase != phaseOutcome {
+		t.Errorf("phase = %s, want outcome", st.(*state).phase)
+	}
+}
+
+func TestStealGuessWrongLeavesCrewWinStanding(t *testing.T) {
+	st, _, imposter := reachStealPhase(t)
+
+	_, effects, err := (Game{}).Advance(st, guessEvent(imposter, "definitely not the word"))
+	if err != nil {
+		t.Fatalf("Advance(guess): %v", err)
+	}
+
+	for id, o := range collectOutcomes(t, effects) {
+		if !o.GetCrewWon() {
+			t.Errorf("player %s: crewWon = false, want true — the steal missed", id)
+		}
+		if !o.GetStealAttempted() || o.GetStealCorrect() {
+			t.Errorf("player %s: stealAttempted=%v stealCorrect=%v, want true/false", id, o.GetStealAttempted(), o.GetStealCorrect())
+		}
+	}
+}
+
+func TestStealGuessRejectsNonImposter(t *testing.T) {
+	st, order, imposter := reachStealPhase(t)
+	var crew string
+	for _, id := range order {
+		if id != imposter {
+			crew = id
+			break
+		}
+	}
+	if _, _, err := (Game{}).Advance(st, guessEvent(crew, "anything")); err == nil {
+		t.Fatal("expected an error when a non-imposter tries to steal")
+	}
+}
+
+func TestStealGuessRejectsEmptyText(t *testing.T) {
+	st, _, imposter := reachStealPhase(t)
+	if _, _, err := (Game{}).Advance(st, guessEvent(imposter, "   ")); err == nil {
+		t.Fatal("expected an error for a blank guess")
+	}
+}
+
+func TestStealGuessRejectedOutsideStealPhase(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	order := st.(*state).order // still in the reveal phase
+	if _, _, err := (Game{}).Advance(st, guessEvent(order[0], "beach")); err == nil {
+		t.Fatal("expected an error when guessing outside the steal phase")
+	}
+}
+
+// ─── play again ─────────────────────────────────────────────────────────────
+
+func TestPlayAgainEndsTheGameOnceTheRoundIsOver(t *testing.T) {
+	st, order, imposter := reachStealPhase(t)
+	st, _, err := (Game{}).Advance(st, guessEvent(imposter, "wrong on purpose"))
+	if err != nil {
+		t.Fatalf("Advance(guess): %v", err)
+	}
+	if st.(*state).phase != phaseOutcome {
+		t.Fatalf("setup: phase = %s, want outcome", st.(*state).phase)
+	}
+
+	_, effects, err := (Game{}).Advance(st, playAgainEvent(order[0]))
+	if err != nil {
+		t.Fatalf("Advance(play again): %v", err)
+	}
+	if !hasEndGame(effects) {
+		t.Error("PlayAgain from the outcome phase should emit game.EndGame")
+	}
+}
+
+func TestPlayAgainRejectedBeforeOutcome(t *testing.T) {
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	order := st.(*state).order
+	if _, _, err := (Game{}).Advance(st, playAgainEvent(order[0])); err == nil {
+		t.Fatal("expected an error when the round hasn't reached its outcome yet")
 	}
 }

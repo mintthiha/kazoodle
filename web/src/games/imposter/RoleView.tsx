@@ -17,7 +17,7 @@ export function RoleView({ role, progress, ready, selfId, players, onConfirm }: 
   if (!role) {
     return (
       <main className="screen">
-        <p className="hint">{t("imposter.dealing")}</p>
+        <p className="status">{t("imposter.dealing")}</p>
       </main>
     );
   }

@@ -18,7 +18,7 @@ export function VoteView({ votePhase, progress, myVote, onVote, selfId, players 
   if (!votePhase) {
     return (
       <main className="screen">
-        <p className="hint">{t("imposter.dealing")}</p>
+        <p className="status">{t("imposter.dealing")}</p>
       </main>
     );
   }

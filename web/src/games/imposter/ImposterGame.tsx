@@ -1,12 +1,20 @@
 import { useEffect, useState } from "react";
 import { useConnection } from "../../net/useConnection";
 import type { GameViewProps } from "../registry";
-import { decodeImposterEvent, encodeCastVote, encodeMarkReady, encodeSubmitClue } from "./messages";
+import {
+  decodeImposterEvent,
+  encodeCastVote,
+  encodeGuessWord,
+  encodeMarkReady,
+  encodePlayAgain,
+  encodeSubmitClue,
+} from "./messages";
 import type {
   ClueTurn,
   Outcome,
   RevealProgress,
   RoleAssignment,
+  StealPrompt,
   VotePhase,
   VoteProgress,
   VoteTally,
@@ -14,15 +22,16 @@ import type {
 import { RoleView } from "./RoleView";
 import { ClueView } from "./ClueView";
 import { VoteView } from "./VoteView";
+import { StealView } from "./StealView";
 import { OutcomeView } from "./OutcomeView";
 
 // Which screen to show. Message types map to phases 1:1, except the two
 // *Progress messages, which update within a phase rather than changing it.
-type Phase = "reveal" | "clues" | "vote" | "outcome";
+type Phase = "reveal" | "clues" | "vote" | "steal" | "outcome";
 
 // Container for the Imposter game. Folds the game-event stream into local
 // state and renders whichever phase the round is currently in.
-export function ImposterGame({ selfId, players }: GameViewProps) {
+export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
   const { actions, onGameEvent } = useConnection();
   const [phase, setPhase] = useState<Phase>("reveal");
 
@@ -38,6 +47,8 @@ export function ImposterGame({ selfId, players }: GameViewProps) {
   const [myVote, setMyVote] = useState<string | null>(null);
 
   const [voteTally, setVoteTally] = useState<VoteTally | null>(null);
+  const [stealPrompt, setStealPrompt] = useState<StealPrompt | null>(null);
+  const [myGuess, setMyGuess] = useState("");
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   useEffect(() => {
@@ -66,6 +77,10 @@ export function ImposterGame({ selfId, players }: GameViewProps) {
         case "voteTally":
           setVoteTally(msg.body.value);
           break;
+        case "stealPrompt":
+          setPhase("steal");
+          setStealPrompt(msg.body.value);
+          break;
         case "outcome":
           setPhase("outcome");
           setOutcome(msg.body.value);
@@ -91,12 +106,24 @@ export function ImposterGame({ selfId, players }: GameViewProps) {
     actions.gameAction("imposter", encodeCastVote(suspectId));
   }
 
+  function sendGuess() {
+    const text = myGuess.trim();
+    if (!text) return;
+    actions.gameAction("imposter", encodeGuessWord(text));
+    setMyGuess("");
+  }
+
+  function playAgain() {
+    actions.gameAction("imposter", encodePlayAgain());
+  }
+
   switch (phase) {
     case "reveal":
       return (
         <RoleView
           selfId={selfId}
           players={players}
+          isHost={isHost}
           role={role}
           progress={revealProgress}
           ready={readyConfirmed}
@@ -108,6 +135,7 @@ export function ImposterGame({ selfId, players }: GameViewProps) {
         <ClueView
           selfId={selfId}
           players={players}
+          isHost={isHost}
           turn={clueTurn}
           value={myClue}
           onChange={setMyClue}
@@ -119,13 +147,35 @@ export function ImposterGame({ selfId, players }: GameViewProps) {
         <VoteView
           selfId={selfId}
           players={players}
+          isHost={isHost}
           votePhase={votePhase}
           progress={voteProgress}
           myVote={myVote}
           onVote={castVote}
         />
       );
+    case "steal":
+      return (
+        <StealView
+          selfId={selfId}
+          players={players}
+          isHost={isHost}
+          prompt={stealPrompt}
+          value={myGuess}
+          onChange={setMyGuess}
+          onSubmit={sendGuess}
+        />
+      );
     case "outcome":
-      return <OutcomeView selfId={selfId} players={players} tally={voteTally} outcome={outcome} />;
+      return (
+        <OutcomeView
+          selfId={selfId}
+          players={players}
+          isHost={isHost}
+          tally={voteTally}
+          outcome={outcome}
+          onPlayAgain={playAgain}
+        />
+      );
   }
 }

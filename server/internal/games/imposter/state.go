@@ -7,6 +7,7 @@ const (
 	phaseReveal  phase = iota // players are looking at their role
 	phaseClues                // players give one clue each, in turn order
 	phaseVote                 // everyone votes for who they think the imposter is
+	phaseSteal                // the imposter was caught; they get one guess at the word
 	phaseOutcome              // the round is over; results are final
 )
 
@@ -18,6 +19,8 @@ func (p phase) String() string {
 		return "clues"
 	case phaseVote:
 		return "vote"
+	case phaseSteal:
+		return "steal"
 	case phaseOutcome:
 		return "outcome"
 	default:
