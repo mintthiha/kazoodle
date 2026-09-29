@@ -10,9 +10,11 @@ different cities. Same game library, no separate apps, no TV required.
 ## Status
 
 **Pre-alpha.** The session layer runs — start the server, open the web client,
-create or join a room, watch players sync, bounce a message through the server —
-but there are **no games yet**. Most of this README is still architecture
-direction that the code is growing into.
+create or join a room, watch players sync, bounce a message through the server.
+**Imposter** is the first playable game: role assignment, clues, voting, a
+steal-the-win guess for a caught imposter, and play-again, in English and
+French. Most of this README is still architecture direction that the code is
+growing into.
 
 ---
 
@@ -159,7 +161,8 @@ player's physical location. It receives players and events; it emits state.
 **Phase 1 — Web**
 Mobile-browser-first. No install, no store review, join by link or code.
 Ship 2–3 games that each exercise a different play mode, to prove the session
-layer generalizes.
+layer generalizes. **Imposter** (pass-and-play / local multi-device) is the
+first; 1–2 more, each covering a different play mode, are still to come.
 
 **Phase 2 — Native**
 Wrap for iOS / Android once the web version is genuinely good. Native buys
