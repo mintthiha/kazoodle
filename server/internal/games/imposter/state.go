@@ -38,11 +38,12 @@ type clueEntry struct {
 // only this package reads it. Advance treats the value it receives as
 // read-only and returns a clone with the change applied.
 type state struct {
-	phase      phase
-	order      []string          // player ids, in turn order; set once in Init
-	imposterID string            // which of order is the imposter
-	entry      wordEntry         // the secret word, before localization
-	locales    map[string]string // player id -> locale; set once in Init, used by Outcome
+	phase        phase
+	order        []string          // player ids, in turn order; set once in Init
+	imposterID   string            // which of order is the imposter
+	entry        wordEntry         // the secret word, before localization
+	locales      map[string]string // player id -> locale; set once in Init, used by Outcome
+	hintsEnabled bool              // host option, set once in Init: give the imposter the category
 
 	ready map[string]bool // reveal phase: who has confirmed they saw their role
 
@@ -67,15 +68,16 @@ func (s *state) clone() *state {
 	copy(clues, s.clues)
 
 	return &state{
-		phase:      s.phase,
-		order:      s.order,
-		imposterID: s.imposterID,
-		entry:      s.entry,
-		locales:    s.locales,
-		ready:      ready,
-		turn:       s.turn,
-		clues:      clues,
-		votes:      votes,
+		phase:        s.phase,
+		order:        s.order,
+		imposterID:   s.imposterID,
+		entry:        s.entry,
+		locales:      s.locales,
+		hintsEnabled: s.hintsEnabled,
+		ready:        ready,
+		turn:         s.turn,
+		clues:        clues,
+		votes:        votes,
 	}
 }
 

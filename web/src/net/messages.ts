@@ -47,11 +47,13 @@ export function encodeEcho(text: string): string {
   );
 }
 
-export function encodeStartGame(gameId: string): string {
+// options is the proto3-JSON of a game-specific start-options message,
+// produced by that game's own encoder. Omit it to use that game's defaults.
+export function encodeStartGame(gameId: string, options = ""): string {
   return toJsonString(
     ClientMessageSchema,
     create(ClientMessageSchema, {
-      payload: { case: "startGame", value: { gameId } },
+      payload: { case: "startGame", value: { gameId, options } },
     }),
   );
 }

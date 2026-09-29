@@ -26,9 +26,18 @@ func New() *Game { return &Game{} }
 
 // Init picks the turn order, the imposter, and the secret word, then returns a
 // private RoleAssignment for each player plus a RevealProgress broadcast.
-func (Game) Init(players []game.Player) (game.State, []game.Effect, error) {
+// options is the proto3-JSON of a StartOptions message; empty means defaults
+// (hints off).
+func (Game) Init(players []game.Player, options []byte) (game.State, []game.Effect, error) {
 	if len(players) < minPlayers {
 		return nil, nil, fmt.Errorf("imposter needs at least %d players, got %d", minPlayers, len(players))
+	}
+
+	var opts pb.StartOptions
+	if len(options) > 0 {
+		if err := unmarshal.Unmarshal(options, &opts); err != nil {
+			return nil, nil, fmt.Errorf("imposter: bad start options: %w", err)
+		}
 	}
 
 	order := make([]string, len(players))
@@ -40,13 +49,14 @@ func (Game) Init(players []game.Player) (game.State, []game.Effect, error) {
 	rand.Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
 
 	st := &state{
-		phase:      phaseReveal,
-		order:      order,
-		imposterID: order[rand.IntN(len(order))],
-		entry:      pickWord(),
-		locales:    locales,
-		ready:      make(map[string]bool),
-		votes:      make(map[string]string),
+		phase:        phaseReveal,
+		order:        order,
+		imposterID:   order[rand.IntN(len(order))],
+		entry:        pickWord(),
+		locales:      locales,
+		hintsEnabled: opts.GetHintsEnabled(),
+		ready:        make(map[string]bool),
+		votes:        make(map[string]string),
 	}
 
 	effects := make([]game.Effect, 0, len(players)+1)
@@ -241,12 +251,15 @@ func contains(ids []string, id string) bool {
 
 // ─── message builders ───────────────────────────────────────────────────────
 
-// roleFor builds the private RoleAssignment for one player. The imposter's word
-// and category are left empty.
+// roleFor builds the private RoleAssignment for one player. The imposter's
+// word is always left empty; their category is too unless the host turned
+// hints on for this round.
 func roleFor(st *state, p game.Player) *pb.ImposterServerMessage {
 	role := &pb.RoleAssignment{IsImposter: p.ID == st.imposterID}
 	if !role.IsImposter {
 		role.Word = st.entry.word.forLocale(p.Locale)
+		role.Category = st.entry.category.forLocale(p.Locale)
+	} else if st.hintsEnabled {
 		role.Category = st.entry.category.forLocale(p.Locale)
 	}
 	return &pb.ImposterServerMessage{

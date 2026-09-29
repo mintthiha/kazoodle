@@ -21,6 +21,54 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Sent as StartGame.options (proto3-JSON) when the host starts an Imposter
+// round. Omitted or all-default fields mean "use the defaults".
+type StartOptions struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// When true, the imposter's RoleAssignment includes the category (never
+	// the word) so they have something to go on while bluffing.
+	HintsEnabled  bool `protobuf:"varint,1,opt,name=hints_enabled,json=hintsEnabled,proto3" json:"hints_enabled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartOptions) Reset() {
+	*x = StartOptions{}
+	mi := &file_imposter_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartOptions) ProtoMessage() {}
+
+func (x *StartOptions) ProtoReflect() protoreflect.Message {
+	mi := &file_imposter_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartOptions.ProtoReflect.Descriptor instead.
+func (*StartOptions) Descriptor() ([]byte, []int) {
+	return file_imposter_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *StartOptions) GetHintsEnabled() bool {
+	if x != nil {
+		return x.HintsEnabled
+	}
+	return false
+}
+
 type ImposterServerMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Body:
@@ -40,7 +88,7 @@ type ImposterServerMessage struct {
 
 func (x *ImposterServerMessage) Reset() {
 	*x = ImposterServerMessage{}
-	mi := &file_imposter_proto_msgTypes[0]
+	mi := &file_imposter_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -52,7 +100,7 @@ func (x *ImposterServerMessage) String() string {
 func (*ImposterServerMessage) ProtoMessage() {}
 
 func (x *ImposterServerMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[0]
+	mi := &file_imposter_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -65,7 +113,7 @@ func (x *ImposterServerMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImposterServerMessage.ProtoReflect.Descriptor instead.
 func (*ImposterServerMessage) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{0}
+	return file_imposter_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ImposterServerMessage) GetBody() isImposterServerMessage_Body {
@@ -200,7 +248,8 @@ func (*ImposterServerMessage_Outcome) isImposterServerMessage_Body() {}
 func (*ImposterServerMessage_StealPrompt) isImposterServerMessage_Body() {}
 
 // Sent privately to each player at the start of a round. For the imposter,
-// `word` and `category` are empty.
+// `word` is always empty; `category` is too unless the host turned hints on
+// for this round (StartOptions.hints_enabled).
 type RoleAssignment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	IsImposter    bool                   `protobuf:"varint,1,opt,name=is_imposter,json=isImposter,proto3" json:"is_imposter,omitempty"`
@@ -212,7 +261,7 @@ type RoleAssignment struct {
 
 func (x *RoleAssignment) Reset() {
 	*x = RoleAssignment{}
-	mi := &file_imposter_proto_msgTypes[1]
+	mi := &file_imposter_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -224,7 +273,7 @@ func (x *RoleAssignment) String() string {
 func (*RoleAssignment) ProtoMessage() {}
 
 func (x *RoleAssignment) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[1]
+	mi := &file_imposter_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -237,7 +286,7 @@ func (x *RoleAssignment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoleAssignment.ProtoReflect.Descriptor instead.
 func (*RoleAssignment) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{1}
+	return file_imposter_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *RoleAssignment) GetIsImposter() bool {
@@ -273,7 +322,7 @@ type RevealProgress struct {
 
 func (x *RevealProgress) Reset() {
 	*x = RevealProgress{}
-	mi := &file_imposter_proto_msgTypes[2]
+	mi := &file_imposter_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -285,7 +334,7 @@ func (x *RevealProgress) String() string {
 func (*RevealProgress) ProtoMessage() {}
 
 func (x *RevealProgress) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[2]
+	mi := &file_imposter_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -298,7 +347,7 @@ func (x *RevealProgress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevealProgress.ProtoReflect.Descriptor instead.
 func (*RevealProgress) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{2}
+	return file_imposter_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *RevealProgress) GetReadyPlayerIds() []string {
@@ -326,7 +375,7 @@ type ClueEntry struct {
 
 func (x *ClueEntry) Reset() {
 	*x = ClueEntry{}
-	mi := &file_imposter_proto_msgTypes[3]
+	mi := &file_imposter_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -338,7 +387,7 @@ func (x *ClueEntry) String() string {
 func (*ClueEntry) ProtoMessage() {}
 
 func (x *ClueEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[3]
+	mi := &file_imposter_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -351,7 +400,7 @@ func (x *ClueEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClueEntry.ProtoReflect.Descriptor instead.
 func (*ClueEntry) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{3}
+	return file_imposter_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ClueEntry) GetPlayerId() string {
@@ -382,7 +431,7 @@ type ClueTurn struct {
 
 func (x *ClueTurn) Reset() {
 	*x = ClueTurn{}
-	mi := &file_imposter_proto_msgTypes[4]
+	mi := &file_imposter_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -394,7 +443,7 @@ func (x *ClueTurn) String() string {
 func (*ClueTurn) ProtoMessage() {}
 
 func (x *ClueTurn) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[4]
+	mi := &file_imposter_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -407,7 +456,7 @@ func (x *ClueTurn) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClueTurn.ProtoReflect.Descriptor instead.
 func (*ClueTurn) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{4}
+	return file_imposter_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ClueTurn) GetPlayerId() string {
@@ -449,7 +498,7 @@ type VotePhase struct {
 
 func (x *VotePhase) Reset() {
 	*x = VotePhase{}
-	mi := &file_imposter_proto_msgTypes[5]
+	mi := &file_imposter_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -461,7 +510,7 @@ func (x *VotePhase) String() string {
 func (*VotePhase) ProtoMessage() {}
 
 func (x *VotePhase) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[5]
+	mi := &file_imposter_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -474,7 +523,7 @@ func (x *VotePhase) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VotePhase.ProtoReflect.Descriptor instead.
 func (*VotePhase) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{5}
+	return file_imposter_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *VotePhase) GetClues() []*ClueEntry {
@@ -502,7 +551,7 @@ type VoteProgress struct {
 
 func (x *VoteProgress) Reset() {
 	*x = VoteProgress{}
-	mi := &file_imposter_proto_msgTypes[6]
+	mi := &file_imposter_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -514,7 +563,7 @@ func (x *VoteProgress) String() string {
 func (*VoteProgress) ProtoMessage() {}
 
 func (x *VoteProgress) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[6]
+	mi := &file_imposter_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -527,7 +576,7 @@ func (x *VoteProgress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoteProgress.ProtoReflect.Descriptor instead.
 func (*VoteProgress) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{6}
+	return file_imposter_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *VoteProgress) GetVotedPlayerIds() []string {
@@ -554,7 +603,7 @@ type VoteCount struct {
 
 func (x *VoteCount) Reset() {
 	*x = VoteCount{}
-	mi := &file_imposter_proto_msgTypes[7]
+	mi := &file_imposter_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -566,7 +615,7 @@ func (x *VoteCount) String() string {
 func (*VoteCount) ProtoMessage() {}
 
 func (x *VoteCount) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[7]
+	mi := &file_imposter_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -579,7 +628,7 @@ func (x *VoteCount) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoteCount.ProtoReflect.Descriptor instead.
 func (*VoteCount) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{7}
+	return file_imposter_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *VoteCount) GetPlayerId() string {
@@ -608,7 +657,7 @@ type VoteTally struct {
 
 func (x *VoteTally) Reset() {
 	*x = VoteTally{}
-	mi := &file_imposter_proto_msgTypes[8]
+	mi := &file_imposter_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -620,7 +669,7 @@ func (x *VoteTally) String() string {
 func (*VoteTally) ProtoMessage() {}
 
 func (x *VoteTally) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[8]
+	mi := &file_imposter_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -633,7 +682,7 @@ func (x *VoteTally) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoteTally.ProtoReflect.Descriptor instead.
 func (*VoteTally) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{8}
+	return file_imposter_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *VoteTally) GetCounts() []*VoteCount {
@@ -661,7 +710,7 @@ type StealPrompt struct {
 
 func (x *StealPrompt) Reset() {
 	*x = StealPrompt{}
-	mi := &file_imposter_proto_msgTypes[9]
+	mi := &file_imposter_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -673,7 +722,7 @@ func (x *StealPrompt) String() string {
 func (*StealPrompt) ProtoMessage() {}
 
 func (x *StealPrompt) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[9]
+	mi := &file_imposter_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -686,7 +735,7 @@ func (x *StealPrompt) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StealPrompt.ProtoReflect.Descriptor instead.
 func (*StealPrompt) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{9}
+	return file_imposter_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *StealPrompt) GetImposterId() string {
@@ -717,7 +766,7 @@ type Outcome struct {
 
 func (x *Outcome) Reset() {
 	*x = Outcome{}
-	mi := &file_imposter_proto_msgTypes[10]
+	mi := &file_imposter_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -729,7 +778,7 @@ func (x *Outcome) String() string {
 func (*Outcome) ProtoMessage() {}
 
 func (x *Outcome) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[10]
+	mi := &file_imposter_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -742,7 +791,7 @@ func (x *Outcome) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Outcome.ProtoReflect.Descriptor instead.
 func (*Outcome) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{10}
+	return file_imposter_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Outcome) GetImposterId() string {
@@ -817,7 +866,7 @@ type ImposterClientMessage struct {
 
 func (x *ImposterClientMessage) Reset() {
 	*x = ImposterClientMessage{}
-	mi := &file_imposter_proto_msgTypes[11]
+	mi := &file_imposter_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -829,7 +878,7 @@ func (x *ImposterClientMessage) String() string {
 func (*ImposterClientMessage) ProtoMessage() {}
 
 func (x *ImposterClientMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[11]
+	mi := &file_imposter_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -842,7 +891,7 @@ func (x *ImposterClientMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImposterClientMessage.ProtoReflect.Descriptor instead.
 func (*ImposterClientMessage) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{11}
+	return file_imposter_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ImposterClientMessage) GetBody() isImposterClientMessage_Body {
@@ -940,7 +989,7 @@ type MarkReady struct {
 
 func (x *MarkReady) Reset() {
 	*x = MarkReady{}
-	mi := &file_imposter_proto_msgTypes[12]
+	mi := &file_imposter_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -952,7 +1001,7 @@ func (x *MarkReady) String() string {
 func (*MarkReady) ProtoMessage() {}
 
 func (x *MarkReady) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[12]
+	mi := &file_imposter_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -965,7 +1014,7 @@ func (x *MarkReady) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MarkReady.ProtoReflect.Descriptor instead.
 func (*MarkReady) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{12}
+	return file_imposter_proto_rawDescGZIP(), []int{13}
 }
 
 // One player's clue. Only accepted from whoever's turn it currently is.
@@ -978,7 +1027,7 @@ type SubmitClue struct {
 
 func (x *SubmitClue) Reset() {
 	*x = SubmitClue{}
-	mi := &file_imposter_proto_msgTypes[13]
+	mi := &file_imposter_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -990,7 +1039,7 @@ func (x *SubmitClue) String() string {
 func (*SubmitClue) ProtoMessage() {}
 
 func (x *SubmitClue) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[13]
+	mi := &file_imposter_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1003,7 +1052,7 @@ func (x *SubmitClue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitClue.ProtoReflect.Descriptor instead.
 func (*SubmitClue) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{13}
+	return file_imposter_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *SubmitClue) GetText() string {
@@ -1024,7 +1073,7 @@ type CastVote struct {
 
 func (x *CastVote) Reset() {
 	*x = CastVote{}
-	mi := &file_imposter_proto_msgTypes[14]
+	mi := &file_imposter_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1036,7 +1085,7 @@ func (x *CastVote) String() string {
 func (*CastVote) ProtoMessage() {}
 
 func (x *CastVote) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[14]
+	mi := &file_imposter_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1049,7 +1098,7 @@ func (x *CastVote) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CastVote.ProtoReflect.Descriptor instead.
 func (*CastVote) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{14}
+	return file_imposter_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CastVote) GetSuspectId() string {
@@ -1070,7 +1119,7 @@ type GuessWord struct {
 
 func (x *GuessWord) Reset() {
 	*x = GuessWord{}
-	mi := &file_imposter_proto_msgTypes[15]
+	mi := &file_imposter_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1082,7 +1131,7 @@ func (x *GuessWord) String() string {
 func (*GuessWord) ProtoMessage() {}
 
 func (x *GuessWord) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[15]
+	mi := &file_imposter_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1095,7 +1144,7 @@ func (x *GuessWord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GuessWord.ProtoReflect.Descriptor instead.
 func (*GuessWord) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{15}
+	return file_imposter_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GuessWord) GetText() string {
@@ -1115,7 +1164,7 @@ type PlayAgain struct {
 
 func (x *PlayAgain) Reset() {
 	*x = PlayAgain{}
-	mi := &file_imposter_proto_msgTypes[16]
+	mi := &file_imposter_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1127,7 +1176,7 @@ func (x *PlayAgain) String() string {
 func (*PlayAgain) ProtoMessage() {}
 
 func (x *PlayAgain) ProtoReflect() protoreflect.Message {
-	mi := &file_imposter_proto_msgTypes[16]
+	mi := &file_imposter_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1140,14 +1189,16 @@ func (x *PlayAgain) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayAgain.ProtoReflect.Descriptor instead.
 func (*PlayAgain) Descriptor() ([]byte, []int) {
-	return file_imposter_proto_rawDescGZIP(), []int{16}
+	return file_imposter_proto_rawDescGZIP(), []int{17}
 }
 
 var File_imposter_proto protoreflect.FileDescriptor
 
 const file_imposter_proto_rawDesc = "" +
 	"\n" +
-	"\x0eimposter.proto\x12\vimposter.v1\"\x8a\x04\n" +
+	"\x0eimposter.proto\x12\vimposter.v1\"3\n" +
+	"\fStartOptions\x12#\n" +
+	"\rhints_enabled\x18\x01 \x01(\bR\fhintsEnabled\"\x8a\x04\n" +
 	"\x15ImposterServerMessage\x12F\n" +
 	"\x0frole_assignment\x18\x01 \x01(\v2\x1b.imposter.v1.RoleAssignmentH\x00R\x0eroleAssignment\x12F\n" +
 	"\x0freveal_progress\x18\x02 \x01(\v2\x1b.imposter.v1.RevealProgressH\x00R\x0erevealProgress\x124\n" +
@@ -1240,43 +1291,44 @@ func file_imposter_proto_rawDescGZIP() []byte {
 	return file_imposter_proto_rawDescData
 }
 
-var file_imposter_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_imposter_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_imposter_proto_goTypes = []any{
-	(*ImposterServerMessage)(nil), // 0: imposter.v1.ImposterServerMessage
-	(*RoleAssignment)(nil),        // 1: imposter.v1.RoleAssignment
-	(*RevealProgress)(nil),        // 2: imposter.v1.RevealProgress
-	(*ClueEntry)(nil),             // 3: imposter.v1.ClueEntry
-	(*ClueTurn)(nil),              // 4: imposter.v1.ClueTurn
-	(*VotePhase)(nil),             // 5: imposter.v1.VotePhase
-	(*VoteProgress)(nil),          // 6: imposter.v1.VoteProgress
-	(*VoteCount)(nil),             // 7: imposter.v1.VoteCount
-	(*VoteTally)(nil),             // 8: imposter.v1.VoteTally
-	(*StealPrompt)(nil),           // 9: imposter.v1.StealPrompt
-	(*Outcome)(nil),               // 10: imposter.v1.Outcome
-	(*ImposterClientMessage)(nil), // 11: imposter.v1.ImposterClientMessage
-	(*MarkReady)(nil),             // 12: imposter.v1.MarkReady
-	(*SubmitClue)(nil),            // 13: imposter.v1.SubmitClue
-	(*CastVote)(nil),              // 14: imposter.v1.CastVote
-	(*GuessWord)(nil),             // 15: imposter.v1.GuessWord
-	(*PlayAgain)(nil),             // 16: imposter.v1.PlayAgain
+	(*StartOptions)(nil),          // 0: imposter.v1.StartOptions
+	(*ImposterServerMessage)(nil), // 1: imposter.v1.ImposterServerMessage
+	(*RoleAssignment)(nil),        // 2: imposter.v1.RoleAssignment
+	(*RevealProgress)(nil),        // 3: imposter.v1.RevealProgress
+	(*ClueEntry)(nil),             // 4: imposter.v1.ClueEntry
+	(*ClueTurn)(nil),              // 5: imposter.v1.ClueTurn
+	(*VotePhase)(nil),             // 6: imposter.v1.VotePhase
+	(*VoteProgress)(nil),          // 7: imposter.v1.VoteProgress
+	(*VoteCount)(nil),             // 8: imposter.v1.VoteCount
+	(*VoteTally)(nil),             // 9: imposter.v1.VoteTally
+	(*StealPrompt)(nil),           // 10: imposter.v1.StealPrompt
+	(*Outcome)(nil),               // 11: imposter.v1.Outcome
+	(*ImposterClientMessage)(nil), // 12: imposter.v1.ImposterClientMessage
+	(*MarkReady)(nil),             // 13: imposter.v1.MarkReady
+	(*SubmitClue)(nil),            // 14: imposter.v1.SubmitClue
+	(*CastVote)(nil),              // 15: imposter.v1.CastVote
+	(*GuessWord)(nil),             // 16: imposter.v1.GuessWord
+	(*PlayAgain)(nil),             // 17: imposter.v1.PlayAgain
 }
 var file_imposter_proto_depIdxs = []int32{
-	1,  // 0: imposter.v1.ImposterServerMessage.role_assignment:type_name -> imposter.v1.RoleAssignment
-	2,  // 1: imposter.v1.ImposterServerMessage.reveal_progress:type_name -> imposter.v1.RevealProgress
-	4,  // 2: imposter.v1.ImposterServerMessage.clue_turn:type_name -> imposter.v1.ClueTurn
-	5,  // 3: imposter.v1.ImposterServerMessage.vote_phase:type_name -> imposter.v1.VotePhase
-	6,  // 4: imposter.v1.ImposterServerMessage.vote_progress:type_name -> imposter.v1.VoteProgress
-	8,  // 5: imposter.v1.ImposterServerMessage.vote_tally:type_name -> imposter.v1.VoteTally
-	10, // 6: imposter.v1.ImposterServerMessage.outcome:type_name -> imposter.v1.Outcome
-	9,  // 7: imposter.v1.ImposterServerMessage.steal_prompt:type_name -> imposter.v1.StealPrompt
-	3,  // 8: imposter.v1.ClueTurn.clues_so_far:type_name -> imposter.v1.ClueEntry
-	3,  // 9: imposter.v1.VotePhase.clues:type_name -> imposter.v1.ClueEntry
-	7,  // 10: imposter.v1.VoteTally.counts:type_name -> imposter.v1.VoteCount
-	12, // 11: imposter.v1.ImposterClientMessage.mark_ready:type_name -> imposter.v1.MarkReady
-	13, // 12: imposter.v1.ImposterClientMessage.submit_clue:type_name -> imposter.v1.SubmitClue
-	14, // 13: imposter.v1.ImposterClientMessage.cast_vote:type_name -> imposter.v1.CastVote
-	15, // 14: imposter.v1.ImposterClientMessage.guess_word:type_name -> imposter.v1.GuessWord
-	16, // 15: imposter.v1.ImposterClientMessage.play_again:type_name -> imposter.v1.PlayAgain
+	2,  // 0: imposter.v1.ImposterServerMessage.role_assignment:type_name -> imposter.v1.RoleAssignment
+	3,  // 1: imposter.v1.ImposterServerMessage.reveal_progress:type_name -> imposter.v1.RevealProgress
+	5,  // 2: imposter.v1.ImposterServerMessage.clue_turn:type_name -> imposter.v1.ClueTurn
+	6,  // 3: imposter.v1.ImposterServerMessage.vote_phase:type_name -> imposter.v1.VotePhase
+	7,  // 4: imposter.v1.ImposterServerMessage.vote_progress:type_name -> imposter.v1.VoteProgress
+	9,  // 5: imposter.v1.ImposterServerMessage.vote_tally:type_name -> imposter.v1.VoteTally
+	11, // 6: imposter.v1.ImposterServerMessage.outcome:type_name -> imposter.v1.Outcome
+	10, // 7: imposter.v1.ImposterServerMessage.steal_prompt:type_name -> imposter.v1.StealPrompt
+	4,  // 8: imposter.v1.ClueTurn.clues_so_far:type_name -> imposter.v1.ClueEntry
+	4,  // 9: imposter.v1.VotePhase.clues:type_name -> imposter.v1.ClueEntry
+	8,  // 10: imposter.v1.VoteTally.counts:type_name -> imposter.v1.VoteCount
+	13, // 11: imposter.v1.ImposterClientMessage.mark_ready:type_name -> imposter.v1.MarkReady
+	14, // 12: imposter.v1.ImposterClientMessage.submit_clue:type_name -> imposter.v1.SubmitClue
+	15, // 13: imposter.v1.ImposterClientMessage.cast_vote:type_name -> imposter.v1.CastVote
+	16, // 14: imposter.v1.ImposterClientMessage.guess_word:type_name -> imposter.v1.GuessWord
+	17, // 15: imposter.v1.ImposterClientMessage.play_again:type_name -> imposter.v1.PlayAgain
 	16, // [16:16] is the sub-list for method output_type
 	16, // [16:16] is the sub-list for method input_type
 	16, // [16:16] is the sub-list for extension type_name
@@ -1289,7 +1341,7 @@ func file_imposter_proto_init() {
 	if File_imposter_proto != nil {
 		return
 	}
-	file_imposter_proto_msgTypes[0].OneofWrappers = []any{
+	file_imposter_proto_msgTypes[1].OneofWrappers = []any{
 		(*ImposterServerMessage_RoleAssignment)(nil),
 		(*ImposterServerMessage_RevealProgress)(nil),
 		(*ImposterServerMessage_ClueTurn)(nil),
@@ -1299,7 +1351,7 @@ func file_imposter_proto_init() {
 		(*ImposterServerMessage_Outcome)(nil),
 		(*ImposterServerMessage_StealPrompt)(nil),
 	}
-	file_imposter_proto_msgTypes[11].OneofWrappers = []any{
+	file_imposter_proto_msgTypes[12].OneofWrappers = []any{
 		(*ImposterClientMessage_MarkReady)(nil),
 		(*ImposterClientMessage_SubmitClue)(nil),
 		(*ImposterClientMessage_CastVote)(nil),
@@ -1312,7 +1364,7 @@ func file_imposter_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_imposter_proto_rawDesc), len(file_imposter_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

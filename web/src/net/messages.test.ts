@@ -30,8 +30,14 @@ describe("encode", () => {
     expect(JSON.parse(encodeEcho("hi"))).toEqual({ echo: { text: "hi" } });
   });
 
-  it("startGame", () => {
+  it("startGame with no options", () => {
     expect(JSON.parse(encodeStartGame("imposter"))).toEqual({ startGame: { gameId: "imposter" } });
+  });
+
+  it("startGame carries a game's options string verbatim", () => {
+    expect(JSON.parse(encodeStartGame("imposter", '{"hintsEnabled":true}'))).toEqual({
+      startGame: { gameId: "imposter", options: '{"hintsEnabled":true}' },
+    });
   });
 
   it("gameAction wraps a game payload string verbatim", () => {

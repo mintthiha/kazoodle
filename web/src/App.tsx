@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useConnection } from "./net/useConnection";
 import { useT, type Locale } from "./i18n";
 import { gameViews } from "./games/registry";
+import { encodeStartOptions } from "./games/imposter/messages";
 import { ConnBanner } from "./screens/ConnBanner";
 import { JoinScreen } from "./screens/JoinScreen";
 import { LobbyScreen } from "./screens/LobbyScreen";
@@ -32,7 +33,9 @@ export function App() {
         room={snapshot.room}
         lastEcho={snapshot.lastEcho}
         isHost={snapshot.room.hostId === snapshot.room.selfId}
-        onStartGame={() => actions.startGame("imposter")}
+        onStartGame={(hintsEnabled) =>
+          actions.startGame("imposter", encodeStartOptions(hintsEnabled))
+        }
         onEcho={actions.echo}
         onLeave={actions.leaveRoom}
       />

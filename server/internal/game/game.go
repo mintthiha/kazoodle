@@ -54,9 +54,11 @@ func (EndGame) isEffect() {}
 type Game interface {
 	// Init sets up a fresh round for these players (already in the order the
 	// game should use) and returns the effects that start it — typically a
-	// private Send to each player. It errors if the game can't run with this
-	// group, e.g. too few players.
-	Init(players []Player) (State, []Effect, error)
+	// private Send to each player. options is the raw proto3-JSON the host
+	// sent in StartGame; nil or empty means "use this game's defaults", and a
+	// game that takes no options may ignore it entirely. It errors if the
+	// game can't run with this group, e.g. too few players.
+	Init(players []Player, options []byte) (State, []Effect, error)
 
 	// Advance applies exactly one event. It must treat the incoming State as
 	// read-only and return a new value rather than mutating it.

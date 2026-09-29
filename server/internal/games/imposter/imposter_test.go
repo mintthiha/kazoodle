@@ -29,6 +29,16 @@ func clientMsg(body *pb.ImposterClientMessage) []byte {
 	return raw
 }
 
+// startOpts marshals StartOptions the way the room hands them to Init: raw
+// proto3-JSON bytes.
+func startOpts(o *pb.StartOptions) []byte {
+	raw, err := protojson.Marshal(o)
+	if err != nil {
+		panic(err)
+	}
+	return raw
+}
+
 func readyEvent(id string) game.Event {
 	return game.Event{
 		PlayerID: id,
@@ -199,13 +209,13 @@ func collectOutcomes(t *testing.T, effects []game.Effect) map[string]*pb.Outcome
 // ─── reveal phase ───────────────────────────────────────────────────────────
 
 func TestInitRejectsTooFewPlayers(t *testing.T) {
-	if _, _, err := (Game{}).Init(mkPlayers(2, "en")); err == nil {
+	if _, _, err := (Game{}).Init(mkPlayers(2, "en"), nil); err == nil {
 		t.Fatal("expected an error for 2 players")
 	}
 }
 
 func TestInitAssignsExactlyOneImposterWithNoWord(t *testing.T) {
-	st, effects, err := (Game{}).Init(mkPlayers(5, "en"))
+	st, effects, err := (Game{}).Init(mkPlayers(5, "en"), nil)
 	if err != nil {
 		t.Fatalf("Init: %v", err)
 	}
@@ -243,8 +253,45 @@ func TestInitAssignsExactlyOneImposterWithNoWord(t *testing.T) {
 	}
 }
 
+func TestInitHintsEnabledGivesImposterCategoryButNotWord(t *testing.T) {
+	opts := startOpts(&pb.StartOptions{HintsEnabled: true})
+	st, effects, err := (Game{}).Init(mkPlayers(5, "en"), opts)
+	if err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	s := st.(*state)
+	roles := collectRoles(t, effects)
+
+	r := roles[s.imposterID]
+	if r == nil || !r.GetIsImposter() {
+		t.Fatalf("roles[%s] = %v, want the imposter's own role", s.imposterID, r)
+	}
+	if r.GetWord() != "" {
+		t.Errorf("imposter got word %q, want empty even with hints on", r.GetWord())
+	}
+	want := s.entry.category.forLocale("en")
+	if r.GetCategory() != want {
+		t.Errorf("imposter category = %q, want %q", r.GetCategory(), want)
+	}
+}
+
+func TestInitHintsDisabledByDefault(t *testing.T) {
+	// No options at all (nil) — same as StartOptions{} — must leave the
+	// imposter with no category, same as TestInitAssignsExactlyOneImposterWithNoWord.
+	opts := startOpts(&pb.StartOptions{HintsEnabled: false})
+	st, effects, err := (Game{}).Init(mkPlayers(5, "en"), opts)
+	if err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	s := st.(*state)
+	roles := collectRoles(t, effects)
+	if r := roles[s.imposterID]; r.GetCategory() != "" {
+		t.Errorf("imposter category = %q, want empty with hints off", r.GetCategory())
+	}
+}
+
 func TestInitBroadcastsRevealProgress(t *testing.T) {
-	_, effects, _ := (Game{}).Init(mkPlayers(4, "en"))
+	_, effects, _ := (Game{}).Init(mkPlayers(4, "en"), nil)
 	rp := broadcastMsg(t, effects).GetRevealProgress()
 	if rp == nil {
 		t.Fatal("no RevealProgress broadcast")
@@ -264,7 +311,7 @@ func TestInitLocalizesWordPerPlayerLocale(t *testing.T) {
 		{ID: "c", Locale: "en"},
 		{ID: "d", Locale: "fr"},
 	}
-	st, effects, err := (Game{}).Init(players)
+	st, effects, err := (Game{}).Init(players, nil)
 	if err != nil {
 		t.Fatalf("Init: %v", err)
 	}
@@ -284,7 +331,7 @@ func TestInitLocalizesWordPerPlayerLocale(t *testing.T) {
 }
 
 func TestMarkReadyAccumulatesInTurnOrder(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 
 	var effects []game.Effect
@@ -307,7 +354,7 @@ func TestMarkReadyAccumulatesInTurnOrder(t *testing.T) {
 }
 
 func TestAdvanceDoesNotMutateInputState(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	before := st.(*state)
 	_, _, err := (Game{}).Advance(st, readyEvent(before.order[0]))
 	if err != nil {
@@ -319,7 +366,7 @@ func TestAdvanceDoesNotMutateInputState(t *testing.T) {
 }
 
 func TestMarkReadyIsIdempotent(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	id := st.(*state).order[0]
 	st, _, _ = (Game{}).Advance(st, readyEvent(id))
 	_, effects, err := (Game{}).Advance(st, readyEvent(id))
@@ -332,7 +379,7 @@ func TestMarkReadyIsIdempotent(t *testing.T) {
 }
 
 func TestAdvanceRejectsBadInput(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 
 	if _, _, err := (Game{}).Advance(st, game.Event{PlayerID: "a", Data: []byte("{")}); err == nil {
 		t.Error("malformed JSON: expected an error")
@@ -348,7 +395,7 @@ func TestAdvanceRejectsBadInput(t *testing.T) {
 // ─── clue phase ─────────────────────────────────────────────────────────────
 
 func TestClueTurnEnforcesOrder(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 	st, _ = readyAll(t, st, order)
 
@@ -361,7 +408,7 @@ func TestClueTurnEnforcesOrder(t *testing.T) {
 }
 
 func TestSubmitClueRejectsEmptyText(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 	st, _ = readyAll(t, st, order)
 
@@ -371,7 +418,7 @@ func TestSubmitClueRejectsEmptyText(t *testing.T) {
 }
 
 func TestCluePhaseProgressesAndTransitionsToVote(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(4, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(4, "en"), nil)
 	order := st.(*state).order
 	st, _ = readyAll(t, st, order)
 
@@ -414,7 +461,7 @@ func TestCluePhaseProgressesAndTransitionsToVote(t *testing.T) {
 // ─── vote phase ─────────────────────────────────────────────────────────────
 
 func TestVoteCatchingImposterOpensStealPhaseInsteadOfOutcome(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	s := st.(*state)
 	order, imposter := s.order, s.imposterID
 
@@ -447,7 +494,7 @@ func TestVoteCatchingImposterOpensStealPhaseInsteadOfOutcome(t *testing.T) {
 }
 
 func TestVoteTieMeansImposterEscapes(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 
 	st, _ = readyAll(t, st, order)
@@ -479,7 +526,7 @@ func TestVoteTieMeansImposterEscapes(t *testing.T) {
 }
 
 func TestVoteChangeBeforeEveryoneHasVoted(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 	st, _ = readyAll(t, st, order)
 	st, _ = giveAllClues(t, st, order)
@@ -503,7 +550,7 @@ func TestVoteChangeBeforeEveryoneHasVoted(t *testing.T) {
 }
 
 func TestCastVoteRejectsUnknownSuspect(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 	st, _ = readyAll(t, st, order)
 	st, _ = giveAllClues(t, st, order)
@@ -514,7 +561,7 @@ func TestCastVoteRejectsUnknownSuspect(t *testing.T) {
 }
 
 func TestCastVoteRejectedOutsideVotePhase(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order // still in the reveal phase
 
 	if _, _, err := (Game{}).Advance(st, voteEvent(order[0], order[1])); err == nil {
@@ -528,7 +575,7 @@ func TestCastVoteRejectedOutsideVotePhase(t *testing.T) {
 // unanimous vote for the imposter, landing on the steal phase.
 func reachStealPhase(t *testing.T) (st game.State, order []string, imposter string) {
 	t.Helper()
-	st, _, _ = (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ = (Game{}).Init(mkPlayers(3, "en"), nil)
 	s := st.(*state)
 	order, imposter = s.order, s.imposterID
 
@@ -618,7 +665,7 @@ func TestStealGuessRejectsEmptyText(t *testing.T) {
 }
 
 func TestStealGuessRejectedOutsideStealPhase(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order // still in the reveal phase
 	if _, _, err := (Game{}).Advance(st, guessEvent(order[0], "beach")); err == nil {
 		t.Fatal("expected an error when guessing outside the steal phase")
@@ -647,7 +694,7 @@ func TestPlayAgainEndsTheGameOnceTheRoundIsOver(t *testing.T) {
 }
 
 func TestPlayAgainRejectedBeforeOutcome(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(3, "en"))
+	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 	if _, _, err := (Game{}).Advance(st, playAgainEvent(order[0])); err == nil {
 		t.Fatal("expected an error when the round hasn't reached its outcome yet")

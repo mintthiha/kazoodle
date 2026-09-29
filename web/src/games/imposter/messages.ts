@@ -6,12 +6,21 @@ import { create, fromJsonString, toJsonString } from "@bufbuild/protobuf";
 import {
   ImposterClientMessageSchema,
   ImposterServerMessageSchema,
+  StartOptionsSchema,
   type ImposterServerMessage,
 } from "./gen/imposter_pb";
 
 /** Decode one game-event payload string into a typed Imposter server message. */
 export function decodeImposterEvent(payload: string): ImposterServerMessage {
   return fromJsonString(ImposterServerMessageSchema, payload);
+}
+
+/** The host's chosen options for a round, passed as StartGame's `options`. */
+export function encodeStartOptions(hintsEnabled: boolean): string {
+  return toJsonString(
+    StartOptionsSchema,
+    create(StartOptionsSchema, { hintsEnabled }),
+  );
 }
 
 /** "I have seen my role." */

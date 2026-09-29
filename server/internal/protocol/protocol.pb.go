@@ -426,10 +426,13 @@ func (x *Echo) GetText() string {
 }
 
 // Host-only: start a game in the current room. `game_id` must name a game the
-// server has registered.
+// server has registered. `options` is the proto3-JSON encoding of a
+// game-specific start-options message (defined in that game's .proto), the
+// same pattern as GameAction.payload. Empty means "use that game's defaults".
 type StartGame struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	GameId        string                 `protobuf:"bytes,1,opt,name=game_id,json=gameId,proto3" json:"game_id,omitempty"`
+	Options       string                 `protobuf:"bytes,2,opt,name=options,proto3" json:"options,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -467,6 +470,13 @@ func (*StartGame) Descriptor() ([]byte, []int) {
 func (x *StartGame) GetGameId() string {
 	if x != nil {
 		return x.GameId
+	}
+	return ""
+}
+
+func (x *StartGame) GetOptions() string {
+	if x != nil {
+		return x.Options
 	}
 	return ""
 }
@@ -1219,9 +1229,10 @@ const file_protocol_proto_rawDesc = "" +
 	"\x06locale\x18\x03 \x01(\tR\x06locale\"\v\n" +
 	"\tLeaveRoom\"\x1a\n" +
 	"\x04Echo\x12\x12\n" +
-	"\x04text\x18\x01 \x01(\tR\x04text\"$\n" +
+	"\x04text\x18\x01 \x01(\tR\x04text\">\n" +
 	"\tStartGame\x12\x17\n" +
-	"\agame_id\x18\x01 \x01(\tR\x06gameId\"?\n" +
+	"\agame_id\x18\x01 \x01(\tR\x06gameId\x12\x18\n" +
+	"\aoptions\x18\x02 \x01(\tR\aoptions\"?\n" +
 	"\n" +
 	"GameAction\x12\x17\n" +
 	"\agame_id\x18\x01 \x01(\tR\x06gameId\x12\x18\n" +

@@ -63,9 +63,12 @@ message Echo {
 }
 
 // Host-only: start a game in the current room. `game_id` must name a game the
-// server has registered.
+// server has registered. `options` is the proto3-JSON encoding of a
+// game-specific start-options message (defined in that game's .proto), the
+// same pattern as GameAction.payload. Empty means "use that game's defaults".
 message StartGame {
   string game_id = 1;
+  string options = 2;
 }
 
 // An action within the running game. `payload` is the proto3-JSON encoding of a

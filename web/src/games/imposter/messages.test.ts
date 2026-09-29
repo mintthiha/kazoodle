@@ -5,6 +5,7 @@ import {
   encodeGuessWord,
   encodeMarkReady,
   encodePlayAgain,
+  encodeStartOptions,
   encodeSubmitClue,
 } from "./messages";
 
@@ -27,6 +28,14 @@ describe("imposter messages: encode", () => {
 
   it("playAgain", () => {
     expect(JSON.parse(encodePlayAgain())).toEqual({ playAgain: {} });
+  });
+
+  it("startOptions with hints on", () => {
+    expect(JSON.parse(encodeStartOptions(true))).toEqual({ hintsEnabled: true });
+  });
+
+  it("startOptions with hints off omits the default field", () => {
+    expect(JSON.parse(encodeStartOptions(false))).toEqual({});
   });
 });
 

@@ -57,6 +57,7 @@ type echoCmd struct {
 type startGameCmd struct {
 	playerID string
 	gameID   string
+	options  []byte
 	reply    chan error
 }
 
@@ -246,7 +247,7 @@ func (r *Room) applyStartGame(cmd startGameCmd) error {
 		players = append(players, game.Player{ID: id, Locale: r.members[id].player.Locale})
 	}
 
-	state, effects, err := g.Init(players)
+	state, effects, err := g.Init(players, cmd.options)
 	if err != nil {
 		return fmt.Errorf("start %q: %w", cmd.gameID, err)
 	}
@@ -415,8 +416,8 @@ func (r *Room) echo(ctx context.Context, playerID, text string) error {
 	}
 }
 
-func (r *Room) startGame(ctx context.Context, playerID, gameID string) error {
-	cmd := startGameCmd{playerID: playerID, gameID: gameID, reply: make(chan error, 1)}
+func (r *Room) startGame(ctx context.Context, playerID, gameID string, options []byte) error {
+	cmd := startGameCmd{playerID: playerID, gameID: gameID, options: options, reply: make(chan error, 1)}
 	select {
 	case r.cmds <- cmd:
 	case <-r.closed:

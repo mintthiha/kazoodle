@@ -14,6 +14,18 @@ option go_package = "github.com/mintthiha/party-games/server/internal/games/impo
 // before the round's Outcome is revealed. A finished round stays on everyone's
 // screen until a player sends PlayAgain, which ends it so the host can start
 // a fresh one.
+//
+// The host may turn on hints for the imposter (StartOptions.hints_enabled):
+// the imposter still gets no word, but does get the category, the same
+// mercy a harder or easier room might want to tune.
+
+// Sent as StartGame.options (proto3-JSON) when the host starts an Imposter
+// round. Omitted or all-default fields mean "use the defaults".
+message StartOptions {
+  // When true, the imposter's RoleAssignment includes the category (never
+  // the word) so they have something to go on while bluffing.
+  bool hints_enabled = 1;
+}
 
 // ── Server → Client ───────────────────────────────────────────────────────
 
@@ -31,7 +43,8 @@ message ImposterServerMessage {
 }
 
 // Sent privately to each player at the start of a round. For the imposter,
-// `word` and `category` are empty.
+// `word` is always empty; `category` is too unless the host turned hints on
+// for this round (StartOptions.hints_enabled).
 message RoleAssignment {
   bool is_imposter = 1;
   string word = 2;

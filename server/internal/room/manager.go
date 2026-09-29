@@ -81,15 +81,17 @@ func (m *Manager) Join(ctx context.Context, code, displayName, locale string, s 
 	return m.addPlayer(ctx, r, displayName, locale, s)
 }
 
-// StartGame asks a room's host-driven state machine to begin a game.
-func (m *Manager) StartGame(ctx context.Context, code, playerID, gameID string) error {
+// StartGame asks a room's host-driven state machine to begin a game. options
+// is the raw proto3-JSON of that game's own start-options message, or nil for
+// its defaults.
+func (m *Manager) StartGame(ctx context.Context, code, playerID, gameID string, options []byte) error {
 	m.mu.RLock()
 	r, ok := m.rooms[code]
 	m.mu.RUnlock()
 	if !ok {
 		return ErrRoomNotFound
 	}
-	return r.startGame(ctx, playerID, gameID)
+	return r.startGame(ctx, playerID, gameID, options)
 }
 
 // GameAction feeds one player's game-specific action (raw proto3-JSON) into the

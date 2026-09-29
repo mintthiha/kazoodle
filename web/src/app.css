@@ -79,6 +79,21 @@ section {
   color: var(--muted);
 }
 
+/* A checkbox + label row, generous enough to tap one-handed. */
+.field-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 48px;
+}
+
+.field-inline input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  flex-shrink: 0;
+}
+
 input {
   width: 100%;
   min-height: 48px;

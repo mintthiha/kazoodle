@@ -21,7 +21,7 @@ type fakeGame struct {
 	lastInitPlayers []game.Player
 }
 
-func (f *fakeGame) Init(players []game.Player) (game.State, []game.Effect, error) {
+func (f *fakeGame) Init(players []game.Player, options []byte) (game.State, []game.Effect, error) {
 	f.lastInitPlayers = players
 	if f.initErr != nil {
 		return nil, nil, f.initErr
@@ -116,7 +116,7 @@ func TestStartGameOnlyByHost(t *testing.T) {
 	benRes, _ := m.Join(context.Background(), created.RoomCode, "Ben", "en", ben)
 	_ = host.next(t)
 
-	if err := m.StartGame(context.Background(), created.RoomCode, benRes.Self.ID, "fake"); !errors.Is(err, ErrNotHost) {
+	if err := m.StartGame(context.Background(), created.RoomCode, benRes.Self.ID, "fake", nil); !errors.Is(err, ErrNotHost) {
 		t.Fatalf("non-host StartGame err = %v, want ErrNotHost", err)
 	}
 }
@@ -126,7 +126,7 @@ func TestStartGameUnknownGame(t *testing.T) {
 	host := newCapture()
 	created, _ := m.Create(context.Background(), "Ana", "en", host)
 
-	if err := m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "nope"); !errors.Is(err, ErrUnknownGame) {
+	if err := m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "nope", nil); !errors.Is(err, ErrUnknownGame) {
 		t.Fatalf("err = %v, want ErrUnknownGame", err)
 	}
 }
@@ -141,7 +141,7 @@ func TestStartGameInitsAndBroadcasts(t *testing.T) {
 	_, _ = m.Join(context.Background(), created.RoomCode, "Ben", "en", ben)
 	_ = host.next(t) // PlayerJoined
 
-	if err := m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake"); err != nil {
+	if err := m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake", nil); err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
 
@@ -175,7 +175,7 @@ func TestStartGamePrivateEffectTargetsOnePlayer(t *testing.T) {
 		game.Send{To: []string{benRes.Self.ID}, Msg: &protocol.EchoResult{Text: "psst"}},
 	}
 
-	if err := m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake"); err != nil {
+	if err := m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake", nil); err != nil {
 		t.Fatalf("StartGame: %v", err)
 	}
 
@@ -193,10 +193,10 @@ func TestStartGameRejectsSecondStart(t *testing.T) {
 	m := newTestManagerWithGames(t, registryWith(&fakeGame{}))
 	host := newCapture()
 	created, _ := m.Create(context.Background(), "Ana", "en", host)
-	_ = m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake")
+	_ = m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake", nil)
 	expectGameStarted(t, host, "fake")
 
-	if err := m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake"); !errors.Is(err, ErrGameInProgress) {
+	if err := m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake", nil); !errors.Is(err, ErrGameInProgress) {
 		t.Fatalf("err = %v, want ErrGameInProgress", err)
 	}
 }
@@ -212,7 +212,7 @@ func TestGameActionRoutesToAdvance(t *testing.T) {
 	m := newTestManagerWithGames(t, registryWith(f))
 	host := newCapture()
 	created, _ := m.Create(context.Background(), "Ana", "en", host)
-	_ = m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake")
+	_ = m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake", nil)
 	expectGameStarted(t, host, "fake")
 
 	if err := m.GameAction(context.Background(), created.RoomCode, created.Self.ID, "fake", []byte("ping")); err != nil {
@@ -242,7 +242,7 @@ func TestGameAbortsWhenPlayerLeaves(t *testing.T) {
 	benRes, _ := m.Join(context.Background(), created.RoomCode, "Ben", "en", ben)
 	_ = host.next(t)
 
-	_ = m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake")
+	_ = m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake", nil)
 	expectGameStarted(t, host, "fake")
 	expectGameStarted(t, ben, "fake")
 

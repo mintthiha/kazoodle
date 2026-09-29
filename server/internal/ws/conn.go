@@ -109,7 +109,7 @@ func (c *conn) handle(ctx context.Context, msg *protocol.ClientMessage) {
 	case *protocol.ClientMessage_Echo:
 		c.doEcho(ctx, p.Echo.GetText())
 	case *protocol.ClientMessage_StartGame:
-		c.doStartGame(ctx, p.StartGame.GetGameId())
+		c.doStartGame(ctx, p.StartGame.GetGameId(), p.StartGame.GetOptions())
 	case *protocol.ClientMessage_GameAction:
 		c.doGameAction(ctx, p.GameAction.GetGameId(), p.GameAction.GetPayload())
 	default:
@@ -168,12 +168,12 @@ func (c *conn) doEcho(ctx context.Context, text string) {
 	}
 }
 
-func (c *conn) doStartGame(ctx context.Context, gameID string) {
+func (c *conn) doStartGame(ctx context.Context, gameID, options string) {
 	if c.roomCode == "" {
 		c.Send(errMsg("not_in_room", "join a room first"))
 		return
 	}
-	if err := c.mgr.StartGame(ctx, c.roomCode, c.playerID, gameID); err != nil {
+	if err := c.mgr.StartGame(ctx, c.roomCode, c.playerID, gameID, []byte(options)); err != nil {
 		c.Send(errMsg(startErrCode(err), err.Error()))
 	}
 }

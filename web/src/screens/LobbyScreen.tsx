@@ -11,16 +11,18 @@ interface Props {
   room: RoomState;
   lastEcho: EchoLine | null;
   isHost: boolean;
-  onStartGame: () => void;
+  onStartGame: (hintsEnabled: boolean) => void;
   onEcho: (text: string) => void;
   onLeave: () => void;
 }
 
 // Second screen: the room's code, who is in it, a host-only "start game"
-// control, and a tiny echo box that proves a message round-trips.
+// control (with the imposter-hints option), and a tiny echo box that proves a
+// message round-trips.
 export function LobbyScreen({ room, lastEcho, isHost, onStartGame, onEcho, onLeave }: Props) {
   const { t } = useT();
   const [text, setText] = useState("");
+  const [hintsEnabled, setHintsEnabled] = useState(false);
   const canStart = room.players.length >= IMPOSTER_MIN_PLAYERS;
 
   function send() {
@@ -55,7 +57,19 @@ export function LobbyScreen({ room, lastEcho, isHost, onStartGame, onEcho, onLea
 
       {isHost && (
         <section>
-          <button className="primary" onClick={onStartGame} disabled={!canStart}>
+          <label className="field-inline">
+            <input
+              type="checkbox"
+              checked={hintsEnabled}
+              onChange={(e) => setHintsEnabled(e.target.checked)}
+            />
+            <span>{t("lobby.hintsToggle")}</span>
+          </label>
+          <button
+            className="primary"
+            onClick={() => onStartGame(hintsEnabled)}
+            disabled={!canStart}
+          >
             {t("lobby.startImposter")}
           </button>
           {!canStart && (

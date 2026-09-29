@@ -38,6 +38,7 @@ const en = {
   "lobby.echoFromOther": "Someone",
   "lobby.startImposter": "Start Imposter",
   "lobby.needPlayers": "Need at least {min} players to start.",
+  "lobby.hintsToggle": "Give the imposter a hint (category)",
 
   "game.unknown": "This game isn’t available in your app version.",
 
@@ -45,6 +46,7 @@ const en = {
   "imposter.dealing": "Dealing roles…",
   "imposter.youAreImposter": "You’re the IMPOSTER",
   "imposter.imposterHint": "You don’t know the word. Give a vague clue and blend in.",
+  "imposter.imposterCategoryHint": "Category: {category}. You still don’t know the word.",
   "imposter.crewHint": "Give a one-word clue that proves you know it — without giving it away.",
   "imposter.gotIt": "Got it",
   "imposter.waiting": "Waiting for the others…",
@@ -120,6 +122,7 @@ const fr: Record<MessageKey, string> = {
   "lobby.echoFromOther": "Quelqu’un",
   "lobby.startImposter": "Lancer Imposteur",
   "lobby.needPlayers": "Il faut au moins {min} joueurs pour commencer.",
+  "lobby.hintsToggle": "Donner un indice à l’imposteur (catégorie)",
 
   "game.unknown": "Ce jeu n’est pas disponible dans votre version.",
 
@@ -127,6 +130,7 @@ const fr: Record<MessageKey, string> = {
   "imposter.dealing": "Distribution des rôles…",
   "imposter.youAreImposter": "Vous êtes l’IMPOSTEUR",
   "imposter.imposterHint": "Vous ne connaissez pas le mot. Donnez un indice vague et faites semblant.",
+  "imposter.imposterCategoryHint": "Catégorie : {category}. Vous ne connaissez toujours pas le mot.",
   "imposter.crewHint": "Donnez un indice d’un mot qui prouve que vous le savez — sans le révéler.",
   "imposter.gotIt": "Compris",
   "imposter.waiting": "En attente des autres…",

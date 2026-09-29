@@ -5,8 +5,8 @@ import "testing"
 // stubGame is a do-nothing Game, enough to exercise the registry.
 type stubGame struct{}
 
-func (stubGame) Init([]Player) (State, []Effect, error)        { return nil, nil, nil }
-func (stubGame) Advance(State, Event) (State, []Effect, error) { return nil, nil, nil }
+func (stubGame) Init([]Player, []byte) (State, []Effect, error) { return nil, nil, nil }
+func (stubGame) Advance(State, Event) (State, []Effect, error)  { return nil, nil, nil }
 
 func TestRegistryRegisterAndLookup(t *testing.T) {
 	r := NewRegistry()

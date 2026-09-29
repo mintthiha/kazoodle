@@ -213,8 +213,8 @@ export class Connection {
     echo: (text: string): void => {
       if (this.#isOpen() && this.#snapshot.room) this.#ws!.send(encodeEcho(text));
     },
-    startGame: (gameId: string): void => {
-      if (this.#isOpen() && this.#snapshot.room) this.#ws!.send(encodeStartGame(gameId));
+    startGame: (gameId: string, options?: string): void => {
+      if (this.#isOpen() && this.#snapshot.room) this.#ws!.send(encodeStartGame(gameId, options));
     },
     gameAction: (gameId: string, payload: string): void => {
       if (this.#isOpen() && this.#snapshot.game) {

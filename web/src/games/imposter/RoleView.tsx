@@ -32,7 +32,13 @@ export function RoleView({ role, progress, ready, selfId, players, onConfirm }: 
       {role.isImposter ? (
         <section className="role-card role-imposter">
           <p className="role-word">{t("imposter.youAreImposter")}</p>
-          <p className="role-hint">{t("imposter.imposterHint")}</p>
+          {role.category ? (
+            <p className="role-hint">
+              {t("imposter.imposterCategoryHint", { category: role.category })}
+            </p>
+          ) : (
+            <p className="role-hint">{t("imposter.imposterHint")}</p>
+          )}
         </section>
       ) : (
         <section className="role-card role-crew">
