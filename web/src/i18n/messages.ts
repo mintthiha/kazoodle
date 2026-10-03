@@ -39,6 +39,17 @@ const en = {
   "lobby.startImposter": "Start Imposter",
   "lobby.needPlayers": "Need at least {min} players to start.",
   "lobby.hintsToggle": "Give the imposter a hint (category)",
+  "lobby.categoryLabel": "Category",
+  "lobby.categoryChosen": "Category: {category}",
+
+  "imposter.category.any": "Any category",
+  "imposter.category.places": "Places",
+  "imposter.category.food": "Food",
+  "imposter.category.animals": "Animals",
+  "imposter.category.objects": "Objects",
+  "imposter.category.activities": "Activities",
+  "imposter.category.jobs": "Jobs",
+  "imposter.category.weather": "Weather",
 
   "game.unknown": "This game isn’t available in your app version.",
 
@@ -129,6 +140,17 @@ const fr: Record<MessageKey, string> = {
   "lobby.startImposter": "Lancer Imposteur",
   "lobby.needPlayers": "Il faut au moins {min} joueurs pour commencer.",
   "lobby.hintsToggle": "Donner un indice à l’imposteur (catégorie)",
+  "lobby.categoryLabel": "Catégorie",
+  "lobby.categoryChosen": "Catégorie : {category}",
+
+  "imposter.category.any": "Toutes catégories",
+  "imposter.category.places": "Lieux",
+  "imposter.category.food": "Nourriture",
+  "imposter.category.animals": "Animaux",
+  "imposter.category.objects": "Objets",
+  "imposter.category.activities": "Activités",
+  "imposter.category.jobs": "Métiers",
+  "imposter.category.weather": "Météo",
 
   "game.unknown": "Ce jeu n’est pas disponible dans votre version.",
 

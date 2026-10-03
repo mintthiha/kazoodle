@@ -94,6 +94,20 @@ func (m *Manager) StartGame(ctx context.Context, code, playerID, gameID string, 
 	return r.startGame(ctx, playerID, gameID, options)
 }
 
+// SetGameOptions relays a host's pending game-start options (raw proto3-JSON)
+// to every player in the room, so the lobby can show the choice before the
+// game actually starts. It does not require a game to not yet be running in
+// any stronger sense than StartGame does — see Room.applySetGameOptions.
+func (m *Manager) SetGameOptions(ctx context.Context, code, playerID, gameID string, options []byte) error {
+	m.mu.RLock()
+	r, ok := m.rooms[code]
+	m.mu.RUnlock()
+	if !ok {
+		return ErrRoomNotFound
+	}
+	return r.setGameOptions(ctx, playerID, gameID, options)
+}
+
 // GameAction feeds one player's game-specific action (raw proto3-JSON) into the
 // running game.
 func (m *Manager) GameAction(ctx context.Context, code, playerID, gameID string, data []byte) error {

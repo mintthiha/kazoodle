@@ -68,11 +68,24 @@ type gameActionCmd struct {
 	reply    chan error
 }
 
-func (joinCmd) isCommand()       {}
-func (leaveCmd) isCommand()      {}
-func (echoCmd) isCommand()       {}
-func (startGameCmd) isCommand()  {}
-func (gameActionCmd) isCommand() {}
+// setGameOptionsCmd is host-only, like startGameCmd, and carries the same
+// kind of payload (a game's proto3-JSON start-options). Unlike startGameCmd
+// it never touches gm/gameState — the room only relays it to every member as
+// a GameOptionsChanged broadcast so the lobby can show the host's pending
+// choice.
+type setGameOptionsCmd struct {
+	playerID string
+	gameID   string
+	options  []byte
+	reply    chan error
+}
+
+func (joinCmd) isCommand()           {}
+func (leaveCmd) isCommand()          {}
+func (echoCmd) isCommand()           {}
+func (startGameCmd) isCommand()      {}
+func (gameActionCmd) isCommand()     {}
+func (setGameOptionsCmd) isCommand() {}
 
 // ─── Room ────────────────────────────────────────────────────────────────────
 
@@ -167,6 +180,9 @@ func (r *Room) run(ctx context.Context) {
 			case gameActionCmd:
 				cmd.reply <- r.applyGameAction(cmd)
 
+			case setGameOptionsCmd:
+				cmd.reply <- r.applySetGameOptions(cmd)
+
 			case leaveCmd:
 				r.applyLeave(cmd)
 				if len(r.members) == 0 {
@@ -255,6 +271,24 @@ func (r *Room) applyStartGame(cmd startGameCmd) error {
 	r.gm, r.gameID, r.gameState = g, cmd.gameID, state
 	r.broadcast(msgGameStarted(cmd.gameID))
 	r.applyEffects(effects)
+	return nil
+}
+
+// applySetGameOptions handles a host's SetGameOptions. Unlike applyStartGame
+// it does not look the game up or touch game state — it only checks who's
+// allowed to send it, then relays the options to the whole room (host
+// included) so every screen shows the same pending choice.
+func (r *Room) applySetGameOptions(cmd setGameOptionsCmd) error {
+	if cmd.playerID != r.hostID {
+		return ErrNotHost
+	}
+	if r.gm != nil {
+		return ErrGameInProgress
+	}
+	if _, ok := r.games.Lookup(cmd.gameID); !ok {
+		return ErrUnknownGame
+	}
+	r.broadcast(msgGameOptionsChanged(cmd.gameID, cmd.options))
 	return nil
 }
 
@@ -418,6 +452,25 @@ func (r *Room) echo(ctx context.Context, playerID, text string) error {
 
 func (r *Room) startGame(ctx context.Context, playerID, gameID string, options []byte) error {
 	cmd := startGameCmd{playerID: playerID, gameID: gameID, options: options, reply: make(chan error, 1)}
+	select {
+	case r.cmds <- cmd:
+	case <-r.closed:
+		return ErrRoomNotFound
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	select {
+	case err := <-cmd.reply:
+		return err
+	case <-r.closed:
+		return ErrRoomNotFound
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (r *Room) setGameOptions(ctx context.Context, playerID, gameID string, options []byte) error {
+	cmd := setGameOptionsCmd{playerID: playerID, gameID: gameID, options: options, reply: make(chan error, 1)}
 	select {
 	case r.cmds <- cmd:
 	case <-r.closed:

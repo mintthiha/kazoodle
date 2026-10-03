@@ -52,3 +52,11 @@ func msgGameEnded(gameID, reason string) *protocol.ServerMessage {
 		},
 	}
 }
+
+func msgGameOptionsChanged(gameID string, options []byte) *protocol.ServerMessage {
+	return &protocol.ServerMessage{
+		Payload: &protocol.ServerMessage_GameOptionsChanged{
+			GameOptionsChanged: &protocol.GameOptionsChanged{GameId: gameID, Options: string(options)},
+		},
+	}
+}

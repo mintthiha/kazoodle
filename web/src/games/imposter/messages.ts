@@ -15,12 +15,28 @@ export function decodeImposterEvent(payload: string): ImposterServerMessage {
   return fromJsonString(ImposterServerMessageSchema, payload);
 }
 
-/** The host's chosen options for a round, passed as StartGame's `options`. */
-export function encodeStartOptions(hintsEnabled: boolean): string {
+/** The host's chosen options for a round. Passed as StartGame's `options` to
+ * begin the round, and also as SetGameOptions' `options` while still in the
+ * lobby so everyone can see the pending choice before the host starts. */
+export function encodeStartOptions(hintsEnabled: boolean, category = ""): string {
   return toJsonString(
     StartOptionsSchema,
-    create(StartOptionsSchema, { hintsEnabled }),
+    create(StartOptionsSchema, { hintsEnabled, category }),
   );
+}
+
+/** The inverse of encodeStartOptions: reads a lobby's pending (or a round's
+ * applied) options back out. Malformed or empty input decodes to defaults
+ * (no hints, any category) rather than throwing — a stray or stale payload
+ * should never crash the lobby screen. */
+export function decodeStartOptions(json: string): { hintsEnabled: boolean; category: string } {
+  if (!json) return { hintsEnabled: false, category: "" };
+  try {
+    const opts = fromJsonString(StartOptionsSchema, json);
+    return { hintsEnabled: opts.hintsEnabled, category: opts.category };
+  } catch {
+    return { hintsEnabled: false, category: "" };
+  }
 }
 
 /** "I have seen my role." */

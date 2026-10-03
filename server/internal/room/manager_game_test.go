@@ -201,6 +201,67 @@ func TestStartGameRejectsSecondStart(t *testing.T) {
 	}
 }
 
+// ─── set game options ───────────────────────────────────────────────────────
+
+func TestSetGameOptionsOnlyByHost(t *testing.T) {
+	m := newTestManagerWithGames(t, registryWith(&fakeGame{}))
+	host := newCapture()
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
+	ben := newCapture()
+	benRes, _ := m.Join(context.Background(), created.RoomCode, "Ben", "en", ben)
+	_ = host.next(t)
+
+	err := m.SetGameOptions(context.Background(), created.RoomCode, benRes.Self.ID, "fake", []byte(`{"x":1}`))
+	if !errors.Is(err, ErrNotHost) {
+		t.Fatalf("non-host SetGameOptions err = %v, want ErrNotHost", err)
+	}
+}
+
+func TestSetGameOptionsUnknownGame(t *testing.T) {
+	m := newTestManagerWithGames(t, registryWith(&fakeGame{}))
+	host := newCapture()
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
+
+	err := m.SetGameOptions(context.Background(), created.RoomCode, created.Self.ID, "nope", nil)
+	if !errors.Is(err, ErrUnknownGame) {
+		t.Fatalf("err = %v, want ErrUnknownGame", err)
+	}
+}
+
+func TestSetGameOptionsBroadcastsToEveryoneIncludingHost(t *testing.T) {
+	m := newTestManagerWithGames(t, registryWith(&fakeGame{}))
+	host := newCapture()
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
+	ben := newCapture()
+	_, _ = m.Join(context.Background(), created.RoomCode, "Ben", "en", ben)
+	_ = host.next(t) // PlayerJoined
+
+	err := m.SetGameOptions(context.Background(), created.RoomCode, created.Self.ID, "fake", []byte(`{"category":"food"}`))
+	if err != nil {
+		t.Fatalf("SetGameOptions: %v", err)
+	}
+
+	for _, c := range []*capture{host, ben} {
+		oc := c.next(t).GetGameOptionsChanged()
+		if oc == nil || oc.GetGameId() != "fake" || oc.GetOptions() != `{"category":"food"}` {
+			t.Fatalf("GameOptionsChanged = %v", oc)
+		}
+	}
+}
+
+func TestSetGameOptionsRejectedOnceGameIsRunning(t *testing.T) {
+	m := newTestManagerWithGames(t, registryWith(&fakeGame{}))
+	host := newCapture()
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
+	_ = m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake", nil)
+	expectGameStarted(t, host, "fake")
+
+	err := m.SetGameOptions(context.Background(), created.RoomCode, created.Self.ID, "fake", nil)
+	if !errors.Is(err, ErrGameInProgress) {
+		t.Fatalf("err = %v, want ErrGameInProgress", err)
+	}
+}
+
 // ─── game actions ───────────────────────────────────────────────────────────
 
 func TestGameActionRoutesToAdvance(t *testing.T) {

@@ -751,6 +751,30 @@ func TestPlayAgainEndsTheGameOnceTheRoundIsOver(t *testing.T) {
 	}
 }
 
+func TestInitRestrictsWordToChosenCategory(t *testing.T) {
+	opts := startOpts(&pb.StartOptions{Category: "animals"})
+	for i := 0; i < 20; i++ { // pickWord is random; make sure the filter actually holds
+		st, _, err := (Game{}).Init(mkPlayers(5, "en"), opts)
+		if err != nil {
+			t.Fatalf("Init: %v", err)
+		}
+		if got := st.(*state).entry.categoryKey; got != "animals" {
+			t.Fatalf("entry.categoryKey = %q, want %q", got, "animals")
+		}
+	}
+}
+
+func TestInitUnknownCategoryFallsBackToAny(t *testing.T) {
+	opts := startOpts(&pb.StartOptions{Category: "not-a-real-category"})
+	st, _, err := (Game{}).Init(mkPlayers(5, "en"), opts)
+	if err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if st.(*state).entry.categoryKey == "" {
+		t.Fatal("entry.categoryKey is empty; pickWord should still have picked a real word")
+	}
+}
+
 func TestPlayAgainRejectedBeforeOutcome(t *testing.T) {
 	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order

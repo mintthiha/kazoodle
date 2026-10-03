@@ -58,6 +58,19 @@ export function encodeStartGame(gameId: string, options = ""): string {
   );
 }
 
+// options is the proto3-JSON of a game-specific start-options message — the
+// same shape encodeStartGame's options takes. Sent as the host changes their
+// pick (e.g. Imposter's category) so the rest of the lobby sees it live,
+// before the game actually starts.
+export function encodeSetGameOptions(gameId: string, options: string): string {
+  return toJsonString(
+    ClientMessageSchema,
+    create(ClientMessageSchema, {
+      payload: { case: "setGameOptions", value: { gameId, options } },
+    }),
+  );
+}
+
 // payload is the proto3-JSON of a game-specific client message, produced by
 // that game's own encoder.
 export function encodeGameAction(gameId: string, payload: string): string {

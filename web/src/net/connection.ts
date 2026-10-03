@@ -22,6 +22,7 @@ import {
   encodeGameAction,
   encodeJoinRoom,
   encodeLeaveRoom,
+  encodeSetGameOptions,
   encodeStartGame,
 } from "./messages";
 
@@ -45,11 +46,20 @@ export interface Player {
   displayName: string;
 }
 
+/** The host's live pending choice for the next game's start options (e.g.
+ * Imposter's category), broadcast via GameOptionsChanged. `options` is that
+ * game's own proto3-JSON, opaque here — only the game's own code decodes it. */
+export interface PendingOptions {
+  gameId: string;
+  options: string;
+}
+
 export interface RoomState {
   code: string;
   selfId: string;
   hostId: string;
   players: Player[];
+  pendingOptions: PendingOptions | null;
 }
 
 export interface EchoLine {
@@ -216,6 +226,11 @@ export class Connection {
     startGame: (gameId: string, options?: string): void => {
       if (this.#isOpen() && this.#snapshot.room) this.#ws!.send(encodeStartGame(gameId, options));
     },
+    setGameOptions: (gameId: string, options: string): void => {
+      if (this.#isOpen() && this.#snapshot.room) {
+        this.#ws!.send(encodeSetGameOptions(gameId, options));
+      }
+    },
     gameAction: (gameId: string, payload: string): void => {
       if (this.#isOpen() && this.#snapshot.game) {
         this.#ws!.send(encodeGameAction(gameId, payload));
@@ -261,6 +276,7 @@ export class Connection {
             selfId: selfPlayerId,
             hostId,
             players: players.map((p) => ({ id: p.id, displayName: p.displayName })),
+            pendingOptions: null,
           },
           game: null,
           lastError: null,
@@ -302,6 +318,13 @@ export class Connection {
       case "echoResult": {
         const { text, fromPlayerId } = msg.payload.value;
         this.#patch({ lastEcho: { text, fromPlayerId } });
+        break;
+      }
+
+      case "gameOptionsChanged": {
+        if (!this.#snapshot.room) break;
+        const { gameId, options } = msg.payload.value;
+        this.#patch({ room: { ...this.#snapshot.room, pendingOptions: { gameId, options } } });
         break;
       }
 

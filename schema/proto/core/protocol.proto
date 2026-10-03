@@ -32,6 +32,7 @@ message ClientMessage {
     Echo echo = 4;
     StartGame start_game = 5;
     GameAction game_action = 6;
+    SetGameOptions set_game_options = 7;
   }
 }
 
@@ -79,6 +80,18 @@ message GameAction {
   string payload = 2;
 }
 
+// Host-only, before a game starts: declare the options the host currently has
+// selected for its next game (e.g. Imposter's category), so the whole lobby
+// can see the choice as it's made. `options` is the proto3-JSON encoding of
+// that game's own start-options message, the same shape StartGame.options
+// uses. This message is advisory only — the room does not remember or apply
+// it; the host must still send the same options on StartGame when they're
+// ready to begin.
+message SetGameOptions {
+  string game_id = 1;
+  string options = 2;
+}
+
 // ── Server → Client ───────────────────────────────────────────────────────
 
 // Every message the server sends is a ServerMessage with exactly one payload set.
@@ -93,6 +106,7 @@ message ServerMessage {
     GameStarted game_started = 7;
     GameEvent game_event = 8;
     GameEnded game_ended = 9;
+    GameOptionsChanged game_options_changed = 10;
   }
 }
 
@@ -153,4 +167,12 @@ message GameEnded {
   string game_id = 1;
   // Stable, machine-readable, e.g. "finished", "player_left", "host_ended".
   string reason = 2;
+}
+
+// Broadcast to the whole room whenever the host's SetGameOptions is accepted,
+// so every client — not just the host's — can render the pending choice
+// (e.g. "Category: Food") while still in the lobby.
+message GameOptionsChanged {
+  string game_id = 1;
+  string options = 2;
 }

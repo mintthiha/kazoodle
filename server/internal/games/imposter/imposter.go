@@ -59,7 +59,7 @@ func (Game) Init(players []game.Player, options []byte) (game.State, []game.Effe
 		phase:        phaseReveal,
 		order:        order,
 		imposterID:   order[rand.IntN(len(order))],
-		entry:        pickWord(),
+		entry:        pickWord(opts.GetCategory()),
 		locales:      locales,
 		hintsEnabled: opts.GetHintsEnabled(),
 		ready:        make(map[string]bool),

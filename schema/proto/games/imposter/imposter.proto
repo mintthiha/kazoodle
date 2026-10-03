@@ -25,6 +25,13 @@ message StartOptions {
   // When true, the imposter's RoleAssignment includes the category (never
   // the word) so they have something to go on while bluffing.
   bool hints_enabled = 1;
+
+  // Restricts the secret word to one category: "places", "food", "animals",
+  // "objects", "activities", "jobs", or "weather". Empty (the default) draws
+  // from every category. An unrecognized key is treated the same as empty
+  // rather than rejected, so an older client's category choice degrades to
+  // "any" instead of failing the round.
+  string category = 2;
 }
 
 // ── Server → Client ───────────────────────────────────────────────────────

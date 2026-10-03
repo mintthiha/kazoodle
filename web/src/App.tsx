@@ -33,8 +33,11 @@ export function App() {
         room={snapshot.room}
         lastEcho={snapshot.lastEcho}
         isHost={snapshot.room.hostId === snapshot.room.selfId}
-        onStartGame={(hintsEnabled) =>
-          actions.startGame("imposter", encodeStartOptions(hintsEnabled))
+        onStartGame={(hintsEnabled, category) =>
+          actions.startGame("imposter", encodeStartOptions(hintsEnabled, category))
+        }
+        onSetCategory={(hintsEnabled, category) =>
+          actions.setGameOptions("imposter", encodeStartOptions(hintsEnabled, category))
         }
         onEcho={actions.echo}
         onLeave={actions.leaveRoom}

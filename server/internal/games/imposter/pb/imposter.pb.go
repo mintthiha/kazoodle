@@ -27,7 +27,13 @@ type StartOptions struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// When true, the imposter's RoleAssignment includes the category (never
 	// the word) so they have something to go on while bluffing.
-	HintsEnabled  bool `protobuf:"varint,1,opt,name=hints_enabled,json=hintsEnabled,proto3" json:"hints_enabled,omitempty"`
+	HintsEnabled bool `protobuf:"varint,1,opt,name=hints_enabled,json=hintsEnabled,proto3" json:"hints_enabled,omitempty"`
+	// Restricts the secret word to one category: "places", "food", "animals",
+	// "objects", "activities", "jobs", or "weather". Empty (the default) draws
+	// from every category. An unrecognized key is treated the same as empty
+	// rather than rejected, so an older client's category choice degrades to
+	// "any" instead of failing the round.
+	Category      string `protobuf:"bytes,2,opt,name=category,proto3" json:"category,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -67,6 +73,13 @@ func (x *StartOptions) GetHintsEnabled() bool {
 		return x.HintsEnabled
 	}
 	return false
+}
+
+func (x *StartOptions) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
 }
 
 type ImposterServerMessage struct {
@@ -1221,9 +1234,10 @@ var File_imposter_proto protoreflect.FileDescriptor
 
 const file_imposter_proto_rawDesc = "" +
 	"\n" +
-	"\x0eimposter.proto\x12\vimposter.v1\"3\n" +
+	"\x0eimposter.proto\x12\vimposter.v1\"O\n" +
 	"\fStartOptions\x12#\n" +
-	"\rhints_enabled\x18\x01 \x01(\bR\fhintsEnabled\"\x8a\x04\n" +
+	"\rhints_enabled\x18\x01 \x01(\bR\fhintsEnabled\x12\x1a\n" +
+	"\bcategory\x18\x02 \x01(\tR\bcategory\"\x8a\x04\n" +
 	"\x15ImposterServerMessage\x12F\n" +
 	"\x0frole_assignment\x18\x01 \x01(\v2\x1b.imposter.v1.RoleAssignmentH\x00R\x0eroleAssignment\x12F\n" +
 	"\x0freveal_progress\x18\x02 \x01(\v2\x1b.imposter.v1.RevealProgressH\x00R\x0erevealProgress\x124\n" +

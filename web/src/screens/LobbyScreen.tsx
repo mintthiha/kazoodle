@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useT } from "../i18n";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
+import { CATEGORY_OPTIONS } from "../games/imposter/categories";
+import { decodeStartOptions } from "../games/imposter/messages";
 
 // IMPOSTER_MIN_PLAYERS mirrors the server's minPlayers for Imposter. If they
 // drift, the server still rejects the start — this only gates the button.
@@ -11,19 +13,47 @@ interface Props {
   room: RoomState;
   lastEcho: EchoLine | null;
   isHost: boolean;
-  onStartGame: (hintsEnabled: boolean) => void;
+  onStartGame: (hintsEnabled: boolean, category: string) => void;
+  onSetCategory: (hintsEnabled: boolean, category: string) => void;
   onEcho: (text: string) => void;
   onLeave: () => void;
 }
 
 // Second screen: the room's code, who is in it, a host-only "start game"
-// control (with the imposter-hints option), and a tiny echo box that proves a
+// control (category + imposter-hints), and a tiny echo box that proves a
 // message round-trips.
-export function LobbyScreen({ room, lastEcho, isHost, onStartGame, onEcho, onLeave }: Props) {
+//
+// The host's category pick is a live choice, not just a start-time one: every
+// change calls onSetCategory, which the app wires to SetGameOptions, so the
+// whole lobby — not just the host — sees "Category: Food" update as the host
+// changes their mind. See room.pendingOptions in net/connection.ts.
+export function LobbyScreen({
+  room,
+  lastEcho,
+  isHost,
+  onStartGame,
+  onSetCategory,
+  onEcho,
+  onLeave,
+}: Props) {
   const { t } = useT();
   const [text, setText] = useState("");
   const [hintsEnabled, setHintsEnabled] = useState(false);
+  const [category, setCategory] = useState("");
   const canStart = room.players.length >= IMPOSTER_MIN_PLAYERS;
+
+  // Non-host players (and the host, on reconnect) read the live pick back out
+  // of the room's broadcast pendingOptions instead of local state.
+  const pending =
+    room.pendingOptions && room.pendingOptions.gameId === "imposter"
+      ? decodeStartOptions(room.pendingOptions.options)
+      : null;
+
+  function setAndBroadcast(nextHints: boolean, nextCategory: string) {
+    setHintsEnabled(nextHints);
+    setCategory(nextCategory);
+    onSetCategory(nextHints, nextCategory);
+  }
 
   function send() {
     const trimmed = text.trim();
@@ -55,19 +85,32 @@ export function LobbyScreen({ room, lastEcho, isHost, onStartGame, onEcho, onLea
         </ul>
       </section>
 
-      {isHost && (
+      {isHost ? (
         <section>
+          <label className="field">
+            <span>{t("lobby.categoryLabel")}</span>
+            <select
+              value={category}
+              onChange={(e) => setAndBroadcast(hintsEnabled, e.target.value)}
+            >
+              {CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.key} value={opt.key}>
+                  {t(opt.labelKey)}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="field-inline">
             <input
               type="checkbox"
               checked={hintsEnabled}
-              onChange={(e) => setHintsEnabled(e.target.checked)}
+              onChange={(e) => setAndBroadcast(e.target.checked, category)}
             />
             <span>{t("lobby.hintsToggle")}</span>
           </label>
           <button
             className="primary"
-            onClick={() => onStartGame(hintsEnabled)}
+            onClick={() => onStartGame(hintsEnabled, category)}
             disabled={!canStart}
           >
             {t("lobby.startImposter")}
@@ -76,6 +119,19 @@ export function LobbyScreen({ room, lastEcho, isHost, onStartGame, onEcho, onLea
             <p className="hint">{t("lobby.needPlayers", { min: IMPOSTER_MIN_PLAYERS })}</p>
           )}
         </section>
+      ) : (
+        pending && (
+          <section>
+            <p className="hint">
+              {t("lobby.categoryChosen", {
+                category: t(
+                  CATEGORY_OPTIONS.find((o) => o.key === pending.category)?.labelKey ??
+                    "imposter.category.any",
+                ),
+              })}
+            </p>
+          </section>
+        )
       )}
 
       <section>
