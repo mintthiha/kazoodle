@@ -16,11 +16,20 @@ func (l localized) forLocale(locale string) string {
 	return l.en
 }
 
-// wordEntry is one secret-word option: the word plus the category it belongs to.
+// wordEntry is one secret-word option. category is always public (crew and
+// imposter both see it); hint is a stronger clue shown only to the imposter,
+// and only when the host turns hints on — see RoleAssignment's doc comment.
+//
+// hint should read like a single strong association, not a definition: "Pole"
+// for Firefighter, not "Puts out fires". The category already tells the
+// imposter the general territory; a hint that just restates the category in
+// sentence form adds nothing. A good hint names a specific, recognizable
+// detail of the word that someone who knows it would nod at instantly.
 type wordEntry struct {
 	categoryKey string // stable, locale-independent id — see StartOptions.category
 	category    localized
 	word        localized
+	hint        localized
 }
 
 // wordList is the curated en/fr set a round's word is drawn from. The
@@ -29,65 +38,65 @@ type wordEntry struct {
 // (web/src/games/imposter/categories.ts) must list the same keys.
 var wordList = []wordEntry{
 	// Places
-	{"places", localized{"Places", "Lieux"}, localized{"Beach", "Plage"}},
-	{"places", localized{"Places", "Lieux"}, localized{"Airport", "Aéroport"}},
-	{"places", localized{"Places", "Lieux"}, localized{"Library", "Bibliothèque"}},
-	{"places", localized{"Places", "Lieux"}, localized{"Hospital", "Hôpital"}},
-	{"places", localized{"Places", "Lieux"}, localized{"Museum", "Musée"}},
-	{"places", localized{"Places", "Lieux"}, localized{"Castle", "Château"}},
-	{"places", localized{"Places", "Lieux"}, localized{"Desert", "Désert"}},
-	{"places", localized{"Places", "Lieux"}, localized{"Mountain", "Montagne"}},
-	{"places", localized{"Places", "Lieux"}, localized{"Farm", "Ferme"}},
-	{"places", localized{"Places", "Lieux"}, localized{"Subway", "Métro"}},
+	{categoryKey: "places", category: localized{"Places", "Lieux"}, word: localized{"Beach", "Plage"}, hint: localized{"Sandcastle", "Château de sable"}},
+	{categoryKey: "places", category: localized{"Places", "Lieux"}, word: localized{"Airport", "Aéroport"}, hint: localized{"Runway", "Piste"}},
+	{categoryKey: "places", category: localized{"Places", "Lieux"}, word: localized{"Library", "Bibliothèque"}, hint: localized{"Shelves", "Étagères"}},
+	{categoryKey: "places", category: localized{"Places", "Lieux"}, word: localized{"Hospital", "Hôpital"}, hint: localized{"Stretcher", "Civière"}},
+	{categoryKey: "places", category: localized{"Places", "Lieux"}, word: localized{"Museum", "Musée"}, hint: localized{"Exhibit", "Exposition"}},
+	{categoryKey: "places", category: localized{"Places", "Lieux"}, word: localized{"Castle", "Château"}, hint: localized{"Moat", "Douves"}},
+	{categoryKey: "places", category: localized{"Places", "Lieux"}, word: localized{"Desert", "Désert"}, hint: localized{"Cactus", "Cactus"}},
+	{categoryKey: "places", category: localized{"Places", "Lieux"}, word: localized{"Mountain", "Montagne"}, hint: localized{"Summit", "Sommet"}},
+	{categoryKey: "places", category: localized{"Places", "Lieux"}, word: localized{"Farm", "Ferme"}, hint: localized{"Tractor", "Tracteur"}},
+	{categoryKey: "places", category: localized{"Places", "Lieux"}, word: localized{"Subway", "Métro"}, hint: localized{"Turnstile", "Tourniquet"}},
 
 	// Food
-	{"food", localized{"Food", "Nourriture"}, localized{"Pizza", "Pizza"}},
-	{"food", localized{"Food", "Nourriture"}, localized{"Sushi", "Sushi"}},
-	{"food", localized{"Food", "Nourriture"}, localized{"Pancakes", "Crêpes"}},
-	{"food", localized{"Food", "Nourriture"}, localized{"Cheese", "Fromage"}},
-	{"food", localized{"Food", "Nourriture"}, localized{"Soup", "Soupe"}},
-	{"food", localized{"Food", "Nourriture"}, localized{"Baguette", "Baguette"}},
-	{"food", localized{"Food", "Nourriture"}, localized{"Chocolate", "Chocolat"}},
-	{"food", localized{"Food", "Nourriture"}, localized{"Popcorn", "Popcorn"}},
+	{categoryKey: "food", category: localized{"Food", "Nourriture"}, word: localized{"Pizza", "Pizza"}, hint: localized{"Slice", "Part"}},
+	{categoryKey: "food", category: localized{"Food", "Nourriture"}, word: localized{"Sushi", "Sushi"}, hint: localized{"Chopsticks", "Baguettes"}},
+	{categoryKey: "food", category: localized{"Food", "Nourriture"}, word: localized{"Pancakes", "Crêpes"}, hint: localized{"Syrup", "Sirop"}},
+	{categoryKey: "food", category: localized{"Food", "Nourriture"}, word: localized{"Cheese", "Fromage"}, hint: localized{"Wedge", "Morceau"}},
+	{categoryKey: "food", category: localized{"Food", "Nourriture"}, word: localized{"Soup", "Soupe"}, hint: localized{"Ladle", "Louche"}},
+	{categoryKey: "food", category: localized{"Food", "Nourriture"}, word: localized{"Baguette", "Baguette"}, hint: localized{"Crust", "Croûte"}},
+	{categoryKey: "food", category: localized{"Food", "Nourriture"}, word: localized{"Chocolate", "Chocolat"}, hint: localized{"Cocoa", "Cacao"}},
+	{categoryKey: "food", category: localized{"Food", "Nourriture"}, word: localized{"Popcorn", "Popcorn"}, hint: localized{"Kernel", "Grain"}},
 
 	// Animals
-	{"animals", localized{"Animals", "Animaux"}, localized{"Penguin", "Manchot"}},
-	{"animals", localized{"Animals", "Animaux"}, localized{"Elephant", "Éléphant"}},
-	{"animals", localized{"Animals", "Animaux"}, localized{"Octopus", "Poulpe"}},
-	{"animals", localized{"Animals", "Animaux"}, localized{"Kangaroo", "Kangourou"}},
-	{"animals", localized{"Animals", "Animaux"}, localized{"Owl", "Hibou"}},
-	{"animals", localized{"Animals", "Animaux"}, localized{"Squirrel", "Écureuil"}},
-	{"animals", localized{"Animals", "Animaux"}, localized{"Shark", "Requin"}},
+	{categoryKey: "animals", category: localized{"Animals", "Animaux"}, word: localized{"Penguin", "Manchot"}, hint: localized{"Tuxedo", "Smoking"}},
+	{categoryKey: "animals", category: localized{"Animals", "Animaux"}, word: localized{"Elephant", "Éléphant"}, hint: localized{"Trunk", "Trompe"}},
+	{categoryKey: "animals", category: localized{"Animals", "Animaux"}, word: localized{"Octopus", "Poulpe"}, hint: localized{"Tentacles", "Tentacules"}},
+	{categoryKey: "animals", category: localized{"Animals", "Animaux"}, word: localized{"Kangaroo", "Kangourou"}, hint: localized{"Pouch", "Poche"}},
+	{categoryKey: "animals", category: localized{"Animals", "Animaux"}, word: localized{"Owl", "Hibou"}, hint: localized{"Hoot", "Hululement"}},
+	{categoryKey: "animals", category: localized{"Animals", "Animaux"}, word: localized{"Squirrel", "Écureuil"}, hint: localized{"Acorn", "Gland"}},
+	{categoryKey: "animals", category: localized{"Animals", "Animaux"}, word: localized{"Shark", "Requin"}, hint: localized{"Fin", "Aileron"}},
 
 	// Objects
-	{"objects", localized{"Objects", "Objets"}, localized{"Umbrella", "Parapluie"}},
-	{"objects", localized{"Objects", "Objets"}, localized{"Telescope", "Télescope"}},
-	{"objects", localized{"Objects", "Objets"}, localized{"Backpack", "Sac à dos"}},
-	{"objects", localized{"Objects", "Objets"}, localized{"Candle", "Bougie"}},
-	{"objects", localized{"Objects", "Objets"}, localized{"Compass", "Boussole"}},
-	{"objects", localized{"Objects", "Objets"}, localized{"Mirror", "Miroir"}},
-	{"objects", localized{"Objects", "Objets"}, localized{"Suitcase", "Valise"}},
+	{categoryKey: "objects", category: localized{"Objects", "Objets"}, word: localized{"Umbrella", "Parapluie"}, hint: localized{"Rain", "Pluie"}},
+	{categoryKey: "objects", category: localized{"Objects", "Objets"}, word: localized{"Telescope", "Télescope"}, hint: localized{"Lens", "Lentille"}},
+	{categoryKey: "objects", category: localized{"Objects", "Objets"}, word: localized{"Backpack", "Sac à dos"}, hint: localized{"Straps", "Bretelles"}},
+	{categoryKey: "objects", category: localized{"Objects", "Objets"}, word: localized{"Candle", "Bougie"}, hint: localized{"Wax", "Cire"}},
+	{categoryKey: "objects", category: localized{"Objects", "Objets"}, word: localized{"Compass", "Boussole"}, hint: localized{"North", "Nord"}},
+	{categoryKey: "objects", category: localized{"Objects", "Objets"}, word: localized{"Mirror", "Miroir"}, hint: localized{"Reflection", "Reflet"}},
+	{categoryKey: "objects", category: localized{"Objects", "Objets"}, word: localized{"Suitcase", "Valise"}, hint: localized{"Zipper", "Fermeture éclair"}},
 
 	// Activities
-	{"activities", localized{"Activities", "Activités"}, localized{"Camping", "Camping"}},
-	{"activities", localized{"Activities", "Activités"}, localized{"Karaoke", "Karaoké"}},
-	{"activities", localized{"Activities", "Activités"}, localized{"Painting", "Peinture"}},
-	{"activities", localized{"Activities", "Activités"}, localized{"Fishing", "Pêche"}},
-	{"activities", localized{"Activities", "Activités"}, localized{"Juggling", "Jonglerie"}},
-	{"activities", localized{"Activities", "Activités"}, localized{"Skiing", "Ski"}},
+	{categoryKey: "activities", category: localized{"Activities", "Activités"}, word: localized{"Camping", "Camping"}, hint: localized{"Tent", "Tente"}},
+	{categoryKey: "activities", category: localized{"Activities", "Activités"}, word: localized{"Karaoke", "Karaoké"}, hint: localized{"Microphone", "Microphone"}},
+	{categoryKey: "activities", category: localized{"Activities", "Activités"}, word: localized{"Painting", "Peinture"}, hint: localized{"Canvas", "Toile"}},
+	{categoryKey: "activities", category: localized{"Activities", "Activités"}, word: localized{"Fishing", "Pêche"}, hint: localized{"Bait", "Appât"}},
+	{categoryKey: "activities", category: localized{"Activities", "Activités"}, word: localized{"Juggling", "Jonglerie"}, hint: localized{"Balls", "Balles"}},
+	{categoryKey: "activities", category: localized{"Activities", "Activités"}, word: localized{"Skiing", "Ski"}, hint: localized{"Slope", "Pente"}},
 
 	// Jobs
-	{"jobs", localized{"Jobs", "Métiers"}, localized{"Firefighter", "Pompier"}},
-	{"jobs", localized{"Jobs", "Métiers"}, localized{"Teacher", "Enseignant"}},
-	{"jobs", localized{"Jobs", "Métiers"}, localized{"Pilot", "Pilote"}},
-	{"jobs", localized{"Jobs", "Métiers"}, localized{"Chef", "Chef cuisinier"}},
-	{"jobs", localized{"Jobs", "Métiers"}, localized{"Plumber", "Plombier"}},
+	{categoryKey: "jobs", category: localized{"Jobs", "Métiers"}, word: localized{"Firefighter", "Pompier"}, hint: localized{"Pole", "Poteau"}},
+	{categoryKey: "jobs", category: localized{"Jobs", "Métiers"}, word: localized{"Teacher", "Enseignant"}, hint: localized{"Chalkboard", "Tableau"}},
+	{categoryKey: "jobs", category: localized{"Jobs", "Métiers"}, word: localized{"Pilot", "Pilote"}, hint: localized{"Cockpit", "Cabine"}},
+	{categoryKey: "jobs", category: localized{"Jobs", "Métiers"}, word: localized{"Chef", "Chef cuisinier"}, hint: localized{"Apron", "Tablier"}},
+	{categoryKey: "jobs", category: localized{"Jobs", "Métiers"}, word: localized{"Plumber", "Plombier"}, hint: localized{"Wrench", "Clé à molette"}},
 
 	// Weather
-	{"weather", localized{"Weather", "Météo"}, localized{"Thunderstorm", "Orage"}},
-	{"weather", localized{"Weather", "Météo"}, localized{"Rainbow", "Arc-en-ciel"}},
-	{"weather", localized{"Weather", "Météo"}, localized{"Fog", "Brouillard"}},
-	{"weather", localized{"Weather", "Météo"}, localized{"Snowstorm", "Tempête de neige"}},
+	{categoryKey: "weather", category: localized{"Weather", "Météo"}, word: localized{"Thunderstorm", "Orage"}, hint: localized{"Lightning", "Éclair"}},
+	{categoryKey: "weather", category: localized{"Weather", "Météo"}, word: localized{"Rainbow", "Arc-en-ciel"}, hint: localized{"Prism", "Prisme"}},
+	{categoryKey: "weather", category: localized{"Weather", "Météo"}, word: localized{"Fog", "Brouillard"}, hint: localized{"Mist", "Brume"}},
+	{categoryKey: "weather", category: localized{"Weather", "Météo"}, word: localized{"Snowstorm", "Tempête de neige"}, hint: localized{"Blizzard", "Blizzard"}},
 }
 
 // pickWord returns a random word, restricted to categoryKey when it names a

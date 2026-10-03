@@ -15,9 +15,13 @@ option go_package = "github.com/mintthiha/party-games/server/internal/games/impo
 // screen until a player sends PlayAgain, which ends it so the host can start
 // a fresh one.
 //
-// The host may turn on hints for the imposter (StartOptions.hints_enabled):
-// the imposter still gets no word, but does get the category, the same
-// mercy a harder or easier room might want to tune.
+// Every word carries two separate pieces of text: its category (e.g.
+// "Animals") and a hint (e.g. "Hops and carries young in a pouch" for
+// Kangaroo). The category is public — crew and imposter both see it, since
+// it's not enough on its own to guess the word. The host may additionally
+// turn on hints for the imposter (StartOptions.hints_enabled): the imposter
+// still gets no word, but does get the hint, the same mercy a harder or
+// easier room might want to tune.
 
 // Sent as StartGame.options (proto3-JSON) when the host starts an Imposter
 // round. Omitted or all-default fields mean "use the defaults".
@@ -50,12 +54,15 @@ message ImposterServerMessage {
 }
 
 // Sent privately to each player at the start of a round. For the imposter,
-// `word` is always empty; `category` is too unless the host turned hints on
-// for this round (StartOptions.hints_enabled).
+// `word` is always empty. `category` is always set for everyone — it's
+// public knowledge, not a hint. `hint` is set only for the imposter, and only
+// when the host turned hints on for this round (StartOptions.hints_enabled);
+// it's a stronger clue than the category, but still never the word itself.
 message RoleAssignment {
   bool is_imposter = 1;
   string word = 2;
   string category = 3;
+  string hint = 4;
 }
 
 // Broadcast as players confirm they have seen their role, so every client can

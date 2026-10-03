@@ -236,8 +236,11 @@ func TestInitAssignsExactlyOneImposterWithNoWord(t *testing.T) {
 	for id, r := range roles {
 		if r.GetIsImposter() {
 			imposters++
-			if r.GetWord() != "" || r.GetCategory() != "" {
-				t.Errorf("imposter %s got word %q / category %q", id, r.GetWord(), r.GetCategory())
+			if r.GetWord() != "" || r.GetHint() != "" {
+				t.Errorf("imposter %s got word %q / hint %q", id, r.GetWord(), r.GetHint())
+			}
+			if r.GetCategory() == "" {
+				t.Errorf("imposter %s got no category; category is public and always set", id)
 			}
 			continue
 		}
@@ -260,7 +263,7 @@ func TestInitAssignsExactlyOneImposterWithNoWord(t *testing.T) {
 	}
 }
 
-func TestInitHintsEnabledGivesImposterCategoryButNotWord(t *testing.T) {
+func TestInitHintsEnabledGivesImposterHintButNotWord(t *testing.T) {
 	opts := startOpts(&pb.StartOptions{HintsEnabled: true})
 	st, effects, err := (Game{}).Init(mkPlayers(5, "en"), opts)
 	if err != nil {
@@ -276,15 +279,20 @@ func TestInitHintsEnabledGivesImposterCategoryButNotWord(t *testing.T) {
 	if r.GetWord() != "" {
 		t.Errorf("imposter got word %q, want empty even with hints on", r.GetWord())
 	}
-	want := s.entry.category.forLocale("en")
-	if r.GetCategory() != want {
-		t.Errorf("imposter category = %q, want %q", r.GetCategory(), want)
+	wantHint := s.entry.hint.forLocale("en")
+	if r.GetHint() != wantHint {
+		t.Errorf("imposter hint = %q, want %q", r.GetHint(), wantHint)
+	}
+	wantCategory := s.entry.category.forLocale("en")
+	if r.GetCategory() != wantCategory {
+		t.Errorf("imposter category = %q, want %q", r.GetCategory(), wantCategory)
 	}
 }
 
 func TestInitHintsDisabledByDefault(t *testing.T) {
 	// No options at all (nil) — same as StartOptions{} — must leave the
-	// imposter with no category, same as TestInitAssignsExactlyOneImposterWithNoWord.
+	// imposter with no hint, but category is public regardless, same as
+	// TestInitAssignsExactlyOneImposterWithNoWord.
 	opts := startOpts(&pb.StartOptions{HintsEnabled: false})
 	st, effects, err := (Game{}).Init(mkPlayers(5, "en"), opts)
 	if err != nil {
@@ -292,8 +300,12 @@ func TestInitHintsDisabledByDefault(t *testing.T) {
 	}
 	s := st.(*state)
 	roles := collectRoles(t, effects)
-	if r := roles[s.imposterID]; r.GetCategory() != "" {
-		t.Errorf("imposter category = %q, want empty with hints off", r.GetCategory())
+	r := roles[s.imposterID]
+	if r.GetHint() != "" {
+		t.Errorf("imposter hint = %q, want empty with hints off", r.GetHint())
+	}
+	if r.GetCategory() == "" {
+		t.Error("imposter category is empty, want it set regardless of hints")
 	}
 }
 

@@ -269,16 +269,19 @@ func contains(ids []string, id string) bool {
 
 // ─── message builders ───────────────────────────────────────────────────────
 
-// roleFor builds the private RoleAssignment for one player. The imposter's
-// word is always left empty; their category is too unless the host turned
-// hints on for this round.
+// roleFor builds the private RoleAssignment for one player. category is
+// always set — it's public, not a hint. The imposter's word is always left
+// empty; they get hint instead, and only if the host turned hints on for
+// this round.
 func roleFor(st *state, p game.Player) *pb.ImposterServerMessage {
-	role := &pb.RoleAssignment{IsImposter: p.ID == st.imposterID}
+	role := &pb.RoleAssignment{
+		IsImposter: p.ID == st.imposterID,
+		Category:   st.entry.category.forLocale(p.Locale),
+	}
 	if !role.IsImposter {
 		role.Word = st.entry.word.forLocale(p.Locale)
-		role.Category = st.entry.category.forLocale(p.Locale)
 	} else if st.hintsEnabled {
-		role.Category = st.entry.category.forLocale(p.Locale)
+		role.Hint = st.entry.hint.forLocale(p.Locale)
 	}
 	return &pb.ImposterServerMessage{
 		Body: &pb.ImposterServerMessage_RoleAssignment{RoleAssignment: role},

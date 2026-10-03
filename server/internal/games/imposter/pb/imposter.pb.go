@@ -261,13 +261,16 @@ func (*ImposterServerMessage_Outcome) isImposterServerMessage_Body() {}
 func (*ImposterServerMessage_StealPrompt) isImposterServerMessage_Body() {}
 
 // Sent privately to each player at the start of a round. For the imposter,
-// `word` is always empty; `category` is too unless the host turned hints on
-// for this round (StartOptions.hints_enabled).
+// `word` is always empty. `category` is always set for everyone — it's
+// public knowledge, not a hint. `hint` is set only for the imposter, and only
+// when the host turned hints on for this round (StartOptions.hints_enabled);
+// it's a stronger clue than the category, but still never the word itself.
 type RoleAssignment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	IsImposter    bool                   `protobuf:"varint,1,opt,name=is_imposter,json=isImposter,proto3" json:"is_imposter,omitempty"`
 	Word          string                 `protobuf:"bytes,2,opt,name=word,proto3" json:"word,omitempty"`
 	Category      string                 `protobuf:"bytes,3,opt,name=category,proto3" json:"category,omitempty"`
+	Hint          string                 `protobuf:"bytes,4,opt,name=hint,proto3" json:"hint,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -319,6 +322,13 @@ func (x *RoleAssignment) GetWord() string {
 func (x *RoleAssignment) GetCategory() string {
 	if x != nil {
 		return x.Category
+	}
+	return ""
+}
+
+func (x *RoleAssignment) GetHint() string {
+	if x != nil {
+		return x.Hint
 	}
 	return ""
 }
@@ -1249,12 +1259,13 @@ const file_imposter_proto_rawDesc = "" +
 	"vote_tally\x18\x06 \x01(\v2\x16.imposter.v1.VoteTallyH\x00R\tvoteTally\x120\n" +
 	"\aoutcome\x18\a \x01(\v2\x14.imposter.v1.OutcomeH\x00R\aoutcome\x12=\n" +
 	"\fsteal_prompt\x18\b \x01(\v2\x18.imposter.v1.StealPromptH\x00R\vstealPromptB\x06\n" +
-	"\x04body\"a\n" +
+	"\x04body\"u\n" +
 	"\x0eRoleAssignment\x12\x1f\n" +
 	"\vis_imposter\x18\x01 \x01(\bR\n" +
 	"isImposter\x12\x12\n" +
 	"\x04word\x18\x02 \x01(\tR\x04word\x12\x1a\n" +
-	"\bcategory\x18\x03 \x01(\tR\bcategory\"P\n" +
+	"\bcategory\x18\x03 \x01(\tR\bcategory\x12\x12\n" +
+	"\x04hint\x18\x04 \x01(\tR\x04hint\"P\n" +
 	"\x0eRevealProgress\x12(\n" +
 	"\x10ready_player_ids\x18\x01 \x03(\tR\x0ereadyPlayerIds\x12\x14\n" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\"<\n" +
