@@ -121,8 +121,8 @@ message StealPrompt {
 
 // Sent privately to each player once the round is fully decided — right after
 // VoteTally if the imposter wasn't caught, or after their steal guess if they
-// were. word/category are localized per recipient, which is why this isn't a
-// broadcast.
+// were. word/category/hint are localized per recipient, which is why this
+// isn't a broadcast.
 message Outcome {
   string imposter_id = 1;
   string word = 2;
@@ -134,6 +134,11 @@ message Outcome {
   bool steal_attempted = 6;
   string steal_guess = 7;
   bool steal_correct = 8;
+
+  // The hint the imposter was given, if the round had hints on
+  // (StartOptions.hints_enabled). Empty on a hints-off round — not something
+  // to render as a blank line.
+  string hint = 9;
 }
 
 // ── Client → Server ───────────────────────────────────────────────────────

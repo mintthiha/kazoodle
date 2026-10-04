@@ -544,6 +544,39 @@ func TestVoteTieMeansImposterEscapes(t *testing.T) {
 	}
 }
 
+func TestOutcomeIncludesHintOnlyWhenHintsWereEnabledForTheRound(t *testing.T) {
+	for _, hintsEnabled := range []bool{true, false} {
+		st, _, _ := (Game{}).Init(mkPlayers(3, "en"), startOpts(&pb.StartOptions{HintsEnabled: hintsEnabled}))
+		s := st.(*state)
+		order := s.order
+		wantHint := ""
+		if hintsEnabled {
+			wantHint = s.entry.hint.forLocale("en")
+		}
+
+		st, _ = readyAll(t, st, order)
+		st, _ = giveAllClues(t, st, order)
+
+		// A three-way tie: nobody is caught, so Outcome comes back immediately.
+		var effects []game.Effect
+		var err error
+		for i, id := range order {
+			suspect := order[(i+1)%len(order)]
+			st, effects, err = (Game{}).Advance(st, voteEvent(id, suspect))
+			if err != nil {
+				t.Fatalf("hintsEnabled=%v: Advance(vote %s): %v", hintsEnabled, id, err)
+			}
+		}
+
+		for id, o := range collectOutcomes(t, effects) {
+			if o.GetHint() != wantHint {
+				t.Errorf("hintsEnabled=%v: player %s outcome hint = %q, want %q",
+					hintsEnabled, id, o.GetHint(), wantHint)
+			}
+		}
+	}
+}
+
 func TestVoteChangeBeforeEveryoneHasVoted(t *testing.T) {
 	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order

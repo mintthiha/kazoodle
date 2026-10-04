@@ -786,8 +786,8 @@ func (x *StealPrompt) GetImposterId() string {
 
 // Sent privately to each player once the round is fully decided — right after
 // VoteTally if the imposter wasn't caught, or after their steal guess if they
-// were. word/category are localized per recipient, which is why this isn't a
-// broadcast.
+// were. word/category/hint are localized per recipient, which is why this
+// isn't a broadcast.
 type Outcome struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	ImposterId string                 `protobuf:"bytes,1,opt,name=imposter_id,json=imposterId,proto3" json:"imposter_id,omitempty"`
@@ -799,8 +799,12 @@ type Outcome struct {
 	StealAttempted bool   `protobuf:"varint,6,opt,name=steal_attempted,json=stealAttempted,proto3" json:"steal_attempted,omitempty"`
 	StealGuess     string `protobuf:"bytes,7,opt,name=steal_guess,json=stealGuess,proto3" json:"steal_guess,omitempty"`
 	StealCorrect   bool   `protobuf:"varint,8,opt,name=steal_correct,json=stealCorrect,proto3" json:"steal_correct,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// The hint the imposter was given, if the round had hints on
+	// (StartOptions.hints_enabled). Empty on a hints-off round — not something
+	// to render as a blank line.
+	Hint          string `protobuf:"bytes,9,opt,name=hint,proto3" json:"hint,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Outcome) Reset() {
@@ -887,6 +891,13 @@ func (x *Outcome) GetStealCorrect() bool {
 		return x.StealCorrect
 	}
 	return false
+}
+
+func (x *Outcome) GetHint() string {
+	if x != nil {
+		return x.Hint
+	}
+	return ""
 }
 
 type ImposterClientMessage struct {
@@ -1296,7 +1307,7 @@ const file_imposter_proto_rawDesc = "" +
 	"\rabstain_count\x18\x03 \x01(\x05R\fabstainCount\".\n" +
 	"\vStealPrompt\x12\x1f\n" +
 	"\vimposter_id\x18\x01 \x01(\tR\n" +
-	"imposterId\"\x86\x02\n" +
+	"imposterId\"\x9a\x02\n" +
 	"\aOutcome\x12\x1f\n" +
 	"\vimposter_id\x18\x01 \x01(\tR\n" +
 	"imposterId\x12\x12\n" +
@@ -1308,7 +1319,8 @@ const file_imposter_proto_rawDesc = "" +
 	"\x0fsteal_attempted\x18\x06 \x01(\bR\x0estealAttempted\x12\x1f\n" +
 	"\vsteal_guess\x18\a \x01(\tR\n" +
 	"stealGuess\x12#\n" +
-	"\rsteal_correct\x18\b \x01(\bR\fstealCorrect\"\xbc\x02\n" +
+	"\rsteal_correct\x18\b \x01(\bR\fstealCorrect\x12\x12\n" +
+	"\x04hint\x18\t \x01(\tR\x04hint\"\xbc\x02\n" +
 	"\x15ImposterClientMessage\x127\n" +
 	"\n" +
 	"mark_ready\x18\x01 \x01(\v2\x16.imposter.v1.MarkReadyH\x00R\tmarkReady\x12:\n" +

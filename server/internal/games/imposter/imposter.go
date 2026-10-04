@@ -367,8 +367,14 @@ func voteTally(st *state, votedOutID string) *pb.ImposterServerMessage {
 }
 
 // outcomeFor builds the private, locale-appropriate Outcome for one player.
+// hint is revealed to everyone here, same as word and category, but only if
+// the round actually had hints on — otherwise there's nothing to reveal.
 func outcomeFor(st *state, playerID, votedOutID string, crewWon, stealAttempted bool, stealGuess string, stealCorrect bool) *pb.ImposterServerMessage {
 	locale := st.locales[playerID]
+	var hint string
+	if st.hintsEnabled {
+		hint = st.entry.hint.forLocale(locale)
+	}
 	return &pb.ImposterServerMessage{
 		Body: &pb.ImposterServerMessage_Outcome{
 			Outcome: &pb.Outcome{
@@ -380,6 +386,7 @@ func outcomeFor(st *state, playerID, votedOutID string, crewWon, stealAttempted 
 				StealAttempted: stealAttempted,
 				StealGuess:     stealGuess,
 				StealCorrect:   stealCorrect,
+				Hint:           hint,
 			},
 		},
 	}

@@ -36,6 +36,9 @@ export function OutcomeView({ tally, outcome, players, isHost, onPlayAgain }: Pr
         <p className="role-hint">
           {t("imposter.revealWord", { word: outcome.word, category: outcome.category })}
         </p>
+        {outcome.hint && (
+          <p className="role-hint">{t("imposter.revealHint", { hint: outcome.hint })}</p>
+        )}
         <p className="role-hint">
           {outcome.votedOutId
             ? t("imposter.votedOut", { who: nameFor(players, outcome.votedOutId) })
