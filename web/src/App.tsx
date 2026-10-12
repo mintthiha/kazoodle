@@ -1,62 +1,25 @@
-import type { ReactNode } from "react";
-import { useConnection } from "./net/useConnection";
 import { useT, type Locale } from "./i18n";
-import { gameViews } from "./games/registry";
-import { encodeStartOptions } from "./games/imposter/messages";
-import { ConnBanner } from "./screens/ConnBanner";
-import { JoinScreen } from "./screens/JoinScreen";
-import { LobbyScreen } from "./screens/LobbyScreen";
+import { GAME_IDS } from "./games/registry";
+import { useRoute } from "./nav/useRoute";
+import { routePath } from "./nav/route";
+import { HomeScreen } from "./screens/home/HomeScreen";
+import { GameSession } from "./screens/GameSession";
 
 const LOCALES: Locale[] = ["en", "fr"];
 
+// Wiring only: pick the screen the URL asks for, and keep the language footer
+// on both. "/" is the hub; "/<game-id>" is that game's session.
 export function App() {
-  const { snapshot, actions } = useConnection();
+  const { route, navigate } = useRoute(GAME_IDS);
   const { locale, setLocale, t } = useT();
-
-  let content: ReactNode;
-  if (snapshot.room && snapshot.game) {
-    const GameView = gameViews[snapshot.game.id];
-    content = GameView ? (
-      <GameView
-        selfId={snapshot.room.selfId}
-        players={snapshot.room.players}
-        isHost={snapshot.room.hostId === snapshot.room.selfId}
-      />
-    ) : (
-      <main className="screen">
-        <p className="hint">{t("game.unknown")}</p>
-      </main>
-    );
-  } else if (snapshot.room) {
-    content = (
-      <LobbyScreen
-        room={snapshot.room}
-        lastEcho={snapshot.lastEcho}
-        isHost={snapshot.room.hostId === snapshot.room.selfId}
-        onStartGame={(hintsEnabled, category) =>
-          actions.startGame("imposter", encodeStartOptions(hintsEnabled, category))
-        }
-        onSetCategory={(hintsEnabled, category) =>
-          actions.setGameOptions("imposter", encodeStartOptions(hintsEnabled, category))
-        }
-        onEcho={actions.echo}
-        onLeave={actions.leaveRoom}
-      />
-    );
-  } else {
-    content = (
-      <JoinScreen
-        snapshot={snapshot}
-        onCreate={(name) => actions.createRoom(name, locale)}
-        onJoin={(code, name) => actions.joinRoom(code, name, locale)}
-      />
-    );
-  }
 
   return (
     <div className="app">
-      <ConnBanner state={snapshot.state} />
-      {content}
+      {route.kind === "home" ? (
+        <HomeScreen onPick={(id) => navigate(routePath({ kind: "game", id }))} />
+      ) : (
+        <GameSession gameId={route.id} onExit={() => navigate(routePath({ kind: "home" }))} />
+      )}
       <footer className="lang">
         <span>{t("app.language")}:</span>
         {LOCALES.map((l) => (

@@ -13,6 +13,16 @@ const en = {
   "conn.reconnecting": "Connection lost — reconnecting…",
   "conn.closed": "Disconnected",
 
+  "home.tagline": "Party games for however your group is arranged.",
+  "home.players": "{min}+ players",
+  "home.soonTitle": "More games soon",
+  "home.soonBody": "The next one lands right here.",
+  "nav.allGames": "All games",
+
+  "game.imposter.name": "Imposter",
+  "game.imposter.hook": "Everyone gets the same word. Except one of you.",
+  "game.imposter.length": "About 5 minutes",
+
   "join.heading": "Join a game",
   "join.nameLabel": "Your name",
   "join.namePlaceholder": "e.g. Alex",
@@ -118,6 +128,16 @@ const fr: Record<MessageKey, string> = {
   "conn.connecting": "Connexion…",
   "conn.reconnecting": "Connexion perdue — reconnexion…",
   "conn.closed": "Déconnecté",
+
+  "home.tagline": "Des jeux de soirée, peu importe comment votre groupe est installé.",
+  "home.players": "{min}+ joueurs",
+  "home.soonTitle": "D’autres jeux bientôt",
+  "home.soonBody": "Le prochain apparaîtra ici.",
+  "nav.allGames": "Tous les jeux",
+
+  "game.imposter.name": "Imposteur",
+  "game.imposter.hook": "Tout le monde reçoit le même mot. Sauf l’un de vous.",
+  "game.imposter.length": "Environ 5 minutes",
 
   "join.heading": "Rejoindre une partie",
   "join.nameLabel": "Votre nom",

@@ -172,6 +172,33 @@ button.danger {
   color: #fff;
 }
 
+/* Session chrome */
+.session-nav {
+  padding: 1rem 1.5rem 0;
+}
+
+.session-nav .back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  width: auto;
+  min-height: 44px;
+  padding: 0.5rem 0.75rem 0.5rem 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: transparent;
+}
+
+.session-nav .back:hover {
+  color: var(--fg);
+}
+
+.session-nav .back svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
 /* Lobby */
 .room-code {
   align-items: center;
