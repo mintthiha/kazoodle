@@ -26,6 +26,9 @@ const en = {
 
   "lobby.heading": "Lobby",
   "lobby.roomCode": "Room code",
+  "lobby.copyCode": "Copy code",
+  "lobby.codeCopied": "Copied!",
+  "lobby.copyFailed": "Couldn’t copy — read the code out instead.",
   "lobby.players": "Players",
   "lobby.you": "you",
   "lobby.leaveButton": "Leave",
@@ -129,6 +132,9 @@ const fr: Record<MessageKey, string> = {
 
   "lobby.heading": "Salon",
   "lobby.roomCode": "Code du salon",
+  "lobby.copyCode": "Copier le code",
+  "lobby.codeCopied": "Copié !",
+  "lobby.copyFailed": "Copie impossible — lisez le code à voix haute.",
   "lobby.players": "Joueurs",
   "lobby.you": "vous",
   "lobby.leaveButton": "Quitter",

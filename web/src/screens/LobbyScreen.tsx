@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "../i18n";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
@@ -8,6 +8,8 @@ import { decodeStartOptions } from "../games/imposter/messages";
 // IMPOSTER_MIN_PLAYERS mirrors the server's minPlayers for Imposter. If they
 // drift, the server still rejects the start — this only gates the button.
 const IMPOSTER_MIN_PLAYERS = 3;
+
+type CopyState = "idle" | "copied" | "failed";
 
 interface Props {
   room: RoomState;
@@ -40,7 +42,21 @@ export function LobbyScreen({
   const [text, setText] = useState("");
   const [hintsEnabled, setHintsEnabled] = useState(false);
   const [category, setCategory] = useState("");
+  // Result of the last "copy code" press. `n` increments on every press so
+  // pressing twice restarts the confirmation timer even when the outcome is
+  // the same both times (React skips a re-render if the value is unchanged).
+  const [copy, setCopy] = useState<{ state: CopyState; n: number }>({ state: "idle", n: 0 });
   const canStart = room.players.length >= IMPOSTER_MIN_PLAYERS;
+
+  // Clear the copy confirmation a couple of seconds after it appears. The
+  // returned function is the cleanup: React runs it before the next effect and
+  // on unmount, so leaving the lobby mid-countdown cannot fire setCopy on a
+  // screen that is gone.
+  useEffect(() => {
+    if (copy.state === "idle") return;
+    const timer = setTimeout(() => setCopy({ state: "idle", n: copy.n }), 2000);
+    return () => clearTimeout(timer);
+  }, [copy.state, copy.n]);
 
   // Non-host players (and the host, on reconnect) read the live pick back out
   // of the room's broadcast pendingOptions instead of local state.
@@ -53,6 +69,18 @@ export function LobbyScreen({
     setHintsEnabled(nextHints);
     setCategory(nextCategory);
     onSetCategory(nextHints, nextCategory);
+  }
+
+  async function copyCode() {
+    try {
+      // navigator.clipboard only exists in a secure context, and a phone
+      // reaching the dev server over plain http on the LAN is not one — so a
+      // missing clipboard is a normal case here, not an edge case.
+      await navigator.clipboard.writeText(room.code);
+      setCopy((c) => ({ state: "copied", n: c.n + 1 }));
+    } catch {
+      setCopy((c) => ({ state: "failed", n: c.n + 1 }));
+    }
   }
 
   function send() {
@@ -69,6 +97,15 @@ export function LobbyScreen({
       <section className="room-code">
         <span className="label">{t("lobby.roomCode")}</span>
         <span className="code">{room.code}</span>
+        <button className="secondary copy-code" onClick={copyCode}>
+          {t("lobby.copyCode")}
+        </button>
+        {/* aria-live so a screen reader announces the result of a press that
+            otherwise changes nothing on screen. */}
+        <p className="copy-status" data-state={copy.state} aria-live="polite">
+          {copy.state === "copied" && t("lobby.codeCopied")}
+          {copy.state === "failed" && t("lobby.copyFailed")}
+        </p>
       </section>
 
       <section>
