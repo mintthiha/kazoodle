@@ -64,3 +64,25 @@ type Game interface {
 	// read-only and return a new value rather than mutating it.
 	Advance(current State, ev Event) (next State, effects []Effect, err error)
 }
+
+// Leaver is the optional half of the Game contract: a game that implements it
+// gets told when a player leaves mid-round and decides for itself what that
+// means. A game that doesn't implement it is simply ended by the platform when
+// anyone leaves, which is the safe default.
+//
+// It is a separate interface rather than a method on Game on purpose. Go
+// interfaces are satisfied implicitly — there's no "implements" keyword — so
+// adding a method to Game itself would break every existing game at compile
+// time, and every future game would be forced to write a Leave it may not
+// want. Keeping it separate lets the room type-assert for it at runtime and
+// fall back when it's absent.
+type Leaver interface {
+	// Leave applies one player's departure. playerID is already gone from the
+	// room, so effects addressed to them go nowhere. Like Advance, it must
+	// treat current as read-only and return a new value.
+	//
+	// Returning EndGame is how a game says the departure was fatal to the
+	// round. Returning no effects at all is fine: it means the round carries
+	// on with nothing new to tell anyone.
+	Leave(current State, playerID string) (next State, effects []Effect, err error)
+}

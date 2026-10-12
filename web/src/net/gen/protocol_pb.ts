@@ -558,6 +558,8 @@ export type GameEnded = Message<"partygames.v1.GameEnded"> & {
 
   /**
    * Stable, machine-readable, e.g. "finished", "player_left", "host_ended".
+   * A game may define its own reasons too (Imposter sends "imposter_left"),
+   * so clients must treat an unrecognized reason as a plain "game over".
    *
    * @generated from field: string reason = 2;
    */

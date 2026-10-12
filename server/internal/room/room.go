@@ -222,12 +222,11 @@ func (r *Room) applyLeave(cmd leaveCmd) {
 	r.order = removeString(r.order, cmd.playerID)
 	r.broadcast(msgPlayerLeft(cmd.playerID))
 
-	// A game in progress can't survive its player set changing under it, so
-	// end it. (A later pass can let a game decide how to handle a mid-game
-	// departure.)
+	// A game in progress now has one fewer player. Games that implement
+	// game.Leaver decide for themselves what that means; the rest can't
+	// survive their player set changing under them, so they're ended.
 	if r.gm != nil {
-		r.broadcast(msgGameEnded(r.gameID, "player_left"))
-		r.clearGame()
+		r.applyGameLeave(cmd.playerID)
 	}
 
 	// If the host left and anyone remains, the longest-present player takes over.
@@ -235,6 +234,34 @@ func (r *Room) applyLeave(cmd leaveCmd) {
 		r.hostID = r.order[0]
 		r.broadcast(msgHostChanged(r.hostID))
 	}
+}
+
+// applyGameLeave tells the running game that a player left, if it's a game
+// that wants to know, and ends it otherwise. The departing member is already
+// out of r.members by the time this runs, so any effect addressed to them is
+// dropped by applyEffects.
+//
+// A Leave that errors is a bug in the game, not something a player did, and
+// there is no client to report it to â the one who caused it has left. So it
+// is logged and the round ended, the same treatment a game that can't handle
+// departures at all gets.
+func (r *Room) applyGameLeave(playerID string) {
+	lv, ok := r.gm.(game.Leaver)
+	if !ok {
+		r.broadcast(msgGameEnded(r.gameID, "player_left"))
+		r.clearGame()
+		return
+	}
+
+	next, effects, err := lv.Leave(r.gameState, playerID)
+	if err != nil {
+		log.Printf("room %s: game %q Leave(%s): %v", r.code, r.gameID, playerID, err)
+		r.broadcast(msgGameEnded(r.gameID, "player_left"))
+		r.clearGame()
+		return
+	}
+	r.gameState = next
+	r.applyEffects(effects)
 }
 
 func (r *Room) applyEcho(cmd echoCmd) {

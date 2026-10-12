@@ -166,6 +166,8 @@ message GameEvent {
 message GameEnded {
   string game_id = 1;
   // Stable, machine-readable, e.g. "finished", "player_left", "host_ended".
+  // A game may define its own reasons too (Imposter sends "imposter_left"),
+  // so clients must treat an unrecognized reason as a plain "game over".
   string reason = 2;
 }
 

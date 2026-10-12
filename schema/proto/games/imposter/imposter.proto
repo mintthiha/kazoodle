@@ -15,6 +15,19 @@ option go_package = "github.com/mintthiha/party-games/server/internal/games/impo
 // screen until a player sends PlayAgain, which ends it so the host can start
 // a fresh one.
 //
+// A player leaving mid-round does not end it. They drop out of the turn order
+// and the candidate list, and the phase they were holding up advances without
+// them; their clue stays in the recap, so clients must tolerate a clue or a
+// vote tally naming an id no longer in the roster. A departure during the
+// vote always reopens the ballot (a fresh VotePhase, same clues, with the
+// leaver dropped from candidate_ids, plus a VoteProgress for the count),
+// since a client builds its ballot from the VotePhase it was handed. Votes
+// cast for the departing player are void; the rest stand.
+//
+// The round is abandoned, with GameEnded, only if the imposter is the one
+// who left (reason "imposter_left") or too few players remain (reason
+// "player_left").
+//
 // Every word carries two separate pieces of text: its category (e.g.
 // "Animals") and a hint (e.g. "Hops and carries young in a pouch" for
 // Kangaroo). The category is public — crew and imposter both see it, since

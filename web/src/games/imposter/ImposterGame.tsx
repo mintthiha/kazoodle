@@ -71,6 +71,10 @@ export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
         case "votePhase":
           setPhase("vote");
           setVotePhase(msg.body.value);
+          // A VotePhase can arrive a second time when the candidate list changes
+          // mid-vote (someone left). That is a new ballot, so this player has no
+          // vote recorded on it any more.
+          setMyVote(null);
           break;
         case "voteProgress":
           setVoteProgress(msg.body.value);

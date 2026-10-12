@@ -1241,6 +1241,8 @@ type GameEnded struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	GameId string                 `protobuf:"bytes,1,opt,name=game_id,json=gameId,proto3" json:"game_id,omitempty"`
 	// Stable, machine-readable, e.g. "finished", "player_left", "host_ended".
+	// A game may define its own reasons too (Imposter sends "imposter_left"),
+	// so clients must treat an unrecognized reason as a plain "game over".
 	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

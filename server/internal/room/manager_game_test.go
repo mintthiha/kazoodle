@@ -320,3 +320,140 @@ func TestGameAbortsWhenPlayerLeaves(t *testing.T) {
 		t.Errorf("action after abort err = %v, want ErrNoActiveGame", err)
 	}
 }
+
+// ─── mid-game departures ────────────────────────────────────────────────────
+
+// fakeLeaver is a fakeGame that also implements game.Leaver, so the room hands
+// it departures instead of ending the round itself.
+type fakeLeaver struct {
+	*fakeGame
+	leave func(s game.State, playerID string) (game.State, []game.Effect, error)
+	left  []string // every playerID Leave was called with, in order
+}
+
+func (f *fakeLeaver) Leave(s game.State, playerID string) (game.State, []game.Effect, error) {
+	f.left = append(f.left, playerID)
+	return f.leave(s, playerID)
+}
+
+func registryOf(g game.Game) *game.Registry {
+	r := game.NewRegistry()
+	r.Register("fake", g)
+	return r
+}
+
+func TestLeaveIsHandedToAGameThatImplementsLeaver(t *testing.T) {
+	inner := &fakeGame{}
+	lv := &fakeLeaver{
+		fakeGame: inner,
+		leave: func(s game.State, playerID string) (game.State, []game.Effect, error) {
+			return "state-after-leave", []game.Effect{gameMsg("carry-on")}, nil
+		},
+	}
+	// Whatever Advance sees afterwards must be the state Leave returned, not
+	// the one from Init.
+	var sawState game.State
+	inner.advance = func(s game.State, ev game.Event) (game.State, []game.Effect, error) {
+		sawState = s
+		return s, nil, nil
+	}
+
+	m := newTestManagerWithGames(t, registryOf(lv))
+	host := newCapture()
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
+	ben := newCapture()
+	benRes, _ := m.Join(context.Background(), created.RoomCode, "Ben", "en", ben)
+	_ = host.next(t) // PlayerJoined
+
+	_ = m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake", nil)
+	expectGameStarted(t, host, "fake")
+	expectGameStarted(t, ben, "fake")
+
+	if err := m.Leave(context.Background(), created.RoomCode, benRes.Self.ID, LeaveDisconnect); err != nil {
+		t.Fatalf("Leave: %v", err)
+	}
+	if len(lv.left) != 1 || lv.left[0] != benRes.Self.ID {
+		t.Fatalf("game was told about %v, want just %s", lv.left, benRes.Self.ID)
+	}
+
+	_ = host.next(t) // PlayerLeft
+	gameID, text := gameEventPayload(t, host)
+	if gameID != "fake" || text != "carry-on" {
+		t.Errorf("got GameEvent{%s, %q}, want {fake, carry-on}", gameID, text)
+	}
+	host.expectSilent(t) // in particular, no GameEnded
+
+	// The round is still live, and running on the state Leave returned.
+	if err := m.GameAction(context.Background(), created.RoomCode, created.Self.ID, "fake", []byte("x")); err != nil {
+		t.Fatalf("GameAction after a handled leave: %v", err)
+	}
+	if sawState != "state-after-leave" {
+		t.Errorf("Advance saw state %v, want state-after-leave", sawState)
+	}
+}
+
+func TestLeaverCanEndTheRoundItself(t *testing.T) {
+	lv := &fakeLeaver{
+		fakeGame: &fakeGame{},
+		leave: func(s game.State, playerID string) (game.State, []game.Effect, error) {
+			return s, []game.Effect{game.EndGame{Reason: "too_few_players"}}, nil
+		},
+	}
+	m := newTestManagerWithGames(t, registryOf(lv))
+	host := newCapture()
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
+	ben := newCapture()
+	benRes, _ := m.Join(context.Background(), created.RoomCode, "Ben", "en", ben)
+	_ = host.next(t)
+
+	_ = m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake", nil)
+	expectGameStarted(t, host, "fake")
+	expectGameStarted(t, ben, "fake")
+
+	if err := m.Leave(context.Background(), created.RoomCode, benRes.Self.ID, LeaveDisconnect); err != nil {
+		t.Fatalf("Leave: %v", err)
+	}
+	_ = host.next(t) // PlayerLeft
+	ge := host.next(t).GetGameEnded()
+	if ge == nil || ge.GetReason() != "too_few_players" {
+		t.Fatalf("expected GameEnded{too_few_players}, got %v", ge)
+	}
+	if err := m.GameAction(context.Background(), created.RoomCode, created.Self.ID, "fake", []byte("x")); !errors.Is(err, ErrNoActiveGame) {
+		t.Errorf("action after the game ended itself: err = %v, want ErrNoActiveGame", err)
+	}
+}
+
+func TestLeaveThatErrorsEndsTheRound(t *testing.T) {
+	// A Leave that fails is a bug in the game, and the player who triggered it
+	// is already gone, so there is nobody to report it to. The room logs it and
+	// falls back to ending the round rather than carrying on with state it
+	// can't trust.
+	lv := &fakeLeaver{
+		fakeGame: &fakeGame{},
+		leave: func(s game.State, playerID string) (game.State, []game.Effect, error) {
+			return nil, nil, errors.New("boom")
+		},
+	}
+	m := newTestManagerWithGames(t, registryOf(lv))
+	host := newCapture()
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
+	ben := newCapture()
+	benRes, _ := m.Join(context.Background(), created.RoomCode, "Ben", "en", ben)
+	_ = host.next(t)
+
+	_ = m.StartGame(context.Background(), created.RoomCode, created.Self.ID, "fake", nil)
+	expectGameStarted(t, host, "fake")
+	expectGameStarted(t, ben, "fake")
+
+	if err := m.Leave(context.Background(), created.RoomCode, benRes.Self.ID, LeaveDisconnect); err != nil {
+		t.Fatalf("Leave: %v", err)
+	}
+	_ = host.next(t) // PlayerLeft
+	ge := host.next(t).GetGameEnded()
+	if ge == nil || ge.GetReason() != "player_left" {
+		t.Fatalf("expected GameEnded{player_left}, got %v", ge)
+	}
+	if err := m.GameAction(context.Background(), created.RoomCode, created.Self.ID, "fake", []byte("x")); !errors.Is(err, ErrNoActiveGame) {
+		t.Errorf("action after a failed leave: err = %v, want ErrNoActiveGame", err)
+	}
+}

@@ -167,13 +167,20 @@ func advanceVote(st *state, voterID, suspectID string, abstain bool) (game.State
 	if !next.allVoted() {
 		return next, []game.Effect{game.Send{Msg: voteProgress(next)}}, nil
 	}
+	return next, resolveVote(next), nil
+}
 
+// resolveVote closes a vote in which everyone present has now voted. It sets
+// the phase on the state it is handed, so callers pass a clone they already
+// own. A vote that caught the imposter moves the round to the steal phase;
+// otherwise the Outcome is final immediately.
+func resolveVote(next *state) []game.Effect {
 	votedOutID, caught := tally(next)
 	effects := []game.Effect{game.Send{Msg: voteTally(next, votedOutID)}}
 
 	if caught {
 		next.phase = phaseSteal
-		return next, append(effects, game.Send{Msg: stealPrompt(next)}), nil
+		return append(effects, game.Send{Msg: stealPrompt(next)})
 	}
 
 	next.phase = phaseOutcome
@@ -182,7 +189,7 @@ func advanceVote(st *state, voterID, suspectID string, abstain bool) (game.State
 	}
 	// No EndGame effect here on purpose: the round's result stays on screen
 	// until a player sends PlayAgain.
-	return next, effects, nil
+	return effects
 }
 
 // advanceSteal handles the caught imposter's one blind guess at the secret
@@ -259,12 +266,17 @@ func tally(st *state) (votedOutID string, caught bool) {
 }
 
 func contains(ids []string, id string) bool {
-	for _, x := range ids {
+	return indexOf(ids, id) >= 0
+}
+
+// indexOf returns id's position in ids, or -1 if it isn't there.
+func indexOf(ids []string, id string) int {
+	for i, x := range ids {
 		if x == id {
-			return true
+			return i
 		}
 	}
-	return false
+	return -1
 }
 
 // ─── message builders ───────────────────────────────────────────────────────
