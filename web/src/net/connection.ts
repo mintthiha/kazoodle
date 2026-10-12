@@ -59,12 +59,27 @@ export interface RoomState {
   selfId: string;
   hostId: string;
   players: Player[];
+  /** Players who have left this room, most recent first. Kept because a round
+   * survives a departure, so their name is still needed after they're off the
+   * roster — a clue of theirs stays in the recap, and a vote tally can name
+   * them. Capped at DEPARTED_LIMIT; past that, the oldest is forgotten and
+   * their name falls back to "someone who left". */
+  departed: Player[];
   pendingOptions: PendingOptions | null;
 }
 
 export interface EchoLine {
   text: string;
   fromPlayerId: string;
+}
+
+/** Why a game stopped, as the server reported it: "finished" for a round that
+ * ran its course, or a reason the game defined ("imposter_left"). Unknown
+ * reasons are expected — a newer server can invent one — so the UI treats
+ * anything it doesn't recognize as a plain "the round ended". */
+export interface GameEnd {
+  gameId: string;
+  reason: string;
 }
 
 /** Immutable view of the connection. A new object is produced on every change,
@@ -76,6 +91,13 @@ export interface Snapshot {
   game: { id: string } | null;
   lastError: string | null;
   lastEcho: EchoLine | null;
+  /** The player who most recently left, for a "so-and-so left" notice. A fresh
+   * object on every departure, even if the same player somehow left twice, so
+   * a component can re-show its notice on identity alone. */
+  lastDeparture: Player | null;
+  /** Why the last game stopped, for a notice explaining the jump back to the
+   * lobby. Cleared when a new game starts. */
+  lastGameEnd: GameEnd | null;
 }
 
 export interface ConnectionOptions {
@@ -95,6 +117,11 @@ interface Desired {
 // just-mounted screen missed without growing without bound.
 const GAME_EVENT_BUFFER = 500;
 
+// How many departed players' names to remember. Generous enough that a long
+// session's worth of dropped phones all stay nameable, bounded so a room
+// nobody closes can't grow this forever.
+const DEPARTED_LIMIT = 50;
+
 export class Connection {
   readonly #url: string;
   readonly #newSocket: SocketFactory;
@@ -112,6 +139,8 @@ export class Connection {
     game: null,
     lastError: null,
     lastEcho: null,
+    lastDeparture: null,
+    lastGameEnd: null,
   };
   readonly #listeners = new Set<() => void>();
 
@@ -276,10 +305,15 @@ export class Connection {
             selfId: selfPlayerId,
             hostId,
             players: players.map((p) => ({ id: p.id, displayName: p.displayName })),
+            departed: [],
             pendingOptions: null,
           },
           game: null,
           lastError: null,
+          // A fresh room, or a rejoin after a reconnect: nothing from the old
+          // one should still be on screen as a notice.
+          lastDeparture: null,
+          lastGameEnd: null,
         });
         break;
       }
@@ -305,12 +339,19 @@ export class Connection {
 
       case "playerLeft": {
         const id = msg.payload.value.playerId;
-        if (!this.#snapshot.room) break;
+        const room = this.#snapshot.room;
+        if (!room) break;
+        // PlayerLeft carries only an id, so their name has to be taken off the
+        // roster before they're removed from it — afterwards it's gone.
+        const gone = room.players.find((x) => x.id === id);
+        if (!gone) break; // already off the roster; nothing to report
         this.#patch({
           room: {
-            ...this.#snapshot.room,
-            players: this.#snapshot.room.players.filter((x) => x.id !== id),
+            ...room,
+            players: room.players.filter((x) => x.id !== id),
+            departed: [gone, ...room.departed].slice(0, DEPARTED_LIMIT),
           },
+          lastDeparture: { ...gone },
         });
         break;
       }
@@ -330,7 +371,8 @@ export class Connection {
 
       case "gameStarted": {
         this.#gameEventLog = [];
-        this.#patch({ game: { id: msg.payload.value.gameId } });
+        // A new round starts clean: why the last one ended is no longer news.
+        this.#patch({ game: { id: msg.payload.value.gameId }, lastGameEnd: null });
         break;
       }
 
@@ -343,8 +385,12 @@ export class Connection {
       }
 
       case "gameEnded": {
+        const { gameId, reason } = msg.payload.value;
         this.#gameEventLog = [];
-        this.#patch({ game: null });
+        // The reason is kept, not dropped: a round that ends because the
+        // imposter quit sends everyone back to the lobby, and without this the
+        // jump has no explanation on screen.
+        this.#patch({ game: null, lastGameEnd: { gameId, reason } });
         break;
       }
 
@@ -353,7 +399,9 @@ export class Connection {
         this.#patch({ lastError: code });
         if (code === "room_not_found") {
           this.#desired = null;
-          this.#patch({ room: null, game: null });
+          // Out of the room entirely: notices about who left it, or why its
+          // last round stopped, are no longer this player's business.
+          this.#patch({ room: null, game: null, lastDeparture: null, lastGameEnd: null });
         }
         break;
       }

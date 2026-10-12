@@ -6,7 +6,7 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { detectLocale, translate, type Locale, type MessageKey, type Vars } from "./messages";
 
-export type { Locale, MessageKey } from "./messages";
+export type { Locale, MessageKey, Vars } from "./messages";
 
 interface LocaleContextValue {
   locale: Locale;

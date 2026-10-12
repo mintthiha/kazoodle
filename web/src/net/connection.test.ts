@@ -164,6 +164,109 @@ describe("Connection", () => {
     expect(conn.getSnapshot().game).toBeNull();
   });
 
+  it("keeps why the last game ended, and clears it when the next one starts", () => {
+    // Without the reason there is nothing to put on screen to explain an
+    // abandoned round, and players just get dropped into the lobby.
+    conn.start();
+    sockets[0].open();
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(roomJoined());
+    sockets[0].receive({ gameStarted: { gameId: "imposter" } });
+
+    sockets[0].receive({ gameEnded: { gameId: "imposter", reason: "imposter_left" } });
+    expect(conn.getSnapshot().lastGameEnd).toEqual({ gameId: "imposter", reason: "imposter_left" });
+
+    sockets[0].receive({ gameStarted: { gameId: "imposter" } });
+    expect(conn.getSnapshot().lastGameEnd).toBeNull();
+  });
+
+  // ─── departures ───────────────────────────────────────────────────────────
+
+  it("remembers a departed player's name instead of only dropping them", () => {
+    // A round survives a departure, so their clue stays in the recap and the
+    // vote tally can still name them. PlayerLeft carries only an id, so the
+    // name has to be captured off the roster on the way out.
+    conn.start();
+    sockets[0].open();
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(
+      roomJoined({
+        players: [
+          { id: "p1", displayName: "Ana" },
+          { id: "p2", displayName: "Ben" },
+        ],
+      }),
+    );
+
+    sockets[0].receive({ playerLeft: { playerId: "p2" } });
+
+    const room = conn.getSnapshot().room;
+    expect(room?.players.map((p) => p.id)).toEqual(["p1"]);
+    expect(room?.departed).toEqual([{ id: "p2", displayName: "Ben" }]);
+    expect(conn.getSnapshot().lastDeparture).toEqual({ id: "p2", displayName: "Ben" });
+  });
+
+  it("ignores a playerLeft for someone already off the roster", () => {
+    conn.start();
+    sockets[0].open();
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(roomJoined());
+
+    sockets[0].receive({ playerLeft: { playerId: "p-never-here" } });
+
+    expect(conn.getSnapshot().room?.departed).toEqual([]);
+    expect(conn.getSnapshot().lastDeparture).toBeNull();
+  });
+
+  it("gives each departure a fresh object, so a repeat notice re-shows", () => {
+    // The notice is transient and keyed on identity: two departures in a row
+    // have to be two distinct values, or the second never re-renders.
+    conn.start();
+    sockets[0].open();
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(
+      roomJoined({
+        players: [
+          { id: "p1", displayName: "Ana" },
+          { id: "p2", displayName: "Ben" },
+          { id: "p3", displayName: "Cal" },
+        ],
+      }),
+    );
+
+    sockets[0].receive({ playerLeft: { playerId: "p2" } });
+    const first = conn.getSnapshot().lastDeparture;
+    sockets[0].receive({ playerLeft: { playerId: "p3" } });
+    const second = conn.getSnapshot().lastDeparture;
+
+    expect(first).not.toBe(second);
+    expect(second).toEqual({ id: "p3", displayName: "Cal" });
+    // Most recent first.
+    expect(conn.getSnapshot().room?.departed.map((p) => p.id)).toEqual(["p3", "p2"]);
+  });
+
+  it("starts a joined room with no departures and no stale notices", () => {
+    conn.start();
+    sockets[0].open();
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(
+      roomJoined({
+        players: [
+          { id: "p1", displayName: "Ana" },
+          { id: "p2", displayName: "Ben" },
+        ],
+      }),
+    );
+    sockets[0].receive({ playerLeft: { playerId: "p2" } });
+    expect(conn.getSnapshot().lastDeparture).not.toBeNull();
+
+    // A rejoin after a reconnect must not carry the old room's notices over.
+    sockets[0].receive(roomJoined());
+    expect(conn.getSnapshot().room?.departed).toEqual([]);
+    expect(conn.getSnapshot().lastDeparture).toBeNull();
+    expect(conn.getSnapshot().lastGameEnd).toBeNull();
+  });
+
   it("streams gameEvent payloads to subscribers", () => {
     conn.start();
     sockets[0].open();

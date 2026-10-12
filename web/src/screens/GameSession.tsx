@@ -6,6 +6,7 @@ import { encodeStartOptions } from "../games/imposter/messages";
 import { ConnBanner } from "./ConnBanner";
 import { JoinScreen } from "./JoinScreen";
 import { LobbyScreen } from "./LobbyScreen";
+import { RoomNotice } from "./RoomNotice";
 
 interface Props {
   /** Which game the hub sent us here to play. Only used for the start call for
@@ -44,6 +45,7 @@ export function GameSession({ gameId, onExit }: Props) {
       <GameView
         selfId={snapshot.room.selfId}
         players={snapshot.room.players}
+        departed={snapshot.room.departed}
         isHost={snapshot.room.hostId === snapshot.room.selfId}
       />
     ) : (
@@ -80,6 +82,11 @@ export function GameSession({ gameId, onExit }: Props) {
   return (
     <>
       <ConnBanner state={snapshot.state} />
+      {/* Only inside a room: a departure from the room someone just left is
+          not news on the join screen. */}
+      {snapshot.room && (
+        <RoomNotice departure={snapshot.lastDeparture} gameEnd={snapshot.lastGameEnd} />
+      )}
       {/* Back to the shelf, offered only before joining a room: once players
           are in a room, Leave is the way out, and two exits side by side is
           one too many. */}

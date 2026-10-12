@@ -172,6 +172,38 @@ button.danger {
   color: #fff;
 }
 
+/* Transient room notices — "Ben left.", "The imposter left — the round was
+   abandoned." Sits under the connection strip, reads as information rather
+   than as an error, and takes itself away after a few seconds. */
+.room-notice {
+  padding: 0.7rem 1.5rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+  font-size: 0.9375rem;
+}
+
+.room-notice p {
+  margin: 0;
+}
+
+.room-notice p + p {
+  margin-top: 0.25rem;
+  color: var(--muted);
+}
+
+/* An in-screen notice, for something that changed under the player's hands —
+   a ballot reissued mid-vote. Distinct from .status (ambient progress) and
+   .hint (their mistake): this is the game telling them to look again. */
+.notice-line {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-left: 3px solid var(--warn);
+  background: var(--panel);
+  color: var(--fg);
+  font-size: 0.9375rem;
+}
+
 /* Session chrome */
 .session-nav {
   padding: 1rem 1.5rem 0;

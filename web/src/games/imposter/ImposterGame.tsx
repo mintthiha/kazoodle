@@ -32,7 +32,7 @@ type Phase = "reveal" | "clues" | "vote" | "steal" | "outcome";
 
 // Container for the Imposter game. Folds the game-event stream into local
 // state and renders whichever phase the round is currently in.
-export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
+export function ImposterGame({ selfId, players, departed, isHost }: GameViewProps) {
   const { actions, onGameEvent } = useConnection();
   const [phase, setPhase] = useState<Phase>("reveal");
 
@@ -46,6 +46,12 @@ export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
   const [votePhase, setVotePhase] = useState<VotePhase | null>(null);
   const [voteProgress, setVoteProgress] = useState<VoteProgress | null>(null);
   const [myVote, setMyVote] = useState<VoteChoice | null>(null);
+  // How many ballots this round has opened. More than one means a player left
+  // mid-vote and the server reissued the ballot, which is worth saying out
+  // loud — the countdown restarting and the selection clearing are otherwise
+  // unexplained. Counting is safe across a late mount: onGameEvent replays the
+  // events already buffered, so a screen that mounts late still sees both.
+  const [ballots, setBallots] = useState(0);
 
   const [voteTally, setVoteTally] = useState<VoteTally | null>(null);
   const [stealPrompt, setStealPrompt] = useState<StealPrompt | null>(null);
@@ -75,6 +81,7 @@ export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
           // mid-vote (someone left). That is a new ballot, so this player has no
           // vote recorded on it any more.
           setMyVote(null);
+          setBallots((n) => n + 1);
           break;
         case "voteProgress":
           setVoteProgress(msg.body.value);
@@ -132,6 +139,7 @@ export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
         <RoleView
           selfId={selfId}
           players={players}
+          departed={departed}
           isHost={isHost}
           role={role}
           progress={revealProgress}
@@ -144,6 +152,7 @@ export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
         <ClueView
           selfId={selfId}
           players={players}
+          departed={departed}
           isHost={isHost}
           turn={clueTurn}
           value={myClue}
@@ -156,8 +165,10 @@ export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
         <VoteView
           selfId={selfId}
           players={players}
+          departed={departed}
           isHost={isHost}
           votePhase={votePhase}
+          reopened={ballots > 1}
           progress={voteProgress}
           myVote={myVote}
           onLockIn={lockInVote}
@@ -168,6 +179,7 @@ export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
         <StealView
           selfId={selfId}
           players={players}
+          departed={departed}
           isHost={isHost}
           prompt={stealPrompt}
           value={myGuess}
@@ -180,6 +192,7 @@ export function ImposterGame({ selfId, players, isHost }: GameViewProps) {
         <OutcomeView
           selfId={selfId}
           players={players}
+          departed={departed}
           isHost={isHost}
           tally={voteTally}
           outcome={outcome}

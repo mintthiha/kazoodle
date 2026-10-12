@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useT } from "../../i18n";
 import type { VotePhase, VoteProgress } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
-import { nameFor } from "./nameFor";
+import { makeNameFor } from "./nameFor";
 
 // What this player is choosing: a specific suspect, or abstaining. Kept as a
 // tagged union rather than a bare string so "no one picked yet" (null),
@@ -14,6 +14,9 @@ interface Props extends GameViewProps {
   votePhase: VotePhase | null;
   progress: VoteProgress | null;
   myVote: VoteChoice | null; // the choice actually sent to the server so far, if any
+  /** True once this round has issued more than one ballot, which only happens
+   * when a player left mid-vote and the server reissued it. */
+  reopened: boolean;
   onLockIn: (choice: VoteChoice) => void;
 }
 
@@ -28,8 +31,19 @@ function sameChoice(a: VoteChoice | null, b: VoteChoice | null): boolean {
 // choice can still be changed (and re-locked) right up until the countdown
 // hits zero, at which point whatever is currently selected (or abstain, if
 // nothing was ever picked) is sent automatically.
-export function VoteView({ votePhase, progress, myVote, onLockIn, selfId, players }: Props) {
+export function VoteView({
+  votePhase,
+  progress,
+  myVote,
+  reopened,
+  onLockIn,
+  selfId,
+  players,
+  departed,
+}: Props) {
   const { t } = useT();
+
+  const name = makeNameFor(players, departed, t);
 
   const [selected, setSelected] = useState<VoteChoice | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -64,12 +78,18 @@ export function VoteView({ votePhase, progress, myVote, onLockIn, selfId, player
   }
 
   function describe(choice: VoteChoice): string {
-    return choice.kind === "abstain" ? t("imposter.abstain") : nameFor(players, choice.id);
+    return choice.kind === "abstain" ? t("imposter.abstain") : name(choice.id);
   }
 
   return (
     <main className="screen">
       <h1>{t("imposter.voteHeading")}</h1>
+
+      {reopened && (
+        <p className="notice-line" role="status">
+          {t("imposter.ballotReopened")}
+        </p>
+      )}
 
       {secondsLeft !== null && (
         <p className="status">
@@ -82,7 +102,7 @@ export function VoteView({ votePhase, progress, myVote, onLockIn, selfId, player
         <ul className="players">
           {votePhase.clues.map((c, i) => (
             <li key={i}>
-              <strong>{nameFor(players, c.playerId)}:</strong> {c.text}
+              <strong>{name(c.playerId)}:</strong> {c.text}
             </li>
           ))}
         </ul>
@@ -105,7 +125,7 @@ export function VoteView({ votePhase, progress, myVote, onLockIn, selfId, player
                   disabled={timedOut}
                   onClick={() => setSelected(choice)}
                 >
-                  {nameFor(players, id)}
+                  {name(id)}
                   {id === selfId && <span className="you"> ({t("lobby.you")})</span>}
                 </button>
               </li>

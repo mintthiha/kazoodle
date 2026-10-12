@@ -1,7 +1,7 @@
 import { useT } from "../../i18n";
 import type { Outcome, VoteTally } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
-import { nameFor } from "./nameFor";
+import { makeNameFor } from "./nameFor";
 
 interface Props extends GameViewProps {
   tally: VoteTally | null;
@@ -13,8 +13,10 @@ interface Props extends GameViewProps {
 // The final screen: who won, who the imposter was, the word, the steal
 // attempt (if there was one), and the vote breakdown. The host gets a "play
 // again" button; everyone else just waits for it.
-export function OutcomeView({ tally, outcome, players, isHost, onPlayAgain }: Props) {
+export function OutcomeView({ tally, outcome, players, departed, isHost, onPlayAgain }: Props) {
   const { t } = useT();
+
+  const name = makeNameFor(players, departed, t);
 
   if (!outcome) {
     return (
@@ -31,7 +33,7 @@ export function OutcomeView({ tally, outcome, players, isHost, onPlayAgain }: Pr
       <section className={`role-card ${outcome.crewWon ? "role-crew" : "role-imposter"}`}>
         <p className="role-word">{outcome.crewWon ? t("imposter.crewWon") : t("imposter.imposterWon")}</p>
         <p className="role-hint">
-          {t("imposter.revealImposter", { who: nameFor(players, outcome.imposterId) })}
+          {t("imposter.revealImposter", { who: name(outcome.imposterId) })}
         </p>
         <p className="role-hint">
           {t("imposter.revealWord", { word: outcome.word, category: outcome.category })}
@@ -41,13 +43,13 @@ export function OutcomeView({ tally, outcome, players, isHost, onPlayAgain }: Pr
         )}
         <p className="role-hint">
           {outcome.votedOutId
-            ? t("imposter.votedOut", { who: nameFor(players, outcome.votedOutId) })
+            ? t("imposter.votedOut", { who: name(outcome.votedOutId) })
             : t("imposter.noOneVotedOut")}
         </p>
         {outcome.stealAttempted && (
           <p className="role-hint">
             {t(outcome.stealCorrect ? "imposter.stealSucceeded" : "imposter.stealFailed", {
-              who: nameFor(players, outcome.imposterId),
+              who: name(outcome.imposterId),
               guess: outcome.stealGuess,
             })}
           </p>
@@ -60,7 +62,7 @@ export function OutcomeView({ tally, outcome, players, isHost, onPlayAgain }: Pr
           <ul className="players">
             {tally.counts.map((c) => (
               <li key={c.playerId}>
-                {nameFor(players, c.playerId)} — {c.votes}
+                {name(c.playerId)} — {c.votes}
               </li>
             ))}
             {tally.abstainCount > 0 && (

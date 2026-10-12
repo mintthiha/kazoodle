@@ -66,6 +66,11 @@ const en = {
 
   "game.unknown": "This game isn’t available in your app version.",
 
+  "room.playerLeft": "{who} left.",
+  "gameEnd.player_left": "Too few players left — the round was abandoned.",
+  "gameEnd.imposter_left": "The imposter left — the round was abandoned.",
+  "gameEnd.generic": "The round ended.",
+
   "imposter.heading": "Your role",
   "imposter.dealing": "Dealing roles…",
   "imposter.youAreImposter": "You’re the IMPOSTER",
@@ -76,6 +81,9 @@ const en = {
   "imposter.gotIt": "Got it",
   "imposter.waiting": "Waiting for the others…",
   "imposter.readyCount": "{ready} / {total} ready",
+
+  "imposter.nameLeft": "{name} (left)",
+  "imposter.nameGone": "a player who left",
 
   "imposter.cluesHeading": "Clues",
   "imposter.clueProgress": "Clue {turn} of {total}",
@@ -92,6 +100,7 @@ const en = {
   "imposter.voteLockedIn": "Locked in: {who}",
   "imposter.voteTimeLeft": "{seconds}s left to decide",
   "imposter.voteTimeUp": "Time's up — your pick was locked in.",
+  "imposter.ballotReopened": "Someone left, so the ballot changed. Pick again.",
 
   "imposter.stealHeading": "Caught!",
   "imposter.stealHintImposter": "You were caught — but you get one guess at the word to steal the win.",
@@ -182,6 +191,11 @@ const fr: Record<MessageKey, string> = {
 
   "game.unknown": "Ce jeu n’est pas disponible dans votre version.",
 
+  "room.playerLeft": "{who} a quitté la partie.",
+  "gameEnd.player_left": "Trop peu de joueurs — la manche a été abandonnée.",
+  "gameEnd.imposter_left": "L’imposteur a quitté la partie — la manche a été abandonnée.",
+  "gameEnd.generic": "La manche est terminée.",
+
   "imposter.heading": "Votre rôle",
   "imposter.dealing": "Distribution des rôles…",
   "imposter.youAreImposter": "Vous êtes l’IMPOSTEUR",
@@ -192,6 +206,9 @@ const fr: Record<MessageKey, string> = {
   "imposter.gotIt": "Compris",
   "imposter.waiting": "En attente des autres…",
   "imposter.readyCount": "{ready} / {total} prêts",
+
+  "imposter.nameLeft": "{name} (a quitté)",
+  "imposter.nameGone": "une personne partie",
 
   "imposter.cluesHeading": "Indices",
   "imposter.clueProgress": "Indice {turn} sur {total}",
@@ -208,6 +225,7 @@ const fr: Record<MessageKey, string> = {
   "imposter.voteLockedIn": "Verrouillé : {who}",
   "imposter.voteTimeLeft": "{seconds} s pour décider",
   "imposter.voteTimeUp": "Temps écoulé — votre choix a été verrouillé.",
+  "imposter.ballotReopened": "Quelqu’un a quitté la partie, donc le vote a changé. Choisissez à nouveau.",
 
   "imposter.stealHeading": "Démasqué !",
   "imposter.stealHintImposter": "Vous avez été démasqué — mais vous avez une chance de deviner le mot pour voler la victoire.",

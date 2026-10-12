@@ -3,10 +3,15 @@ import type { MessageKey } from "../i18n";
 import { ImposterGame } from "./imposter";
 
 /** Every game view gets the same props: who this player is, the roster, and
- * whether this player is the room's host (the one who can start a new round). */
+ * whether this player is the room's host (the one who can start a new round).
+ *
+ * `departed` is the other half of the roster: players who have left. A round
+ * can outlive a departure, so a game still has to be able to name an id that
+ * is no longer in `players` — see imposter/nameFor.ts. */
 export interface GameViewProps {
   selfId: string;
   players: { id: string; displayName: string }[];
+  departed: { id: string; displayName: string }[];
   isHost: boolean;
 }
 

@@ -1,7 +1,7 @@
 import { useT } from "../../i18n";
 import type { StealPrompt } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
-import { nameFor } from "./nameFor";
+import { makeNameFor } from "./nameFor";
 
 interface Props extends GameViewProps {
   prompt: StealPrompt | null;
@@ -12,8 +12,10 @@ interface Props extends GameViewProps {
 
 // The vote caught the imposter. Only they get an input, for one blind guess
 // at the word; everyone else just watches and waits.
-export function StealView({ prompt, value, onChange, onSubmit, selfId, players }: Props) {
+export function StealView({ prompt, value, onChange, onSubmit, selfId, players, departed }: Props) {
   const { t } = useT();
+
+  const name = makeNameFor(players, departed, t);
 
   if (!prompt) {
     return (
@@ -33,7 +35,7 @@ export function StealView({ prompt, value, onChange, onSubmit, selfId, players }
         <p className="role-hint">
           {isImposter
             ? t("imposter.stealHintImposter")
-            : t("imposter.stealHintOther", { who: nameFor(players, prompt.imposterId) })}
+            : t("imposter.stealHintOther", { who: name(prompt.imposterId) })}
         </p>
       </section>
 
@@ -58,7 +60,7 @@ export function StealView({ prompt, value, onChange, onSubmit, selfId, players }
         </section>
       ) : (
         <p className="status">
-          {t("imposter.stealWaiting", { who: nameFor(players, prompt.imposterId) })}
+          {t("imposter.stealWaiting", { who: name(prompt.imposterId) })}
         </p>
       )}
     </main>

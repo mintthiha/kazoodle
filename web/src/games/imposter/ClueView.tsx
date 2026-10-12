@@ -1,7 +1,7 @@
 import { useT } from "../../i18n";
 import type { ClueTurn } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
-import { nameFor } from "./nameFor";
+import { makeNameFor } from "./nameFor";
 
 interface Props extends GameViewProps {
   turn: ClueTurn | null;
@@ -12,8 +12,10 @@ interface Props extends GameViewProps {
 
 // One clue word per player, in the server-set order. Only the player whose
 // turn it is gets an input; everyone else watches the recap grow.
-export function ClueView({ turn, value, onChange, onSubmit, selfId, players }: Props) {
+export function ClueView({ turn, value, onChange, onSubmit, selfId, players, departed }: Props) {
   const { t } = useT();
+
+  const name = makeNameFor(players, departed, t);
 
   if (!turn) {
     return (
@@ -35,7 +37,7 @@ export function ClueView({ turn, value, onChange, onSubmit, selfId, players }: P
       <ul className="players">
         {turn.cluesSoFar.map((c, i) => (
           <li key={i}>
-            <strong>{nameFor(players, c.playerId)}:</strong> {c.text}
+            <strong>{name(c.playerId)}:</strong> {c.text}
           </li>
         ))}
       </ul>
@@ -60,7 +62,7 @@ export function ClueView({ turn, value, onChange, onSubmit, selfId, players }: P
           </button>
         </section>
       ) : (
-        <p className="status">{t("imposter.waitingForClue", { who: nameFor(players, turn.playerId) })}</p>
+        <p className="status">{t("imposter.waitingForClue", { who: name(turn.playerId) })}</p>
       )}
     </main>
   );
