@@ -9,32 +9,50 @@
   padding: 2.25rem 1.25rem 1.25rem;
 }
 
-/* Two slow-drifting glows and a faint grid. Both are fixed to the viewport,
-   not to the 30rem app column, so on a wide window the light bleeds to the
-   window edges instead of ending in a rectangle. z-index -1 keeps them behind
-   the content AND behind the language footer, which sits outside this screen.
-   They are decoration, so they live on pseudo-elements, not in the markup. */
-.screen.home::before,
-.screen.home::after {
-  content: "";
+/* Backdrop. Fixed to the viewport, not to the 30rem app column, so the light
+   bleeds to the window edges instead of ending in a rectangle. z-index -1 keeps
+   it behind the content AND behind the language footer, which sits outside this
+   screen — and the selector is .screen.home > .home-bg so it outranks the
+   z-index: 1 rule below. */
+.screen.home > .home-bg {
   position: fixed;
+  inset: 0;
   z-index: -1;
   pointer-events: none;
+  /* --mx / --my are written by usePointerGlow, and default to 0 on a phone
+     where the hook never runs. The transition is what turns a jumpy stream of
+     pointer events into a glow that eases after the cursor. */
+  transform: translate3d(calc(var(--mx, 0) * 26px), calc(var(--my, 0) * 18px), 0);
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.3, 1);
 }
 
-.screen.home::before {
-  inset: -10vh 0 auto 0;
-  height: 85vh;
-  /* Anchored either side of the centre line rather than at fixed percentages,
-     so the glow stays behind the content column at any window width. */
+.home-bg-glow,
+.home-bg-grid {
+  position: absolute;
+}
+
+.home-bg-glow {
+  /* Overhangs the viewport on every side so the parallax never drags an edge
+     into view. */
+  inset: -14vh -10vw auto;
+  height: 92vh;
   background:
-    radial-gradient(26rem 20rem at calc(50% - 9rem) 14%, rgba(90, 75, 255, 0.5), transparent 70%),
-    radial-gradient(22rem 17rem at calc(50% + 8rem) 2%, rgba(255, 61, 127, 0.4), transparent 72%);
+    radial-gradient(26rem 20rem at calc(50% - 9rem) 16%, rgba(90, 75, 255, 0.5), transparent 70%),
+    radial-gradient(22rem 17rem at calc(50% + 8rem) 4%, rgba(255, 61, 127, 0.4), transparent 72%);
   filter: blur(16px);
   opacity: 0.55;
+  transition:
+    opacity 500ms ease,
+    transform 700ms ease;
 }
 
-.screen.home::after {
+/* Hovering a game lights the room it belongs to. :has() lets the backdrop
+   react to a hover three levels down without a line of JavaScript. */
+.screen.home:has(.tile:hover) .home-bg-glow {
+  opacity: 0.82;
+}
+
+.home-bg-grid {
   inset: 0;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
@@ -86,6 +104,16 @@
   margin-top: 0.25rem;
 }
 
+.group-wrap {
+  transition: transform 560ms cubic-bezier(0.22, 1, 0.3, 1);
+}
+
+/* Point at the mark and the far dots come join the group. Motion that answers
+   a gesture, so it runs even under reduced motion. */
+.group-mark:hover .group-wrap-apart {
+  transform: translate(var(--hx), var(--hy));
+}
+
 .group-dot {
   fill: var(--fg);
   transform-box: fill-box;
@@ -101,6 +129,11 @@
   stroke-width: 2;
   stroke-linecap: round;
   stroke-dasharray: 2 5;
+  transition: opacity 560ms ease;
+}
+
+.group-mark:hover .group-link {
+  opacity: 0.35;
 }
 
 /* Shelf */
@@ -256,7 +289,7 @@
    finished state — so a phone set to "reduce motion" simply gets the page with
    no animation at all, rather than a half-faded one stuck at opacity 0. */
 @media (prefers-reduced-motion: no-preference) {
-  .screen.home::before {
+  .home-bg-glow {
     animation: drift 26s ease-in-out infinite alternate;
   }
 
@@ -264,8 +297,19 @@
     animation: letter-in 620ms cubic-bezier(0.22, 1.2, 0.3, 1) backwards;
   }
 
+  /* Two animations on one element: the pop plays once, then the float takes
+     over the transform. The float waits out the pop via its own delay, so they
+     never fight over the same property. */
   .group-dot {
-    animation: dot-in 460ms cubic-bezier(0.22, 1.4, 0.3, 1) backwards;
+    animation:
+      dot-in 460ms cubic-bezier(0.22, 1.4, 0.3, 1) var(--pop-delay) backwards,
+      dot-float var(--float-time) ease-in-out var(--float-delay) infinite;
+  }
+
+  /* While the dots are regrouping, hold them still so the drift does not
+     wrestle the slide. */
+  .group-mark:hover .group-dot {
+    animation-play-state: paused;
   }
 
   .group-link {
@@ -294,6 +338,18 @@
     to {
       opacity: 1;
       transform: translateY(0) rotate(0deg);
+    }
+  }
+
+  @keyframes dot-float {
+    from {
+      transform: translate(0, 0);
+    }
+    50% {
+      transform: translate(var(--fx), var(--fy));
+    }
+    to {
+      transform: translate(0, 0);
     }
   }
 

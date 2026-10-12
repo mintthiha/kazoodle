@@ -3,6 +3,7 @@ import { useT } from "../../i18n";
 import { GAMES } from "../../games/registry";
 import { GameTile } from "./GameTile";
 import { GroupMark } from "./GroupMark";
+import { HomeBackground } from "./HomeBackground";
 import "./home.css";
 
 interface Props {
@@ -17,6 +18,8 @@ export function HomeScreen({ onPick }: Props) {
 
   return (
     <main className="screen home">
+      <HomeBackground />
+
       <header className="home-head">
         {/* The letters animate in one at a time, so each needs its own element.
             aria-label keeps it a single word for a screen reader. */}
