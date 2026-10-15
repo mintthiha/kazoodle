@@ -27,6 +27,11 @@ export function RoleView({ role, progress, ready, selfId, players, onConfirm }: 
 
   return (
     <main className="screen">
+      {role.totalRounds > 1 && (
+        <p className="round-badge">
+          {t("imposter.roundOf", { round: role.round, total: role.totalRounds })}
+        </p>
+      )}
       <h1>{t("imposter.heading")}</h1>
 
       {role.isImposter ? (

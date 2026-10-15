@@ -9,33 +9,56 @@ import {
   StartOptionsSchema,
   type ImposterServerMessage,
 } from "./gen/imposter_pb";
+import { DEFAULT_ROUNDS } from "./rounds";
+
+/** The host's choices for a match: everything StartOptions carries, as the
+ * lobby holds it. One object rather than three arguments because the lobby
+ * broadcasts the whole set on every change. */
+export interface MatchOptions {
+  hintsEnabled: boolean;
+  category: string;
+  /** How many rounds the match runs for. See ./rounds. */
+  rounds: number;
+}
+
+/** What a match is if the host touches nothing. */
+export const DEFAULT_MATCH_OPTIONS: MatchOptions = {
+  hintsEnabled: false,
+  category: "",
+  rounds: DEFAULT_ROUNDS,
+};
 
 /** Decode one game-event payload string into a typed Imposter server message. */
 export function decodeImposterEvent(payload: string): ImposterServerMessage {
   return fromJsonString(ImposterServerMessageSchema, payload);
 }
 
-/** The host's chosen options for a round. Passed as StartGame's `options` to
- * begin the round, and also as SetGameOptions' `options` while still in the
- * lobby so everyone can see the pending choice before the host starts. */
-export function encodeStartOptions(hintsEnabled: boolean, category = ""): string {
-  return toJsonString(
-    StartOptionsSchema,
-    create(StartOptionsSchema, { hintsEnabled, category }),
-  );
+/** The host's chosen options for a match. Passed as StartGame's `options` to
+ * begin it, and also as SetGameOptions' `options` while still in the lobby so
+ * everyone can see the pending choice before the host starts. */
+export function encodeStartOptions(opts: MatchOptions): string {
+  return toJsonString(StartOptionsSchema, create(StartOptionsSchema, opts));
 }
 
-/** The inverse of encodeStartOptions: reads a lobby's pending (or a round's
- * applied) options back out. Malformed or empty input decodes to defaults
- * (no hints, any category) rather than throwing — a stray or stale payload
- * should never crash the lobby screen. */
-export function decodeStartOptions(json: string): { hintsEnabled: boolean; category: string } {
-  if (!json) return { hintsEnabled: false, category: "" };
+/** The inverse of encodeStartOptions: reads a lobby's pending (or a running
+ * match's applied) options back out. Malformed or empty input decodes to the
+ * defaults rather than throwing — a stray or stale payload should never crash
+ * the lobby screen.
+ *
+ * A zero `rounds` is the proto default, which the server reads as "use yours";
+ * it becomes DEFAULT_ROUNDS here so the lobby shows the length that will
+ * actually be played rather than a bare 0. */
+export function decodeStartOptions(json: string): MatchOptions {
+  if (!json) return DEFAULT_MATCH_OPTIONS;
   try {
     const opts = fromJsonString(StartOptionsSchema, json);
-    return { hintsEnabled: opts.hintsEnabled, category: opts.category };
+    return {
+      hintsEnabled: opts.hintsEnabled,
+      category: opts.category,
+      rounds: opts.rounds || DEFAULT_ROUNDS,
+    };
   } catch {
-    return { hintsEnabled: false, category: "" };
+    return DEFAULT_MATCH_OPTIONS;
   }
 }
 

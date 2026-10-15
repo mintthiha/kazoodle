@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_MATCH_OPTIONS,
   decodeImposterEvent,
+  decodeStartOptions,
   encodeAbstain,
   encodeCastVote,
   encodeGuessWord,
@@ -9,6 +11,7 @@ import {
   encodeStartOptions,
   encodeSubmitClue,
 } from "./messages";
+import { DEFAULT_ROUNDS } from "./rounds";
 
 describe("imposter messages: encode", () => {
   it("markReady as a canonical-JSON envelope body", () => {
@@ -36,11 +39,41 @@ describe("imposter messages: encode", () => {
   });
 
   it("startOptions with hints on", () => {
-    expect(JSON.parse(encodeStartOptions(true))).toEqual({ hintsEnabled: true });
+    expect(JSON.parse(encodeStartOptions({ ...DEFAULT_MATCH_OPTIONS, hintsEnabled: true }))).toEqual(
+      { hintsEnabled: true, rounds: DEFAULT_ROUNDS },
+    );
   });
 
-  it("startOptions with hints off omits the default field", () => {
-    expect(JSON.parse(encodeStartOptions(false))).toEqual({});
+  it("startOptions carries the match length", () => {
+    expect(JSON.parse(encodeStartOptions({ ...DEFAULT_MATCH_OPTIONS, rounds: 7 }))).toEqual({
+      rounds: 7,
+    });
+  });
+
+  it("startOptions omits fields left at their proto default", () => {
+    expect(
+      JSON.parse(encodeStartOptions({ hintsEnabled: false, category: "", rounds: 0 })),
+    ).toEqual({});
+  });
+});
+
+describe("imposter messages: start options round-trip", () => {
+  it("reads back what was encoded", () => {
+    const opts = { hintsEnabled: true, category: "food", rounds: 5 };
+    expect(decodeStartOptions(encodeStartOptions(opts))).toEqual(opts);
+  });
+
+  it("an unset round count reads back as the default that will be played", () => {
+    expect(decodeStartOptions(JSON.stringify({ category: "food" }))).toEqual({
+      hintsEnabled: false,
+      category: "food",
+      rounds: DEFAULT_ROUNDS,
+    });
+  });
+
+  it("empty and malformed payloads decode to the defaults", () => {
+    expect(decodeStartOptions("")).toEqual(DEFAULT_MATCH_OPTIONS);
+    expect(decodeStartOptions("not json")).toEqual(DEFAULT_MATCH_OPTIONS);
   });
 });
 
@@ -59,6 +92,53 @@ describe("imposter messages: decode", () => {
     if (msg.body.case !== "roleAssignment") throw new Error("unreachable");
     expect(msg.body.value.isImposter).toBe(true);
     expect(msg.body.value.word).toBe("");
+  });
+
+  it("roleAssignment carries the round the match is on", () => {
+    const msg = decodeImposterEvent(
+      JSON.stringify({ roleAssignment: { word: "Beach", round: 2, totalRounds: 5 } }),
+    );
+    if (msg.body.case !== "roleAssignment") throw new Error("unreachable");
+    expect(msg.body.value.round).toBe(2);
+    expect(msg.body.value.totalRounds).toBe(5);
+  });
+
+  it("outcome with the match standings", () => {
+    const msg = decodeImposterEvent(
+      JSON.stringify({
+        outcome: {
+          imposterId: "p2",
+          word: "Beach",
+          crewWon: false,
+          round: 3,
+          totalRounds: 3,
+          matchOver: true,
+          winnerIds: ["p2"],
+          scores: [
+            { playerId: "p2", score: 6, delta: 2 },
+            { playerId: "p1", score: 1 },
+          ],
+        },
+      }),
+    );
+    if (msg.body.case !== "outcome") throw new Error("unreachable");
+    const o = msg.body.value;
+    expect(o.round).toBe(3);
+    expect(o.matchOver).toBe(true);
+    expect(o.winnerIds).toEqual(["p2"]);
+    expect(o.scores.map((s) => [s.playerId, s.score, s.delta])).toEqual([
+      ["p2", 6, 2],
+      ["p1", 1, 0],
+    ]);
+  });
+
+  it("a mid-match outcome has no winner and is not over", () => {
+    const msg = decodeImposterEvent(
+      JSON.stringify({ outcome: { imposterId: "p2", round: 1, totalRounds: 3 } }),
+    );
+    if (msg.body.case !== "outcome") throw new Error("unreachable");
+    expect(msg.body.value.matchOver).toBe(false);
+    expect(msg.body.value.winnerIds).toEqual([]);
   });
 
   it("revealProgress", () => {

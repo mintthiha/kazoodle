@@ -10,9 +10,13 @@ interface Props extends GameViewProps {
   onPlayAgain: () => void;
 }
 
-// The final screen: who won, who the imposter was, the word, the steal
-// attempt (if there was one), and the vote breakdown. The host gets a "play
-// again" button; everyone else just waits for it.
+// The screen between rounds, and the one at the end of the match: who won the
+// round, who the imposter was, the word, the steal attempt (if there was one),
+// the vote breakdown, and the standings the round leaves behind.
+//
+// The host's button moves the match on — "next round", or "finish" on the last
+// one. Everyone else waits for them. Which of the two it is comes from the
+// server's matchOver flag, never from the client counting rounds itself.
 export function OutcomeView({ tally, outcome, players, departed, isHost, onPlayAgain }: Props) {
   const { t } = useT();
 
@@ -26,12 +30,32 @@ export function OutcomeView({ tally, outcome, players, departed, isHost, onPlayA
     );
   }
 
+  const over = outcome.matchOver;
+  const winners = outcome.winnerIds;
+
   return (
     <main className="screen">
-      <h1>{t("imposter.outcomeHeading")}</h1>
+      {outcome.totalRounds > 1 && (
+        <p className="round-badge">
+          {t("imposter.roundOf", { round: outcome.round, total: outcome.totalRounds })}
+        </p>
+      )}
+      <h1>{over ? t("imposter.finalHeading") : t("imposter.outcomeHeading")}</h1>
+
+      {over && (
+        <p className="winner-banner">
+          {winners.length === 0
+            ? t("imposter.matchNoWinner")
+            : winners.length === 1
+              ? t("imposter.matchWinner", { who: name(winners[0]) })
+              : t("imposter.matchWinnersTie", { who: winners.map(name).join(", ") })}
+        </p>
+      )}
 
       <section className={`role-card ${outcome.crewWon ? "role-crew" : "role-imposter"}`}>
-        <p className="role-word">{outcome.crewWon ? t("imposter.crewWon") : t("imposter.imposterWon")}</p>
+        <p className="role-word">
+          {outcome.crewWon ? t("imposter.crewWon") : t("imposter.imposterWon")}
+        </p>
         <p className="role-hint">
           {t("imposter.revealImposter", { who: name(outcome.imposterId) })}
         </p>
@@ -56,6 +80,29 @@ export function OutcomeView({ tally, outcome, players, departed, isHost, onPlayA
         )}
       </section>
 
+      {/* Standings come down already sorted, best first, with every player
+          listed — including anyone who left, who keeps the points they
+          earned. */}
+      {outcome.scores.length > 0 && (
+        <section>
+          <h2>{t("imposter.scoresHeading")}</h2>
+          <ul className="players scores">
+            {outcome.scores.map((s) => (
+              <li key={s.playerId} data-winner={over && winners.includes(s.playerId)}>
+                <span className="score-name">{name(s.playerId)}</span>
+                {s.delta > 0 && (
+                  <span className="score-delta">
+                    {t("imposter.scoreDelta", { delta: s.delta })}
+                  </span>
+                )}
+                <span className="score-total">{s.score}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="status">{t("imposter.scoring")}</p>
+        </section>
+      )}
+
       {tally && (
         <section>
           <h2>{t("imposter.votesHeading")}</h2>
@@ -76,10 +123,12 @@ export function OutcomeView({ tally, outcome, players, departed, isHost, onPlayA
 
       {isHost ? (
         <button className="primary" onClick={onPlayAgain}>
-          {t("imposter.playAgain")}
+          {over ? t("imposter.finishMatch") : t("imposter.nextRound")}
         </button>
       ) : (
-        <p className="status">{t("imposter.waitingForHost")}</p>
+        <p className="status">
+          {over ? t("imposter.waitingForFinish") : t("imposter.waitingForNextRound")}
+        </p>
       )}
     </main>
   );

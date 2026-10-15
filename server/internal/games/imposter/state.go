@@ -34,16 +34,30 @@ type clueEntry struct {
 	text     string
 }
 
-// state is one round of Imposter. The room stores it as an opaque game.State;
-// only this package reads it. Advance treats the value it receives as
-// read-only and returns a clone with the change applied.
+// state is one match of Imposter, which is a run of totalRounds rounds plus
+// the round currently being played. The room stores it as an opaque
+// game.State; only this package reads it. Advance treats the value it
+// receives as read-only and returns a clone with the change applied.
+//
+// The fields split into two groups. Match-level fields survive a round
+// ending: they are copied unchanged into the next round (see beginRound).
+// Round-level fields are reset for every round.
 type state struct {
-	phase        phase
-	order        []string          // player ids, in turn order; set once in Init
-	imposterID   string            // which of order is the imposter
-	entry        wordEntry         // the secret word, before localization
-	locales      map[string]string // player id -> locale; set once in Init, used by Outcome
-	hintsEnabled bool              // host option, set once in Init: give the imposter the category
+	// ── match-level ──
+	roster       []string          // every player id the match started with, in join order; set once
+	locales      map[string]string // player id -> locale; set once, used to localize per recipient
+	scores       map[string]int32  // player id -> points so far in the match
+	round        int               // 1-based index of the round being played
+	totalRounds  int               // how many rounds this match runs for
+	hintsEnabled bool              // host option: give the imposter the category
+	wordCategory string            // host option: StartOptions.category, so every round draws from the same pool
+
+	// ── round-level ──
+	phase      phase
+	order      []string         // player ids still in the round, in turn order
+	imposterID string           // which of order is the imposter this round
+	entry      wordEntry        // the secret word, before localization
+	deltas     map[string]int32 // what this round alone awarded, once it resolved
 
 	ready map[string]bool // reveal phase: who has confirmed they saw their role
 
@@ -53,8 +67,9 @@ type state struct {
 	votes map[string]string // vote phase: voter id -> suspect id, or "" for an abstain
 }
 
-// clone returns a copy safe to mutate. order and locales are never changed
-// after Init, so those are shared rather than copied.
+// clone returns a copy safe to mutate. roster and locales are never changed
+// after the match starts, so those are shared rather than copied; order is
+// shared too and rebuilt from scratch by the one place that changes it (Leave).
 func (s *state) clone() *state {
 	ready := make(map[string]bool, len(s.ready))
 	for k, v := range s.ready {
@@ -68,17 +83,34 @@ func (s *state) clone() *state {
 	copy(clues, s.clues)
 
 	return &state{
+		roster:       s.roster,
+		locales:      s.locales,
+		scores:       copyScores(s.scores),
+		round:        s.round,
+		totalRounds:  s.totalRounds,
+		hintsEnabled: s.hintsEnabled,
+		wordCategory: s.wordCategory,
 		phase:        s.phase,
 		order:        s.order,
 		imposterID:   s.imposterID,
 		entry:        s.entry,
-		locales:      s.locales,
-		hintsEnabled: s.hintsEnabled,
+		deltas:       copyScores(s.deltas),
 		ready:        ready,
 		turn:         s.turn,
 		clues:        clues,
 		votes:        votes,
 	}
+}
+
+// copyScores copies a points map. Both scores and deltas are written on a
+// clone after a round resolves, so neither can be shared with the state the
+// room still holds.
+func copyScores(m map[string]int32) map[string]int32 {
+	out := make(map[string]int32, len(m))
+	for k, v := range m {
+		out[k] = v
+	}
+	return out
 }
 
 func (s *state) allReady() bool {
@@ -87,4 +119,11 @@ func (s *state) allReady() bool {
 
 func (s *state) allVoted() bool {
 	return len(s.votes) == len(s.order)
+}
+
+// matchOver reports whether the match is finished once the current round is.
+// Two ways to be done: the last round has been played, or so many players have
+// left that another round can't legally start.
+func (s *state) matchOver() bool {
+	return s.round >= s.totalRounds || len(s.order) < minPlayers
 }

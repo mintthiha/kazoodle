@@ -776,10 +776,28 @@ func TestStealGuessRejectedOutsideStealPhase(t *testing.T) {
 }
 
 // ─── play again ─────────────────────────────────────────────────────────────
+//
+// PlayAgain now ends the *match*, not the round: on any round but the last it
+// deals the next one instead. match_test.go covers that side of it; this file
+// keeps the single-round case, where the two are the same thing.
 
-func TestPlayAgainEndsTheGameOnceTheRoundIsOver(t *testing.T) {
-	st, order, imposter := reachStealPhase(t)
-	st, _, err := (Game{}).Advance(st, guessEvent(imposter, "wrong on purpose"))
+func TestPlayAgainEndsAOneRoundMatch(t *testing.T) {
+	st, _, err := (Game{}).Init(mkPlayers(3, "en"), startOpts(&pb.StartOptions{Rounds: 1}))
+	if err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	s := st.(*state)
+	order, imposter := s.order, s.imposterID
+
+	st, _ = readyAll(t, st, order)
+	st, _ = giveAllClues(t, st, order)
+	for _, id := range order {
+		st, _, err = (Game{}).Advance(st, voteEvent(id, imposter))
+		if err != nil {
+			t.Fatalf("Advance(vote %s): %v", id, err)
+		}
+	}
+	st, _, err = (Game{}).Advance(st, guessEvent(imposter, "wrong on purpose"))
 	if err != nil {
 		t.Fatalf("Advance(guess): %v", err)
 	}
@@ -792,7 +810,7 @@ func TestPlayAgainEndsTheGameOnceTheRoundIsOver(t *testing.T) {
 		t.Fatalf("Advance(play again): %v", err)
 	}
 	if !hasEndGame(effects) {
-		t.Error("PlayAgain from the outcome phase should emit game.EndGame")
+		t.Error("PlayAgain on the last round of a match should emit game.EndGame")
 	}
 }
 

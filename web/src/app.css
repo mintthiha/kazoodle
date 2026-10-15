@@ -367,3 +367,56 @@ button.danger {
   font-size: 0.9rem;
   color: var(--muted);
 }
+
+/* Imposter — match progress and standings */
+.round-badge {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The winner line at the end of a match. Loud on purpose: it is the one
+   moment the whole room looks at the same phone. */
+.winner-banner {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--good);
+  background: var(--panel);
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--good);
+}
+
+/* Standings. Built on .players so a score row looks like a roster row, with
+   the name pushed left and the total pushed right. */
+.scores li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.scores .score-name {
+  flex: 1;
+}
+
+.scores .score-delta {
+  font-size: 0.8rem;
+  color: var(--good);
+}
+
+.scores .score-total {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.1rem;
+  min-width: 2ch;
+  text-align: right;
+}
+
+/* The leader, once the match is decided. */
+.scores li[data-winner="true"] {
+  border: 1px solid var(--good);
+}

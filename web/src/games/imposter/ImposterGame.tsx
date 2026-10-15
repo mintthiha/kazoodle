@@ -65,7 +65,27 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
       const msg = decodeImposterEvent(payload);
       switch (msg.body.case) {
         case "roleAssignment":
+          // A RoleAssignment is how a round begins — the match's first, or the
+          // next one after a PlayAgain. Either way nothing from the round just
+          // played should still be on screen, so every per-round piece of
+          // state is cleared here rather than in the play-again handler: the
+          // server decides when a round starts, and this is that moment
+          // arriving. (A player who pressed nothing still gets reset, and a
+          // reconnecting phone rebuilds from the replayed events.)
+          setPhase("reveal");
           setRole(msg.body.value);
+          setReadyConfirmed(false);
+          setRevealProgress(null);
+          setClueTurn(null);
+          setMyClue("");
+          setVotePhase(null);
+          setVoteProgress(null);
+          setMyVote(null);
+          setBallots(0);
+          setVoteTally(null);
+          setStealPrompt(null);
+          setMyGuess("");
+          setOutcome(null);
           break;
         case "revealProgress":
           setRevealProgress(msg.body.value);
@@ -129,6 +149,9 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
     setMyGuess("");
   }
 
+  // "Next round", or "Finish" on the last round of the match — one message
+  // either way. The server knows which round this is; the client only has to
+  // say the room is done looking at the results.
   function playAgain() {
     actions.gameAction("imposter", encodePlayAgain());
   }

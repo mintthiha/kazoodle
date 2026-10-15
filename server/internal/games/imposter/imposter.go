@@ -2,7 +2,6 @@ package imposter
 
 import (
 	"fmt"
-	"math/rand/v2"
 	"strings"
 
 	"google.golang.org/protobuf/encoding/protojson"
@@ -31,10 +30,10 @@ type Game struct{}
 // New returns an Imposter game ready to register.
 func New() *Game { return &Game{} }
 
-// Init picks the turn order, the imposter, and the secret word, then returns a
-// private RoleAssignment for each player plus a RevealProgress broadcast.
-// options is the proto3-JSON of a StartOptions message; empty means defaults
-// (hints off).
+// Init sets up a match of StartOptions.rounds rounds and starts the first one,
+// returning a private RoleAssignment for each player plus a RevealProgress
+// broadcast. options is the proto3-JSON of a StartOptions message; empty means
+// defaults (hints off, any category, defaultRounds rounds).
 func (Game) Init(players []game.Player, options []byte) (game.State, []game.Effect, error) {
 	if len(players) < minPlayers {
 		return nil, nil, fmt.Errorf("imposter needs at least %d players, got %d", minPlayers, len(players))
@@ -47,31 +46,28 @@ func (Game) Init(players []game.Player, options []byte) (game.State, []game.Effe
 		}
 	}
 
-	order := make([]string, len(players))
+	roster := make([]string, len(players))
 	locales := make(map[string]string, len(players))
 	for i, p := range players {
-		order[i] = p.ID
+		roster[i] = p.ID
 		locales[p.ID] = p.Locale
 	}
-	rand.Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
 
-	st := &state{
-		phase:        phaseReveal,
-		order:        order,
-		imposterID:   order[rand.IntN(len(order))],
-		entry:        pickWord(opts.GetCategory()),
+	// A round-zero seed holding only the match-level fields. beginRound fills
+	// in everything else and bumps round to 1, so the first round and every
+	// later one are set up by the same code.
+	seed := &state{
+		roster:       roster,
 		locales:      locales,
+		scores:       make(map[string]int32),
+		round:        0,
+		totalRounds:  roundsFromOption(opts.GetRounds()),
 		hintsEnabled: opts.GetHintsEnabled(),
-		ready:        make(map[string]bool),
-		votes:        make(map[string]string),
+		wordCategory: opts.GetCategory(),
+		order:        roster, // beginRound copies and shuffles this
 	}
-
-	effects := make([]game.Effect, 0, len(players)+1)
-	for _, p := range players {
-		effects = append(effects, game.Send{To: []string{p.ID}, Msg: roleFor(st, p)})
-	}
-	effects = append(effects, game.Send{Msg: revealProgress(st)}) // broadcast
-	return st, effects, nil
+	st := seed.beginRound()
+	return st, roundStart(st), nil
 }
 
 // Advance dispatches one client message to the handler for the phase it
@@ -184,11 +180,13 @@ func resolveVote(next *state) []game.Effect {
 	}
 
 	next.phase = phaseOutcome
+	applyAward(next, false, false) // the imposter escaped
+	res := result{votedOutID: votedOutID}
 	for _, id := range next.order {
-		effects = append(effects, game.Send{To: []string{id}, Msg: outcomeFor(next, id, votedOutID, false, false, "", false)})
+		effects = append(effects, game.Send{To: []string{id}, Msg: outcomeFor(next, id, res)})
 	}
-	// No EndGame effect here on purpose: the round's result stays on screen
-	// until a player sends PlayAgain.
+	// No EndGame effect here on purpose, even on the match's last round: the
+	// result stays on screen until a player sends PlayAgain.
 	return effects
 }
 
@@ -211,23 +209,40 @@ func advanceSteal(st *state, playerID, guess string) (game.State, []game.Effect,
 	next.phase = phaseOutcome
 	votedOutID, _ := tally(next) // still the imposter; votes are unchanged since the catch
 	correct := normalizeGuess(guess) == normalizeGuess(next.entry.word.forLocale(next.locales[playerID]))
-	crewWon := !correct
 
+	applyAward(next, true, correct)
+	res := result{
+		votedOutID:     votedOutID,
+		crewWon:        !correct,
+		stealAttempted: true,
+		stealGuess:     guess,
+		stealCorrect:   correct,
+	}
 	effects := make([]game.Effect, 0, len(next.order))
 	for _, id := range next.order {
-		effects = append(effects, game.Send{To: []string{id}, Msg: outcomeFor(next, id, votedOutID, crewWon, true, guess, correct)})
+		effects = append(effects, game.Send{To: []string{id}, Msg: outcomeFor(next, id, res)})
 	}
 	return next, effects, nil
 }
 
-// advancePlayAgain ends a finished round so the host can start a fresh one.
-// It is a no-op error outside the outcome phase, so a stray or duplicate
-// PlayAgain from a slow client can't restart a round still in progress.
+// advancePlayAgain moves a finished round on: into the next round of the
+// match, or out of the match entirely if that was the last round (or too few
+// players are left to play another).
+//
+// It is an error outside the outcome phase, so a stray or duplicate PlayAgain
+// from a slow client can't restart a round still in progress. That matters
+// more now than when PlayAgain only ended the game: two presses must not burn
+// two rounds, and the second one arrives while the phase is reveal, so it is
+// rejected.
 func advancePlayAgain(st *state) (game.State, []game.Effect, error) {
 	if st.phase != phaseOutcome {
 		return st, nil, fmt.Errorf("imposter: the round isn't over yet")
 	}
-	return st, []game.Effect{game.EndGame{Reason: "finished"}}, nil
+	if st.matchOver() {
+		return st, []game.Effect{game.EndGame{Reason: "finished"}}, nil
+	}
+	next := st.beginRound()
+	return next, roundStart(next), nil
 }
 
 // normalizeGuess makes a steal guess forgiving of case and surrounding
@@ -285,15 +300,18 @@ func indexOf(ids []string, id string) int {
 // always set — it's public, not a hint. The imposter's word is always left
 // empty; they get hint instead, and only if the host turned hints on for
 // this round.
-func roleFor(st *state, p game.Player) *pb.ImposterServerMessage {
+func roleFor(st *state, playerID string) *pb.ImposterServerMessage {
+	locale := st.locales[playerID]
 	role := &pb.RoleAssignment{
-		IsImposter: p.ID == st.imposterID,
-		Category:   st.entry.category.forLocale(p.Locale),
+		IsImposter:  playerID == st.imposterID,
+		Category:    st.entry.category.forLocale(locale),
+		Round:       int32(st.round),
+		TotalRounds: int32(st.totalRounds),
 	}
 	if !role.IsImposter {
-		role.Word = st.entry.word.forLocale(p.Locale)
+		role.Word = st.entry.word.forLocale(locale)
 	} else if st.hintsEnabled {
-		role.Hint = st.entry.hint.forLocale(p.Locale)
+		role.Hint = st.entry.hint.forLocale(locale)
 	}
 	return &pb.ImposterServerMessage{
 		Body: &pb.ImposterServerMessage_RoleAssignment{RoleAssignment: role},
@@ -378,14 +396,34 @@ func voteTally(st *state, votedOutID string) *pb.ImposterServerMessage {
 	}
 }
 
+// result is how a round ended: what the Outcome messages need that the state
+// alone doesn't say. It travels from whichever handler resolved the round to
+// outcomeFor, which would otherwise take seven arguments, three of them bools.
+type result struct {
+	votedOutID     string
+	crewWon        bool
+	stealAttempted bool
+	stealGuess     string
+	stealCorrect   bool
+}
+
 // outcomeFor builds the private, locale-appropriate Outcome for one player.
 // hint is revealed to everyone here, same as word and category, but only if
 // the round actually had hints on — otherwise there's nothing to reveal.
-func outcomeFor(st *state, playerID, votedOutID string, crewWon, stealAttempted bool, stealGuess string, stealCorrect bool) *pb.ImposterServerMessage {
+//
+// The match fields (round, scores, winners) are identical for every
+// recipient; it's only the word, category and hint that are localized, which
+// is why this is a private Send per player rather than one broadcast.
+func outcomeFor(st *state, playerID string, res result) *pb.ImposterServerMessage {
 	locale := st.locales[playerID]
 	var hint string
 	if st.hintsEnabled {
 		hint = st.entry.hint.forLocale(locale)
+	}
+	over := st.matchOver()
+	var winners []string
+	if over {
+		winners = leaders(st)
 	}
 	return &pb.ImposterServerMessage{
 		Body: &pb.ImposterServerMessage_Outcome{
@@ -393,15 +431,31 @@ func outcomeFor(st *state, playerID, votedOutID string, crewWon, stealAttempted 
 				ImposterId:     st.imposterID,
 				Word:           st.entry.word.forLocale(locale),
 				Category:       st.entry.category.forLocale(locale),
-				CrewWon:        crewWon,
-				VotedOutId:     votedOutID,
-				StealAttempted: stealAttempted,
-				StealGuess:     stealGuess,
-				StealCorrect:   stealCorrect,
+				CrewWon:        res.crewWon,
+				VotedOutId:     res.votedOutID,
+				StealAttempted: res.stealAttempted,
+				StealGuess:     res.stealGuess,
+				StealCorrect:   res.stealCorrect,
 				Hint:           hint,
+				Round:          int32(st.round),
+				TotalRounds:    int32(st.totalRounds),
+				Scores:         scoreEntries(st),
+				MatchOver:      over,
+				WinnerIds:      winners,
 			},
 		},
 	}
+}
+
+// scoreEntries renders the match standings for the wire: every player, best
+// first, each with their running total and what this round added.
+func scoreEntries(st *state) []*pb.ScoreEntry {
+	rows := standings(st)
+	out := make([]*pb.ScoreEntry, len(rows))
+	for i, r := range rows {
+		out[i] = &pb.ScoreEntry{PlayerId: r.playerID, Score: r.score, Delta: r.delta}
+	}
+	return out
 }
 
 // stealPrompt announces that the vote caught the imposter, who now gets one

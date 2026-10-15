@@ -3,7 +3,12 @@ import { useT } from "../i18n";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
 import { CATEGORY_OPTIONS } from "../games/imposter/categories";
-import { decodeStartOptions } from "../games/imposter/messages";
+import { ROUND_OPTIONS } from "../games/imposter/rounds";
+import {
+  DEFAULT_MATCH_OPTIONS,
+  decodeStartOptions,
+  type MatchOptions,
+} from "../games/imposter/messages";
 
 // IMPOSTER_MIN_PLAYERS mirrors the server's minPlayers for Imposter. If they
 // drift, the server still rejects the start — this only gates the button.
@@ -15,33 +20,32 @@ interface Props {
   room: RoomState;
   lastEcho: EchoLine | null;
   isHost: boolean;
-  onStartGame: (hintsEnabled: boolean, category: string) => void;
-  onSetCategory: (hintsEnabled: boolean, category: string) => void;
+  onStartGame: (opts: MatchOptions) => void;
+  onSetOptions: (opts: MatchOptions) => void;
   onEcho: (text: string) => void;
   onLeave: () => void;
 }
 
-// Second screen: the room's code, who is in it, a host-only "start game"
-// control (category + imposter-hints), and a tiny echo box that proves a
-// message round-trips.
+// Second screen: the room's code, who is in it, the host-only match setup
+// (category, match length, imposter-hints) and start control, and a tiny echo
+// box that proves a message round-trips.
 //
-// The host's category pick is a live choice, not just a start-time one: every
-// change calls onSetCategory, which the app wires to SetGameOptions, so the
-// whole lobby — not just the host — sees "Category: Food" update as the host
-// changes their mind. See room.pendingOptions in net/connection.ts.
+// The host's picks are live choices, not just start-time ones: every change
+// calls onSetOptions, which the app wires to SetGameOptions, so the whole
+// lobby — not just the host — sees "Category: Food" update as the host changes
+// their mind. See room.pendingOptions in net/connection.ts.
 export function LobbyScreen({
   room,
   lastEcho,
   isHost,
   onStartGame,
-  onSetCategory,
+  onSetOptions,
   onEcho,
   onLeave,
 }: Props) {
   const { t } = useT();
   const [text, setText] = useState("");
-  const [hintsEnabled, setHintsEnabled] = useState(false);
-  const [category, setCategory] = useState("");
+  const [opts, setOpts] = useState<MatchOptions>(DEFAULT_MATCH_OPTIONS);
   // Result of the last "copy code" press. `n` increments on every press so
   // pressing twice restarts the confirmation timer even when the outcome is
   // the same both times (React skips a re-render if the value is unchanged).
@@ -65,10 +69,13 @@ export function LobbyScreen({
       ? decodeStartOptions(room.pendingOptions.options)
       : null;
 
-  function setAndBroadcast(nextHints: boolean, nextCategory: string) {
-    setHintsEnabled(nextHints);
-    setCategory(nextCategory);
-    onSetCategory(nextHints, nextCategory);
+  // One setter for all three options: a partial update is merged into what the
+  // host already picked, then the whole set goes out, since SetGameOptions
+  // carries the options as one payload rather than a patch.
+  function pick(change: Partial<MatchOptions>) {
+    const next = { ...opts, ...change };
+    setOpts(next);
+    onSetOptions(next);
   }
 
   async function copyCode() {
@@ -126,13 +133,23 @@ export function LobbyScreen({
         <section>
           <label className="field">
             <span>{t("lobby.categoryLabel")}</span>
+            <select value={opts.category} onChange={(e) => pick({ category: e.target.value })}>
+              {CATEGORY_OPTIONS.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {t(o.labelKey)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>{t("lobby.roundsLabel")}</span>
             <select
-              value={category}
-              onChange={(e) => setAndBroadcast(hintsEnabled, e.target.value)}
+              value={opts.rounds}
+              onChange={(e) => pick({ rounds: Number(e.target.value) })}
             >
-              {CATEGORY_OPTIONS.map((opt) => (
-                <option key={opt.key} value={opt.key}>
-                  {t(opt.labelKey)}
+              {ROUND_OPTIONS.map((n) => (
+                <option key={n} value={n}>
+                  {t("lobby.roundsOption", { n })}
                 </option>
               ))}
             </select>
@@ -140,16 +157,12 @@ export function LobbyScreen({
           <label className="field-inline">
             <input
               type="checkbox"
-              checked={hintsEnabled}
-              onChange={(e) => setAndBroadcast(e.target.checked, category)}
+              checked={opts.hintsEnabled}
+              onChange={(e) => pick({ hintsEnabled: e.target.checked })}
             />
             <span>{t("lobby.hintsToggle")}</span>
           </label>
-          <button
-            className="primary"
-            onClick={() => onStartGame(hintsEnabled, category)}
-            disabled={!canStart}
-          >
+          <button className="primary" onClick={() => onStartGame(opts)} disabled={!canStart}>
             {t("lobby.startImposter")}
           </button>
           {!canStart && (
@@ -159,7 +172,7 @@ export function LobbyScreen({
       ) : (
         pending && (
           <section>
-            <p className="hint">
+            <p className="status">
               {t("lobby.categoryChosen", {
                 category: t(
                   CATEGORY_OPTIONS.find((o) => o.key === pending.category)?.labelKey ??
@@ -167,6 +180,7 @@ export function LobbyScreen({
                 ),
               })}
             </p>
+            <p className="status">{t("lobby.roundsChosen", { n: pending.rounds })}</p>
           </section>
         )
       )}

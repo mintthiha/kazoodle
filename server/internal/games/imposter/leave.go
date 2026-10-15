@@ -12,7 +12,15 @@ import (
 //
 // The round carries on wherever that still makes sense. It's abandoned in two
 // cases: the imposter left (there's nobody left to catch), or too few players
-// remain to play on.
+// remain to play on. Abandoning ends the whole match, scores included: there
+// is no way to replay a round whose imposter walked out, and carrying half a
+// scoreboard into a game the room has to restart anyway would be worse than
+// starting clean.
+//
+// A departure between rounds is the gentler case. The results screen stays up,
+// the player drops out of the turn order, and the next round — if there still
+// can be one — is dealt to whoever is left. Their points stay in the standings
+// (they earned them) but they can no longer win the match; see leaders.
 //
 // A departed player's clue stays in the recap. The room already saw it and
 // argued about it, so dropping it would quietly rewrite what happened; the web

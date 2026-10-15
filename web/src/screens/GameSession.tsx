@@ -59,12 +59,8 @@ export function GameSession({ gameId, onExit }: Props) {
         room={snapshot.room}
         lastEcho={snapshot.lastEcho}
         isHost={snapshot.room.hostId === snapshot.room.selfId}
-        onStartGame={(hintsEnabled, category) =>
-          actions.startGame(gameId, encodeStartOptions(hintsEnabled, category))
-        }
-        onSetCategory={(hintsEnabled, category) =>
-          actions.setGameOptions(gameId, encodeStartOptions(hintsEnabled, category))
-        }
+        onStartGame={(opts) => actions.startGame(gameId, encodeStartOptions(opts))}
+        onSetOptions={(opts) => actions.setGameOptions(gameId, encodeStartOptions(opts))}
         onEcho={actions.echo}
         onLeave={actions.leaveRoom}
       />

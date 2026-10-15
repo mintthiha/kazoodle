@@ -8,12 +8,21 @@ option go_package = "github.com/mintthiha/party-games/server/internal/games/impo
 // GameEvent / GameAction envelopes as proto3 JSON.
 //
 // Ruleset (v1): exactly one imposter, who gets no word. One clue word per
-// player, one round, in a server-set order. Everyone then votes; a tie means
-// no one is removed and the imposter escapes. If the vote catches the
-// imposter, they get one blind guess at the secret word to steal the win
-// before the round's Outcome is revealed. A finished round stays on everyone's
-// screen until a player sends PlayAgain, which ends it so the host can start
-// a fresh one.
+// player, in a server-set order. Everyone then votes; a tie means no one is
+// removed and the imposter escapes. If the vote catches the imposter, they get
+// one blind guess at the secret word to steal the win before the round's
+// Outcome is revealed.
+//
+// A game is a *match* of StartOptions.rounds rounds. Points carry across
+// rounds and the match has a winner: a caught imposter scores +1 for every
+// crew member still in the round, an escaped imposter +2 for themselves, and a
+// caught imposter whose steal guess lands +3 instead. Running totals ride
+// along on every Outcome.
+//
+// A finished round stays on everyone's screen until a player sends PlayAgain.
+// That starts the next round — fresh word, fresh imposter, reshuffled
+// turn order, same scores — unless it was the last one, in which case
+// the match ends with GameEnded "finished".
 //
 // A player leaving mid-round does not end it. They drop out of the turn order
 // and the candidate list, and the phase they were holding up advances without
@@ -42,6 +51,11 @@ message StartOptions {
   // When true, the imposter's RoleAssignment includes the category (never
   // the word) so they have something to go on while bluffing.
   bool hints_enabled = 1;
+
+  // How many rounds the match runs for. 0 (the default) means 3; anything
+  // above 10 is clamped to 10, so a client cannot ask for a thousand-round
+  // match. Scores carry across every round of a match.
+  int32 rounds = 3;
 
   // Restricts the secret word to one category: "places", "food", "animals",
   // "objects", "activities", "jobs", or "weather". Empty (the default) draws
@@ -76,6 +90,21 @@ message RoleAssignment {
   string word = 2;
   string category = 3;
   string hint = 4;
+
+  // Where this round sits in the match: round 1-based, total_rounds the match
+  // length. A second RoleAssignment arriving is how a client learns the next
+  // round has begun, so it clears whatever the last round left on screen.
+  int32 round = 5;
+  int32 total_rounds = 6;
+}
+
+// One player's standing in the match. score is their running total after the
+// round the message belongs to; delta is what that round alone earned them,
+// which is 0 for everyone who scored nothing.
+message ScoreEntry {
+  string player_id = 1;
+  int32 score = 2;
+  int32 delta = 3;
 }
 
 // Broadcast as players confirm they have seen their role, so every client can
@@ -152,6 +181,27 @@ message Outcome {
   // (StartOptions.hints_enabled). Empty on a hints-off round — not something
   // to render as a blank line.
   string hint = 9;
+
+  // ── Match, not round ──
+  // Where this round sat in the match, and the scores it leaves behind.
+  int32 round = 10; // 1-based
+  int32 total_rounds = 11;
+
+  // Every player the match started with, highest score first, ties broken by
+  // the original join order. Players who left mid-match stay listed with the
+  // score they had: their points were really earned, and dropping them would
+  // silently rewrite the table.
+  repeated ScoreEntry scores = 12;
+
+  // True when no further round follows, either because this was the last one
+  // or because too few players remain to play another. PlayAgain then ends the
+  // match instead of starting a round.
+  bool match_over = 13;
+
+  // The winner (or winners, on a tie), set only when match_over is true.
+  // Limited to players still in the room — someone who left does not win a
+  // match they are not in — so it can be empty even when scores are not.
+  repeated string winner_ids = 14;
 }
 
 // ── Client → Server ───────────────────────────────────────────────────────
@@ -188,6 +238,7 @@ message GuessWord {
   string text = 1;
 }
 
-// "Start a new round." Only accepted once the current round has reached its
-// Outcome. Ends the round; the host starts the next one from the lobby.
+// "On to the next round." Only accepted once the current round has reached its
+// Outcome. Starts the next round of the match, or — on the last round, or when
+// too few players remain for another — ends the match with GameEnded.
 message PlayAgain {}
