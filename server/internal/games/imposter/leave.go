@@ -77,12 +77,10 @@ func (Game) Leave(current game.State, playerID string) (game.State, []game.Effec
 		if idx < next.turn {
 			next.turn--
 		}
-		if next.turn >= len(next.order) {
-			// Whoever left was the last player still to give a clue.
-			next.phase = phaseVote
-			return next, []game.Effect{game.Send{Msg: votePhase(next)}}, nil
-		}
-		return next, []game.Effect{game.Send{Msg: clueTurn(next)}}, nil
+		// Whoever left may have been the last player still to give a clue this
+		// pass, so this goes through the same rule a submitted clue does: the
+		// pass may now be over, and with it the whole clue phase.
+		return next, nextClue(next), nil
 
 	case phaseVote:
 		// Anyone who voted for the player who left no longer has a valid vote.

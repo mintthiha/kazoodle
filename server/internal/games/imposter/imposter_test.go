@@ -95,15 +95,23 @@ func readyAll(t *testing.T, st game.State, order []string) (game.State, []game.E
 	return st, effects
 }
 
-// giveAllClues drives every player's SubmitClue, in turn order.
-func giveAllClues(t *testing.T, st game.State, order []string) (game.State, []game.Effect) {
+// giveAllClues drives SubmitClue for whoever is up, over and over, until the
+// clue phase is done. That is one lap of the table per pass, so on a default
+// round it is two — which is why it reads the current turn-holder out of the
+// state each time instead of walking a fixed order.
+func giveAllClues(t *testing.T, st game.State) (game.State, []game.Effect) {
 	t.Helper()
 	var effects []game.Effect
 	var err error
-	for i, id := range order {
+	for i := 0; st.(*state).phase == phaseClues; i++ {
+		s := st.(*state)
+		id := s.order[s.turn]
 		st, effects, err = (Game{}).Advance(st, clueEvent(id, fmt.Sprintf("clue-%d", i)))
 		if err != nil {
 			t.Fatalf("Advance(clue %d, %s): %v", i, id, err)
+		}
+		if i > 50 {
+			t.Fatal("giveAllClues: the clue phase never ended")
 		}
 	}
 	return st, effects
@@ -437,7 +445,8 @@ func TestSubmitClueRejectsEmptyText(t *testing.T) {
 }
 
 func TestCluePhaseProgressesAndTransitionsToVote(t *testing.T) {
-	st, _, _ := (Game{}).Init(mkPlayers(4, "en"), nil)
+	// One pass, so the last clue of the lap is the last clue of the phase.
+	st, _, _ := (Game{}).Init(mkPlayers(4, "en"), startOpts(&pb.StartOptions{CluePasses: 1}))
 	order := st.(*state).order
 	st, _ = readyAll(t, st, order)
 
@@ -485,7 +494,7 @@ func TestVoteCatchingImposterOpensStealPhaseInsteadOfOutcome(t *testing.T) {
 	order, imposter := s.order, s.imposterID
 
 	st, _ = readyAll(t, st, order)
-	st, _ = giveAllClues(t, st, order)
+	st, _ = giveAllClues(t, st)
 
 	var effects []game.Effect
 	var err error
@@ -517,7 +526,7 @@ func TestVoteTieMeansImposterEscapes(t *testing.T) {
 	order := st.(*state).order
 
 	st, _ = readyAll(t, st, order)
-	st, _ = giveAllClues(t, st, order)
+	st, _ = giveAllClues(t, st)
 
 	// A three-way tie: each player votes for the next one, round-robin.
 	var effects []game.Effect
@@ -555,7 +564,7 @@ func TestOutcomeIncludesHintOnlyWhenHintsWereEnabledForTheRound(t *testing.T) {
 		}
 
 		st, _ = readyAll(t, st, order)
-		st, _ = giveAllClues(t, st, order)
+		st, _ = giveAllClues(t, st)
 
 		// A three-way tie: nobody is caught, so Outcome comes back immediately.
 		var effects []game.Effect
@@ -581,7 +590,7 @@ func TestVoteChangeBeforeEveryoneHasVoted(t *testing.T) {
 	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 	st, _ = readyAll(t, st, order)
-	st, _ = giveAllClues(t, st, order)
+	st, _ = giveAllClues(t, st)
 
 	st, effects, err := (Game{}).Advance(st, voteEvent(order[0], order[1]))
 	if err != nil {
@@ -605,7 +614,7 @@ func TestCastVoteRejectsUnknownSuspect(t *testing.T) {
 	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 	st, _ = readyAll(t, st, order)
-	st, _ = giveAllClues(t, st, order)
+	st, _ = giveAllClues(t, st)
 
 	if _, _, err := (Game{}).Advance(st, voteEvent(order[0], "not-a-player")); err == nil {
 		t.Fatal("expected an error for an unknown suspect")
@@ -616,7 +625,7 @@ func TestCastVoteRejectsEmptySuspectWithoutAbstain(t *testing.T) {
 	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 	st, _ = readyAll(t, st, order)
-	st, _ = giveAllClues(t, st, order)
+	st, _ = giveAllClues(t, st)
 
 	if _, _, err := (Game{}).Advance(st, voteEvent(order[0], "")); err == nil {
 		t.Fatal("expected an error for an empty suspect id with abstain not set")
@@ -627,7 +636,7 @@ func TestAbstainDoesNotCountTowardAnySuspect(t *testing.T) {
 	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 	st, _ = readyAll(t, st, order)
-	st, _ = giveAllClues(t, st, order)
+	st, _ = giveAllClues(t, st)
 
 	// Everyone abstains. Nobody is removed and no suspect gets any votes.
 	var effects []game.Effect
@@ -655,7 +664,7 @@ func TestVotePhaseAdvertisesVoteSeconds(t *testing.T) {
 	st, _, _ := (Game{}).Init(mkPlayers(3, "en"), nil)
 	order := st.(*state).order
 	st, _ = readyAll(t, st, order)
-	_, effects := giveAllClues(t, st, order)
+	_, effects := giveAllClues(t, st)
 
 	vp := broadcastMsg(t, effects).GetVotePhase()
 	if vp.GetVoteSeconds() != voteSeconds {
@@ -683,7 +692,7 @@ func reachStealPhase(t *testing.T) (st game.State, order []string, imposter stri
 	order, imposter = s.order, s.imposterID
 
 	st, _ = readyAll(t, st, order)
-	st, _ = giveAllClues(t, st, order)
+	st, _ = giveAllClues(t, st)
 
 	var err error
 	for _, id := range order {
@@ -790,7 +799,7 @@ func TestPlayAgainEndsAOneRoundMatch(t *testing.T) {
 	order, imposter := s.order, s.imposterID
 
 	st, _ = readyAll(t, st, order)
-	st, _ = giveAllClues(t, st, order)
+	st, _ = giveAllClues(t, st)
 	for _, id := range order {
 		st, _, err = (Game{}).Advance(st, voteEvent(id, imposter))
 		if err != nil {

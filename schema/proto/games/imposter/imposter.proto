@@ -8,7 +8,10 @@ option go_package = "github.com/mintthiha/party-games/server/internal/games/impo
 // GameEvent / GameAction envelopes as proto3 JSON.
 //
 // Ruleset (v1): exactly one imposter, who gets no word. One clue word per
-// player, in a server-set order. Everyone then votes; a tie means no one is
+// player per pass, in a server-set order, for StartOptions.clue_passes passes
+// of the table — the same players in the same order, each speaking again after
+// hearing everyone else, which is where an imposter who survived the first
+// pass usually comes undone. Everyone then votes; a tie means no one is
 // removed and the imposter escapes. If the vote catches the imposter, they get
 // one blind guess at the secret word to steal the win before the round's
 // Outcome is revealed.
@@ -51,6 +54,11 @@ message StartOptions {
   // When true, the imposter's RoleAssignment includes the category (never
   // the word) so they have something to go on while bluffing.
   bool hints_enabled = 1;
+
+  // How many times the table goes around giving clues before the vote. 0 (the
+  // default) means 2; anything above 3 is clamped to 3. One pass is the quick
+  // version — it was the only version before this field existed.
+  int32 clue_passes = 4;
 
   // How many rounds the match runs for. 0 (the default) means 3; anything
   // above 10 is clamped to 10, so a client cannot ask for a thousand-round
@@ -122,11 +130,19 @@ message ClueEntry {
 
 // Broadcast whenever the clue phase advances: at its start, and again after
 // each clue. `player_id` is whose turn it is now.
+//
+// turn_index and total describe the position within the current pass of the
+// table, not the whole clue phase: on a two-pass round they both restart when
+// the second pass begins, and clue_pass says which pass that is. clues_so_far
+// keeps growing across passes, so the second pass is given with the first
+// pass's clues still on screen — which is the point of having one.
 message ClueTurn {
   string player_id = 1;
-  int32 turn_index = 2; // 0-based
-  int32 total = 3;      // total clues expected this round
+  int32 turn_index = 2; // 0-based, within this pass
+  int32 total = 3;      // clues expected in this pass: one per player still in the round
   repeated ClueEntry clues_so_far = 4;
+  int32 clue_pass = 5;        // 1-based
+  int32 total_clue_passes = 6;
 }
 
 // Broadcast once, when every player has given a clue and voting opens.

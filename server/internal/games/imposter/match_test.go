@@ -21,7 +21,7 @@ func playRound(t *testing.T, st game.State, vote, stealGuess string) (game.State
 	order, imposter := s.order, s.imposterID
 
 	st, _ = readyAll(t, st, order)
-	st, _ = giveAllClues(t, st, order)
+	st, _ = giveAllClues(t, st)
 
 	var effects []game.Effect
 	var err error

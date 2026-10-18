@@ -49,6 +49,7 @@ type state struct {
 	scores       map[string]int32  // player id -> points so far in the match
 	round        int               // 1-based index of the round being played
 	totalRounds  int               // how many rounds this match runs for
+	cluePasses   int               // host option: how many times the table goes around giving clues
 	hintsEnabled bool              // host option: give the imposter the category
 	wordCategory string            // host option: StartOptions.category, so every round draws from the same pool
 
@@ -61,8 +62,9 @@ type state struct {
 
 	ready map[string]bool // reveal phase: who has confirmed they saw their role
 
-	turn  int         // clue phase: index into order of whose turn it is
-	clues []clueEntry // clue phase: submitted so far, in turn order
+	turn     int         // clue phase: index into order of whose turn it is, within the current pass
+	cluePass int         // clue phase: which pass of the table this is, 1-based
+	clues    []clueEntry // clue phase: submitted so far, in the order given, across all passes
 
 	votes map[string]string // vote phase: voter id -> suspect id, or "" for an abstain
 }
@@ -88,6 +90,7 @@ func (s *state) clone() *state {
 		scores:       copyScores(s.scores),
 		round:        s.round,
 		totalRounds:  s.totalRounds,
+		cluePasses:   s.cluePasses,
 		hintsEnabled: s.hintsEnabled,
 		wordCategory: s.wordCategory,
 		phase:        s.phase,
@@ -97,6 +100,7 @@ func (s *state) clone() *state {
 		deltas:       copyScores(s.deltas),
 		ready:        ready,
 		turn:         s.turn,
+		cluePass:     s.cluePass,
 		clues:        clues,
 		votes:        votes,
 	}

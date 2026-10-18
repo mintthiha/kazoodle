@@ -28,6 +28,10 @@ type StartOptions struct {
 	// When true, the imposter's RoleAssignment includes the category (never
 	// the word) so they have something to go on while bluffing.
 	HintsEnabled bool `protobuf:"varint,1,opt,name=hints_enabled,json=hintsEnabled,proto3" json:"hints_enabled,omitempty"`
+	// How many times the table goes around giving clues before the vote. 0 (the
+	// default) means 2; anything above 3 is clamped to 3. One pass is the quick
+	// version — it was the only version before this field existed.
+	CluePasses int32 `protobuf:"varint,4,opt,name=clue_passes,json=cluePasses,proto3" json:"clue_passes,omitempty"`
 	// How many rounds the match runs for. 0 (the default) means 3; anything
 	// above 10 is clamped to 10, so a client cannot ask for a thousand-round
 	// match. Scores carry across every round of a match.
@@ -77,6 +81,13 @@ func (x *StartOptions) GetHintsEnabled() bool {
 		return x.HintsEnabled
 	}
 	return false
+}
+
+func (x *StartOptions) GetCluePasses() int32 {
+	if x != nil {
+		return x.CluePasses
+	}
+	return 0
 }
 
 func (x *StartOptions) GetRounds() int32 {
@@ -535,14 +546,22 @@ func (x *ClueEntry) GetText() string {
 
 // Broadcast whenever the clue phase advances: at its start, and again after
 // each clue. `player_id` is whose turn it is now.
+//
+// turn_index and total describe the position within the current pass of the
+// table, not the whole clue phase: on a two-pass round they both restart when
+// the second pass begins, and clue_pass says which pass that is. clues_so_far
+// keeps growing across passes, so the second pass is given with the first
+// pass's clues still on screen — which is the point of having one.
 type ClueTurn struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PlayerId      string                 `protobuf:"bytes,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
-	TurnIndex     int32                  `protobuf:"varint,2,opt,name=turn_index,json=turnIndex,proto3" json:"turn_index,omitempty"` // 0-based
-	Total         int32                  `protobuf:"varint,3,opt,name=total,proto3" json:"total,omitempty"`                          // total clues expected this round
-	CluesSoFar    []*ClueEntry           `protobuf:"bytes,4,rep,name=clues_so_far,json=cluesSoFar,proto3" json:"clues_so_far,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	PlayerId        string                 `protobuf:"bytes,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	TurnIndex       int32                  `protobuf:"varint,2,opt,name=turn_index,json=turnIndex,proto3" json:"turn_index,omitempty"` // 0-based, within this pass
+	Total           int32                  `protobuf:"varint,3,opt,name=total,proto3" json:"total,omitempty"`                          // clues expected in this pass: one per player still in the round
+	CluesSoFar      []*ClueEntry           `protobuf:"bytes,4,rep,name=clues_so_far,json=cluesSoFar,proto3" json:"clues_so_far,omitempty"`
+	CluePass        int32                  `protobuf:"varint,5,opt,name=clue_pass,json=cluePass,proto3" json:"clue_pass,omitempty"` // 1-based
+	TotalCluePasses int32                  `protobuf:"varint,6,opt,name=total_clue_passes,json=totalCluePasses,proto3" json:"total_clue_passes,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *ClueTurn) Reset() {
@@ -601,6 +620,20 @@ func (x *ClueTurn) GetCluesSoFar() []*ClueEntry {
 		return x.CluesSoFar
 	}
 	return nil
+}
+
+func (x *ClueTurn) GetCluePass() int32 {
+	if x != nil {
+		return x.CluePass
+	}
+	return 0
+}
+
+func (x *ClueTurn) GetTotalCluePasses() int32 {
+	if x != nil {
+		return x.TotalCluePasses
+	}
+	return 0
 }
 
 // Broadcast once, when every player has given a clue and voting opens.
@@ -1401,9 +1434,11 @@ var File_imposter_proto protoreflect.FileDescriptor
 
 const file_imposter_proto_rawDesc = "" +
 	"\n" +
-	"\x0eimposter.proto\x12\vimposter.v1\"g\n" +
+	"\x0eimposter.proto\x12\vimposter.v1\"\x88\x01\n" +
 	"\fStartOptions\x12#\n" +
-	"\rhints_enabled\x18\x01 \x01(\bR\fhintsEnabled\x12\x16\n" +
+	"\rhints_enabled\x18\x01 \x01(\bR\fhintsEnabled\x12\x1f\n" +
+	"\vclue_passes\x18\x04 \x01(\x05R\n" +
+	"cluePasses\x12\x16\n" +
 	"\x06rounds\x18\x03 \x01(\x05R\x06rounds\x12\x1a\n" +
 	"\bcategory\x18\x02 \x01(\tR\bcategory\"\x8a\x04\n" +
 	"\x15ImposterServerMessage\x12F\n" +
@@ -1436,14 +1471,16 @@ const file_imposter_proto_rawDesc = "" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\"<\n" +
 	"\tClueEntry\x12\x1b\n" +
 	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x12\x12\n" +
-	"\x04text\x18\x02 \x01(\tR\x04text\"\x96\x01\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\"\xdf\x01\n" +
 	"\bClueTurn\x12\x1b\n" +
 	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x12\x1d\n" +
 	"\n" +
 	"turn_index\x18\x02 \x01(\x05R\tturnIndex\x12\x14\n" +
 	"\x05total\x18\x03 \x01(\x05R\x05total\x128\n" +
 	"\fclues_so_far\x18\x04 \x03(\v2\x16.imposter.v1.ClueEntryR\n" +
-	"cluesSoFar\"\x81\x01\n" +
+	"cluesSoFar\x12\x1b\n" +
+	"\tclue_pass\x18\x05 \x01(\x05R\bcluePass\x12*\n" +
+	"\x11total_clue_passes\x18\x06 \x01(\x05R\x0ftotalCluePasses\"\x81\x01\n" +
 	"\tVotePhase\x12,\n" +
 	"\x05clues\x18\x01 \x03(\v2\x16.imposter.v1.ClueEntryR\x05clues\x12#\n" +
 	"\rcandidate_ids\x18\x02 \x03(\tR\fcandidateIds\x12!\n" +

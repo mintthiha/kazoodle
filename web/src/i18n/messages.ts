@@ -57,6 +57,10 @@ const en = {
   "lobby.roundsLabel": "Match length",
   "lobby.roundsOption": "{n} rounds",
   "lobby.roundsChosen": "Match length: {n} rounds",
+  "lobby.cluePassesLabel": "Clues per player",
+  "lobby.cluePassesOne": "One clue each (quick)",
+  "lobby.cluePassesTwo": "Two clues each",
+  "lobby.cluePassesThree": "Three clues each",
 
   "imposter.category.any": "Any category",
   "imposter.category.places": "Places",
@@ -91,6 +95,7 @@ const en = {
 
   "imposter.cluesHeading": "Clues",
   "imposter.clueProgress": "Clue {turn} of {total}",
+  "imposter.cluePass": "Pass {pass} of {total}",
   "imposter.yourClueLabel": "Your clue",
   "imposter.yourCluePlaceholder": "One word",
   "imposter.submitClue": "Submit",
@@ -195,6 +200,10 @@ const fr: Record<MessageKey, string> = {
   "lobby.roundsLabel": "Durée de la partie",
   "lobby.roundsOption": "{n} manches",
   "lobby.roundsChosen": "Durée de la partie : {n} manches",
+  "lobby.cluePassesLabel": "Indices par joueur",
+  "lobby.cluePassesOne": "Un indice chacun (rapide)",
+  "lobby.cluePassesTwo": "Deux indices chacun",
+  "lobby.cluePassesThree": "Trois indices chacun",
 
   "imposter.category.any": "Toutes catégories",
   "imposter.category.places": "Lieux",
@@ -229,6 +238,7 @@ const fr: Record<MessageKey, string> = {
 
   "imposter.cluesHeading": "Indices",
   "imposter.clueProgress": "Indice {turn} sur {total}",
+  "imposter.cluePass": "Tour de table {pass} sur {total}",
   "imposter.yourClueLabel": "Votre indice",
   "imposter.yourCluePlaceholder": "Un mot",
   "imposter.submitClue": "Envoyer",

@@ -9,7 +9,7 @@ import {
   StartOptionsSchema,
   type ImposterServerMessage,
 } from "./gen/imposter_pb";
-import { DEFAULT_ROUNDS } from "./rounds";
+import { DEFAULT_CLUE_PASSES, DEFAULT_ROUNDS } from "./rounds";
 
 /** The host's choices for a match: everything StartOptions carries, as the
  * lobby holds it. One object rather than three arguments because the lobby
@@ -19,6 +19,8 @@ export interface MatchOptions {
   category: string;
   /** How many rounds the match runs for. See ./rounds. */
   rounds: number;
+  /** How many clues each player gives before the vote. See ./rounds. */
+  cluePasses: number;
 }
 
 /** What a match is if the host touches nothing. */
@@ -26,6 +28,7 @@ export const DEFAULT_MATCH_OPTIONS: MatchOptions = {
   hintsEnabled: false,
   category: "",
   rounds: DEFAULT_ROUNDS,
+  cluePasses: DEFAULT_CLUE_PASSES,
 };
 
 /** Decode one game-event payload string into a typed Imposter server message. */
@@ -45,9 +48,9 @@ export function encodeStartOptions(opts: MatchOptions): string {
  * defaults rather than throwing — a stray or stale payload should never crash
  * the lobby screen.
  *
- * A zero `rounds` is the proto default, which the server reads as "use yours";
- * it becomes DEFAULT_ROUNDS here so the lobby shows the length that will
- * actually be played rather than a bare 0. */
+ * A zero `rounds` or `cluePasses` is the proto default, which the server reads
+ * as "use yours"; both become the matching default here so the lobby shows
+ * what will actually be played rather than a bare 0. */
 export function decodeStartOptions(json: string): MatchOptions {
   if (!json) return DEFAULT_MATCH_OPTIONS;
   try {
@@ -56,6 +59,7 @@ export function decodeStartOptions(json: string): MatchOptions {
       hintsEnabled: opts.hintsEnabled,
       category: opts.category,
       rounds: opts.rounds || DEFAULT_ROUNDS,
+      cluePasses: opts.cluePasses || DEFAULT_CLUE_PASSES,
     };
   } catch {
     return DEFAULT_MATCH_OPTIONS;

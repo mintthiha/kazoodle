@@ -2,10 +2,13 @@
 //
 // Ruleset (v1): exactly one imposter, chosen at random, who gets no word.
 // Everyone else gets the same secret word. Players give one clue word each, in
-// a server-set order; then everyone votes. A tie for the most votes means no
-// one is removed and the imposter escapes. A caught imposter gets one blind
-// guess at the word to steal the win. A finished round stays on screen until
-// someone sends PlayAgain.
+// a server-set order, and the table goes around that way once per clue pass —
+// twice by default. The second pass is where the game is: the imposter has to
+// speak again having heard everyone, and the crew can aim a clue at whoever
+// sounded wrong. Then everyone votes. A tie for the most votes means no one is
+// removed and the imposter escapes. A caught imposter gets one blind guess at
+// the word to steal the win. A finished round stays on screen until someone
+// sends PlayAgain.
 //
 // A game is a match of several rounds, not a single round: PlayAgain deals the
 // next one, with the same players and the same host options but a fresh word,

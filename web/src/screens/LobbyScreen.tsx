@@ -3,7 +3,7 @@ import { useT } from "../i18n";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
 import { CATEGORY_OPTIONS } from "../games/imposter/categories";
-import { ROUND_OPTIONS } from "../games/imposter/rounds";
+import { CLUE_PASS_OPTIONS, ROUND_OPTIONS } from "../games/imposter/rounds";
 import {
   DEFAULT_MATCH_OPTIONS,
   decodeStartOptions,
@@ -142,6 +142,19 @@ export function LobbyScreen({
             </select>
           </label>
           <label className="field">
+            <span>{t("lobby.cluePassesLabel")}</span>
+            <select
+              value={opts.cluePasses}
+              onChange={(e) => pick({ cluePasses: Number(e.target.value) })}
+            >
+              {CLUE_PASS_OPTIONS.map((o) => (
+                <option key={o.passes} value={o.passes}>
+                  {t(o.labelKey)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
             <span>{t("lobby.roundsLabel")}</span>
             <select
               value={opts.rounds}
@@ -181,6 +194,12 @@ export function LobbyScreen({
               })}
             </p>
             <p className="status">{t("lobby.roundsChosen", { n: pending.rounds })}</p>
+            <p className="status">
+              {t(
+                CLUE_PASS_OPTIONS.find((o) => o.passes === pending.cluePasses)?.labelKey ??
+                  "lobby.cluePassesTwo",
+              )}
+            </p>
           </section>
         )
       )}

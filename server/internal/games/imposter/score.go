@@ -20,6 +20,15 @@ const (
 	maxRounds     = 10
 )
 
+// defaultCluePasses and maxCluePasses bound StartOptions.clue_passes. Two is
+// the default because one pass gives the imposter almost nothing to trip over:
+// they speak before hearing enough to contradict. The cap is three — past that
+// the crew has said everything it knows and the imposter is just copying.
+const (
+	defaultCluePasses = 2
+	maxCluePasses     = 3
+)
+
 // roundsFromOption turns the host's requested round count into one this game
 // will actually play. Out-of-range values are corrected rather than rejected,
 // so an older or sloppier client gets a sane match instead of a failed start.
@@ -29,6 +38,20 @@ func roundsFromOption(requested int32) int {
 		return defaultRounds
 	case requested > maxRounds:
 		return maxRounds
+	default:
+		return int(requested)
+	}
+}
+
+// cluePassesFromOption turns the host's requested pass count into one this
+// game will play, correcting rather than rejecting an out-of-range value for
+// the same reason roundsFromOption does.
+func cluePassesFromOption(requested int32) int {
+	switch {
+	case requested <= 0:
+		return defaultCluePasses
+	case requested > maxCluePasses:
+		return maxCluePasses
 	default:
 		return int(requested)
 	}

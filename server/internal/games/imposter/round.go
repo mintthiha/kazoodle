@@ -27,6 +27,7 @@ func (s *state) beginRound() *state {
 		scores:       copyScores(s.scores),
 		round:        s.round + 1,
 		totalRounds:  s.totalRounds,
+		cluePasses:   s.cluePasses,
 		hintsEnabled: s.hintsEnabled,
 		wordCategory: s.wordCategory,
 
@@ -37,7 +38,29 @@ func (s *state) beginRound() *state {
 		deltas:     make(map[string]int32),
 		ready:      make(map[string]bool),
 		votes:      make(map[string]string),
+		cluePass:   1,
 	}
+}
+
+// nextClue moves the clue phase on by one turn, which is the one rule shared
+// by a submitted clue and a departure mid-phase: step to the next player, and
+// when the table has gone all the way around, start the next pass or — if that
+// was the last pass — open the vote.
+//
+// It sets the phase on the state it is handed, so callers pass a clone they
+// already own, the same contract as resolveVote.
+func nextClue(next *state) []game.Effect {
+	if next.turn < len(next.order) {
+		return []game.Effect{game.Send{Msg: clueTurn(next)}}
+	}
+	// The table has gone all the way around.
+	if next.cluePass < next.cluePasses {
+		next.cluePass++
+		next.turn = 0 // same order again, from the top
+		return []game.Effect{game.Send{Msg: clueTurn(next)}}
+	}
+	next.phase = phaseVote
+	return []game.Effect{game.Send{Msg: votePhase(next)}}
 }
 
 // roundStart is the effects that open a round: a private RoleAssignment for

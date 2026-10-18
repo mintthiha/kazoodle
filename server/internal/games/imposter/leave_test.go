@@ -30,6 +30,11 @@ func mkState(ph phase, order []string, imposterID string) *state {
 		locales:    locales,
 		ready:      make(map[string]bool),
 		votes:      make(map[string]string),
+		// A one-pass round, so a test that says "the last player still to give
+		// a clue" means the last one of the whole phase. Tests about the wrap
+		// to a second pass set these themselves.
+		cluePasses: 1,
+		cluePass:   1,
 	}
 }
 
@@ -247,6 +252,37 @@ func TestLeaveDuringCluesKeepsTheRightPlayerUp(t *testing.T) {
 				t.Errorf("total = %d, want 4", ct.GetTotal())
 			}
 		})
+	}
+}
+
+func TestLeaveByTheLastClueGiverStartsTheNextPassWhenOneIsLeft(t *testing.T) {
+	st := mkState(phaseClues, []string{"a", "b", "c", "d"}, "a")
+	st.cluePasses = 2 // two laps of the table before the vote
+	st.cluePass = 1
+	st.turn = 3 // a, b and c have gone; d is the only one left in this pass
+	st.clues = []clueEntry{
+		{playerID: "a", text: "one"},
+		{playerID: "b", text: "two"},
+		{playerID: "c", text: "three"},
+	}
+
+	next, effects := leaveOK(t, st, "d")
+
+	ct := broadcastMsg(t, effects).GetClueTurn()
+	if ct == nil {
+		t.Fatal("no ClueTurn broadcast; the first pass ended but a second one is still to come")
+	}
+	if ct.GetCluePass() != 2 {
+		t.Errorf("cluePass = %d, want 2", ct.GetCluePass())
+	}
+	if ct.GetPlayerId() != "a" {
+		t.Errorf("turn = %s, want a — the second pass starts from the top", ct.GetPlayerId())
+	}
+	if len(ct.GetCluesSoFar()) != 3 {
+		t.Errorf("recap has %d clues, want the 3 from the first pass", len(ct.GetCluesSoFar()))
+	}
+	if next.phase != phaseClues {
+		t.Errorf("phase = %s, want clues", next.phase)
 	}
 }
 

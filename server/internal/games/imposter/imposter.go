@@ -62,6 +62,7 @@ func (Game) Init(players []game.Player, options []byte) (game.State, []game.Effe
 		scores:       make(map[string]int32),
 		round:        0,
 		totalRounds:  roundsFromOption(opts.GetRounds()),
+		cluePasses:   cluePassesFromOption(opts.GetCluePasses()),
 		hintsEnabled: opts.GetHintsEnabled(),
 		wordCategory: opts.GetCategory(),
 		order:        roster, // beginRound copies and shuffles this
@@ -116,7 +117,8 @@ func advanceReady(st *state, playerID string) (game.State, []game.Effect, error)
 }
 
 // advanceClue handles one player's clue. Only the player whose turn it is may
-// submit; once the last player has, the round moves into the vote phase.
+// submit; nextClue decides whether that was the last clue of the pass, of the
+// phase, or neither.
 func advanceClue(st *state, playerID, text string) (game.State, []game.Effect, error) {
 	if st.phase != phaseClues {
 		return st, nil, fmt.Errorf("imposter: clues are not open right now")
@@ -132,11 +134,7 @@ func advanceClue(st *state, playerID, text string) (game.State, []game.Effect, e
 	next := st.clone()
 	next.clues = append(next.clues, clueEntry{playerID: playerID, text: text})
 	next.turn++
-	if next.turn >= len(next.order) {
-		next.phase = phaseVote
-		return next, []game.Effect{game.Send{Msg: votePhase(next)}}, nil
-	}
-	return next, []game.Effect{game.Send{Msg: clueTurn(next)}}, nil
+	return next, nextClue(next), nil
 }
 
 // advanceVote handles one player's vote, abstain, or changed mind. Once
@@ -330,15 +328,19 @@ func revealProgress(st *state) *pb.ImposterServerMessage {
 	}
 }
 
-// clueTurn announces whose turn it is now, with the clues given so far.
+// clueTurn announces whose turn it is now, with every clue given so far — the
+// earlier passes included, since a second clue is only interesting next to the
+// first one.
 func clueTurn(st *state) *pb.ImposterServerMessage {
 	return &pb.ImposterServerMessage{
 		Body: &pb.ImposterServerMessage_ClueTurn{
 			ClueTurn: &pb.ClueTurn{
-				PlayerId:   st.order[st.turn],
-				TurnIndex:  int32(st.turn),
-				Total:      int32(len(st.order)),
-				CluesSoFar: clueEntries(st),
+				PlayerId:        st.order[st.turn],
+				TurnIndex:       int32(st.turn),
+				Total:           int32(len(st.order)),
+				CluesSoFar:      clueEntries(st),
+				CluePass:        int32(st.cluePass),
+				TotalCluePasses: int32(st.cluePasses),
 			},
 		},
 	}

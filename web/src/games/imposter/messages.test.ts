@@ -11,7 +11,7 @@ import {
   encodeStartOptions,
   encodeSubmitClue,
 } from "./messages";
-import { DEFAULT_ROUNDS } from "./rounds";
+import { DEFAULT_CLUE_PASSES, DEFAULT_ROUNDS } from "./rounds";
 
 describe("imposter messages: encode", () => {
   it("markReady as a canonical-JSON envelope body", () => {
@@ -40,34 +40,44 @@ describe("imposter messages: encode", () => {
 
   it("startOptions with hints on", () => {
     expect(JSON.parse(encodeStartOptions({ ...DEFAULT_MATCH_OPTIONS, hintsEnabled: true }))).toEqual(
-      { hintsEnabled: true, rounds: DEFAULT_ROUNDS },
+      { hintsEnabled: true, rounds: DEFAULT_ROUNDS, cluePasses: DEFAULT_CLUE_PASSES },
     );
   });
 
   it("startOptions carries the match length", () => {
     expect(JSON.parse(encodeStartOptions({ ...DEFAULT_MATCH_OPTIONS, rounds: 7 }))).toEqual({
       rounds: 7,
+      cluePasses: DEFAULT_CLUE_PASSES,
     });
+  });
+
+  it("startOptions carries the clue passes", () => {
+    expect(
+      JSON.parse(encodeStartOptions({ ...DEFAULT_MATCH_OPTIONS, cluePasses: 1 })),
+    ).toEqual({ rounds: DEFAULT_ROUNDS, cluePasses: 1 });
   });
 
   it("startOptions omits fields left at their proto default", () => {
     expect(
-      JSON.parse(encodeStartOptions({ hintsEnabled: false, category: "", rounds: 0 })),
+      JSON.parse(
+        encodeStartOptions({ hintsEnabled: false, category: "", rounds: 0, cluePasses: 0 }),
+      ),
     ).toEqual({});
   });
 });
 
 describe("imposter messages: start options round-trip", () => {
   it("reads back what was encoded", () => {
-    const opts = { hintsEnabled: true, category: "food", rounds: 5 };
+    const opts = { hintsEnabled: true, category: "food", rounds: 5, cluePasses: 3 };
     expect(decodeStartOptions(encodeStartOptions(opts))).toEqual(opts);
   });
 
-  it("an unset round count reads back as the default that will be played", () => {
+  it("unset counts read back as the defaults that will be played", () => {
     expect(decodeStartOptions(JSON.stringify({ category: "food" }))).toEqual({
       hintsEnabled: false,
       category: "food",
       rounds: DEFAULT_ROUNDS,
+      cluePasses: DEFAULT_CLUE_PASSES,
     });
   });
 
@@ -165,6 +175,37 @@ describe("imposter messages: decode", () => {
     expect(msg.body.value.cluesSoFar).toHaveLength(1);
     expect(msg.body.value.cluesSoFar[0].playerId).toBe("p1");
     expect(msg.body.value.cluesSoFar[0].text).toBe("sand");
+  });
+
+  it("clueTurn on the second pass, with the first pass still in the recap", () => {
+    const msg = decodeImposterEvent(
+      JSON.stringify({
+        clueTurn: {
+          playerId: "p1",
+          turnIndex: 0,
+          total: 2,
+          cluePass: 2,
+          totalCluePasses: 2,
+          cluesSoFar: [
+            { playerId: "p1", text: "sand" },
+            { playerId: "p2", text: "towel" },
+          ],
+        },
+      }),
+    );
+    if (msg.body.case !== "clueTurn") throw new Error("unreachable");
+    expect(msg.body.value.cluePass).toBe(2);
+    expect(msg.body.value.totalCluePasses).toBe(2);
+    expect(msg.body.value.turnIndex).toBe(0);
+    expect(msg.body.value.cluesSoFar).toHaveLength(2);
+  });
+
+  it("clueTurn from a one-pass round has no pass fields set", () => {
+    const msg = decodeImposterEvent(
+      JSON.stringify({ clueTurn: { playerId: "p1", total: 3, cluePass: 1, totalCluePasses: 1 } }),
+    );
+    if (msg.body.case !== "clueTurn") throw new Error("unreachable");
+    expect(msg.body.value.totalCluePasses).toBe(1);
   });
 
   it("votePhase", () => {

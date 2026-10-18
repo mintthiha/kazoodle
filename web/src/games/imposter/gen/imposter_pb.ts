@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file imposter.proto.
  */
 export const file_imposter: GenFile = /*@__PURE__*/
-  fileDesc("Cg5pbXBvc3Rlci5wcm90bxILaW1wb3N0ZXIudjEiRwoMU3RhcnRPcHRpb25zEhUKDWhpbnRzX2VuYWJsZWQYASABKAgSDgoGcm91bmRzGAMgASgFEhAKCGNhdGVnb3J5GAIgASgJIqYDChVJbXBvc3RlclNlcnZlck1lc3NhZ2USNgoPcm9sZV9hc3NpZ25tZW50GAEgASgLMhsuaW1wb3N0ZXIudjEuUm9sZUFzc2lnbm1lbnRIABI2Cg9yZXZlYWxfcHJvZ3Jlc3MYAiABKAsyGy5pbXBvc3Rlci52MS5SZXZlYWxQcm9ncmVzc0gAEioKCWNsdWVfdHVybhgDIAEoCzIVLmltcG9zdGVyLnYxLkNsdWVUdXJuSAASLAoKdm90ZV9waGFzZRgEIAEoCzIWLmltcG9zdGVyLnYxLlZvdGVQaGFzZUgAEjIKDXZvdGVfcHJvZ3Jlc3MYBSABKAsyGS5pbXBvc3Rlci52MS5Wb3RlUHJvZ3Jlc3NIABIsCgp2b3RlX3RhbGx5GAYgASgLMhYuaW1wb3N0ZXIudjEuVm90ZVRhbGx5SAASJwoHb3V0Y29tZRgHIAEoCzIULmltcG9zdGVyLnYxLk91dGNvbWVIABIwCgxzdGVhbF9wcm9tcHQYCCABKAsyGC5pbXBvc3Rlci52MS5TdGVhbFByb21wdEgAQgYKBGJvZHkieAoOUm9sZUFzc2lnbm1lbnQSEwoLaXNfaW1wb3N0ZXIYASABKAgSDAoEd29yZBgCIAEoCRIQCghjYXRlZ29yeRgDIAEoCRIMCgRoaW50GAQgASgJEg0KBXJvdW5kGAUgASgFEhQKDHRvdGFsX3JvdW5kcxgGIAEoBSI9CgpTY29yZUVudHJ5EhEKCXBsYXllcl9pZBgBIAEoCRINCgVzY29yZRgCIAEoBRINCgVkZWx0YRgDIAEoBSI5Cg5SZXZlYWxQcm9ncmVzcxIYChByZWFkeV9wbGF5ZXJfaWRzGAEgAygJEg0KBXRvdGFsGAIgASgFIiwKCUNsdWVFbnRyeRIRCglwbGF5ZXJfaWQYASABKAkSDAoEdGV4dBgCIAEoCSJuCghDbHVlVHVybhIRCglwbGF5ZXJfaWQYASABKAkSEgoKdHVybl9pbmRleBgCIAEoBRINCgV0b3RhbBgDIAEoBRIsCgxjbHVlc19zb19mYXIYBCADKAsyFi5pbXBvc3Rlci52MS5DbHVlRW50cnkiXwoJVm90ZVBoYXNlEiUKBWNsdWVzGAEgAygLMhYuaW1wb3N0ZXIudjEuQ2x1ZUVudHJ5EhUKDWNhbmRpZGF0ZV9pZHMYAiADKAkSFAoMdm90ZV9zZWNvbmRzGAMgASgFIjcKDFZvdGVQcm9ncmVzcxIYChB2b3RlZF9wbGF5ZXJfaWRzGAEgAygJEg0KBXRvdGFsGAIgASgFIi0KCVZvdGVDb3VudBIRCglwbGF5ZXJfaWQYASABKAkSDQoFdm90ZXMYAiABKAUiYAoJVm90ZVRhbGx5EiYKBmNvdW50cxgBIAMoCzIWLmltcG9zdGVyLnYxLlZvdGVDb3VudBIUCgx2b3RlZF9vdXRfaWQYAiABKAkSFQoNYWJzdGFpbl9jb3VudBgDIAEoBSIiCgtTdGVhbFByb21wdBITCgtpbXBvc3Rlcl9pZBgBIAEoCSKvAgoHT3V0Y29tZRITCgtpbXBvc3Rlcl9pZBgBIAEoCRIMCgR3b3JkGAIgASgJEhAKCGNhdGVnb3J5GAMgASgJEhAKCGNyZXdfd29uGAQgASgIEhQKDHZvdGVkX291dF9pZBgFIAEoCRIXCg9zdGVhbF9hdHRlbXB0ZWQYBiABKAgSEwoLc3RlYWxfZ3Vlc3MYByABKAkSFQoNc3RlYWxfY29ycmVjdBgIIAEoCBIMCgRoaW50GAkgASgJEg0KBXJvdW5kGAogASgFEhQKDHRvdGFsX3JvdW5kcxgLIAEoBRInCgZzY29yZXMYDCADKAsyFy5pbXBvc3Rlci52MS5TY29yZUVudHJ5EhIKCm1hdGNoX292ZXIYDSABKAgSEgoKd2lubmVyX2lkcxgOIAMoCSKFAgoVSW1wb3N0ZXJDbGllbnRNZXNzYWdlEiwKCm1hcmtfcmVhZHkYASABKAsyFi5pbXBvc3Rlci52MS5NYXJrUmVhZHlIABIuCgtzdWJtaXRfY2x1ZRgCIAEoCzIXLmltcG9zdGVyLnYxLlN1Ym1pdENsdWVIABIqCgljYXN0X3ZvdGUYAyABKAsyFS5pbXBvc3Rlci52MS5DYXN0Vm90ZUgAEiwKCmd1ZXNzX3dvcmQYBCABKAsyFi5pbXBvc3Rlci52MS5HdWVzc1dvcmRIABIsCgpwbGF5X2FnYWluGAUgASgLMhYuaW1wb3N0ZXIudjEuUGxheUFnYWluSABCBgoEYm9keSILCglNYXJrUmVhZHkiGgoKU3VibWl0Q2x1ZRIMCgR0ZXh0GAEgASgJIi8KCENhc3RWb3RlEhIKCnN1c3BlY3RfaWQYASABKAkSDwoHYWJzdGFpbhgCIAEoCCIZCglHdWVzc1dvcmQSDAoEdGV4dBgBIAEoCSILCglQbGF5QWdhaW5CR1pFZ2l0aHViLmNvbS9taW50dGhpaGEvcGFydHktZ2FtZXMvc2VydmVyL2ludGVybmFsL2dhbWVzL2ltcG9zdGVyL3BiO3BiYgZwcm90bzM");
+  fileDesc("Cg5pbXBvc3Rlci5wcm90bxILaW1wb3N0ZXIudjEiXAoMU3RhcnRPcHRpb25zEhUKDWhpbnRzX2VuYWJsZWQYASABKAgSEwoLY2x1ZV9wYXNzZXMYBCABKAUSDgoGcm91bmRzGAMgASgFEhAKCGNhdGVnb3J5GAIgASgJIqYDChVJbXBvc3RlclNlcnZlck1lc3NhZ2USNgoPcm9sZV9hc3NpZ25tZW50GAEgASgLMhsuaW1wb3N0ZXIudjEuUm9sZUFzc2lnbm1lbnRIABI2Cg9yZXZlYWxfcHJvZ3Jlc3MYAiABKAsyGy5pbXBvc3Rlci52MS5SZXZlYWxQcm9ncmVzc0gAEioKCWNsdWVfdHVybhgDIAEoCzIVLmltcG9zdGVyLnYxLkNsdWVUdXJuSAASLAoKdm90ZV9waGFzZRgEIAEoCzIWLmltcG9zdGVyLnYxLlZvdGVQaGFzZUgAEjIKDXZvdGVfcHJvZ3Jlc3MYBSABKAsyGS5pbXBvc3Rlci52MS5Wb3RlUHJvZ3Jlc3NIABIsCgp2b3RlX3RhbGx5GAYgASgLMhYuaW1wb3N0ZXIudjEuVm90ZVRhbGx5SAASJwoHb3V0Y29tZRgHIAEoCzIULmltcG9zdGVyLnYxLk91dGNvbWVIABIwCgxzdGVhbF9wcm9tcHQYCCABKAsyGC5pbXBvc3Rlci52MS5TdGVhbFByb21wdEgAQgYKBGJvZHkieAoOUm9sZUFzc2lnbm1lbnQSEwoLaXNfaW1wb3N0ZXIYASABKAgSDAoEd29yZBgCIAEoCRIQCghjYXRlZ29yeRgDIAEoCRIMCgRoaW50GAQgASgJEg0KBXJvdW5kGAUgASgFEhQKDHRvdGFsX3JvdW5kcxgGIAEoBSI9CgpTY29yZUVudHJ5EhEKCXBsYXllcl9pZBgBIAEoCRINCgVzY29yZRgCIAEoBRINCgVkZWx0YRgDIAEoBSI5Cg5SZXZlYWxQcm9ncmVzcxIYChByZWFkeV9wbGF5ZXJfaWRzGAEgAygJEg0KBXRvdGFsGAIgASgFIiwKCUNsdWVFbnRyeRIRCglwbGF5ZXJfaWQYASABKAkSDAoEdGV4dBgCIAEoCSKcAQoIQ2x1ZVR1cm4SEQoJcGxheWVyX2lkGAEgASgJEhIKCnR1cm5faW5kZXgYAiABKAUSDQoFdG90YWwYAyABKAUSLAoMY2x1ZXNfc29fZmFyGAQgAygLMhYuaW1wb3N0ZXIudjEuQ2x1ZUVudHJ5EhEKCWNsdWVfcGFzcxgFIAEoBRIZChF0b3RhbF9jbHVlX3Bhc3NlcxgGIAEoBSJfCglWb3RlUGhhc2USJQoFY2x1ZXMYASADKAsyFi5pbXBvc3Rlci52MS5DbHVlRW50cnkSFQoNY2FuZGlkYXRlX2lkcxgCIAMoCRIUCgx2b3RlX3NlY29uZHMYAyABKAUiNwoMVm90ZVByb2dyZXNzEhgKEHZvdGVkX3BsYXllcl9pZHMYASADKAkSDQoFdG90YWwYAiABKAUiLQoJVm90ZUNvdW50EhEKCXBsYXllcl9pZBgBIAEoCRINCgV2b3RlcxgCIAEoBSJgCglWb3RlVGFsbHkSJgoGY291bnRzGAEgAygLMhYuaW1wb3N0ZXIudjEuVm90ZUNvdW50EhQKDHZvdGVkX291dF9pZBgCIAEoCRIVCg1hYnN0YWluX2NvdW50GAMgASgFIiIKC1N0ZWFsUHJvbXB0EhMKC2ltcG9zdGVyX2lkGAEgASgJIq8CCgdPdXRjb21lEhMKC2ltcG9zdGVyX2lkGAEgASgJEgwKBHdvcmQYAiABKAkSEAoIY2F0ZWdvcnkYAyABKAkSEAoIY3Jld193b24YBCABKAgSFAoMdm90ZWRfb3V0X2lkGAUgASgJEhcKD3N0ZWFsX2F0dGVtcHRlZBgGIAEoCBITCgtzdGVhbF9ndWVzcxgHIAEoCRIVCg1zdGVhbF9jb3JyZWN0GAggASgIEgwKBGhpbnQYCSABKAkSDQoFcm91bmQYCiABKAUSFAoMdG90YWxfcm91bmRzGAsgASgFEicKBnNjb3JlcxgMIAMoCzIXLmltcG9zdGVyLnYxLlNjb3JlRW50cnkSEgoKbWF0Y2hfb3ZlchgNIAEoCBISCgp3aW5uZXJfaWRzGA4gAygJIoUCChVJbXBvc3RlckNsaWVudE1lc3NhZ2USLAoKbWFya19yZWFkeRgBIAEoCzIWLmltcG9zdGVyLnYxLk1hcmtSZWFkeUgAEi4KC3N1Ym1pdF9jbHVlGAIgASgLMhcuaW1wb3N0ZXIudjEuU3VibWl0Q2x1ZUgAEioKCWNhc3Rfdm90ZRgDIAEoCzIVLmltcG9zdGVyLnYxLkNhc3RWb3RlSAASLAoKZ3Vlc3Nfd29yZBgEIAEoCzIWLmltcG9zdGVyLnYxLkd1ZXNzV29yZEgAEiwKCnBsYXlfYWdhaW4YBSABKAsyFi5pbXBvc3Rlci52MS5QbGF5QWdhaW5IAEIGCgRib2R5IgsKCU1hcmtSZWFkeSIaCgpTdWJtaXRDbHVlEgwKBHRleHQYASABKAkiLwoIQ2FzdFZvdGUSEgoKc3VzcGVjdF9pZBgBIAEoCRIPCgdhYnN0YWluGAIgASgIIhkKCUd1ZXNzV29yZBIMCgR0ZXh0GAEgASgJIgsKCVBsYXlBZ2FpbkJHWkVnaXRodWIuY29tL21pbnR0aGloYS9wYXJ0eS1nYW1lcy9zZXJ2ZXIvaW50ZXJuYWwvZ2FtZXMvaW1wb3N0ZXIvcGI7cGJiBnByb3RvMw");
 
 /**
  * Sent as StartGame.options (proto3-JSON) when the host starts an Imposter
@@ -26,6 +26,15 @@ export type StartOptions = Message<"imposter.v1.StartOptions"> & {
    * @generated from field: bool hints_enabled = 1;
    */
   hintsEnabled: boolean;
+
+  /**
+   * How many times the table goes around giving clues before the vote. 0 (the
+   * default) means 2; anything above 3 is clamped to 3. One pass is the quick
+   * version — it was the only version before this field existed.
+   *
+   * @generated from field: int32 clue_passes = 4;
+   */
+  cluePasses: number;
 
   /**
    * How many rounds the match runs for. 0 (the default) means 3; anything
@@ -256,6 +265,12 @@ export const ClueEntrySchema: GenMessage<ClueEntry> = /*@__PURE__*/
  * Broadcast whenever the clue phase advances: at its start, and again after
  * each clue. `player_id` is whose turn it is now.
  *
+ * turn_index and total describe the position within the current pass of the
+ * table, not the whole clue phase: on a two-pass round they both restart when
+ * the second pass begins, and clue_pass says which pass that is. clues_so_far
+ * keeps growing across passes, so the second pass is given with the first
+ * pass's clues still on screen — which is the point of having one.
+ *
  * @generated from message imposter.v1.ClueTurn
  */
 export type ClueTurn = Message<"imposter.v1.ClueTurn"> & {
@@ -265,14 +280,14 @@ export type ClueTurn = Message<"imposter.v1.ClueTurn"> & {
   playerId: string;
 
   /**
-   * 0-based
+   * 0-based, within this pass
    *
    * @generated from field: int32 turn_index = 2;
    */
   turnIndex: number;
 
   /**
-   * total clues expected this round
+   * clues expected in this pass: one per player still in the round
    *
    * @generated from field: int32 total = 3;
    */
@@ -282,6 +297,18 @@ export type ClueTurn = Message<"imposter.v1.ClueTurn"> & {
    * @generated from field: repeated imposter.v1.ClueEntry clues_so_far = 4;
    */
   cluesSoFar: ClueEntry[];
+
+  /**
+   * 1-based
+   *
+   * @generated from field: int32 clue_pass = 5;
+   */
+  cluePass: number;
+
+  /**
+   * @generated from field: int32 total_clue_passes = 6;
+   */
+  totalCluePasses: number;
 };
 
 /**

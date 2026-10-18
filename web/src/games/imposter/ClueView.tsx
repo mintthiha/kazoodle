@@ -29,6 +29,13 @@ export function ClueView({ turn, value, onChange, onSubmit, selfId, players, dep
 
   return (
     <main className="screen">
+      {/* Only worth saying on a round with more than one pass; on a one-pass
+          round "pass 1 of 1" is noise. */}
+      {turn.totalCluePasses > 1 && (
+        <p className="round-badge">
+          {t("imposter.cluePass", { pass: turn.cluePass, total: turn.totalCluePasses })}
+        </p>
+      )}
       <h1>{t("imposter.cluesHeading")}</h1>
       <p className="status">
         {t("imposter.clueProgress", { turn: turn.turnIndex + 1, total: turn.total })}
