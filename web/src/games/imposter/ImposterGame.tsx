@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useConnection } from "../../net/useConnection";
 import type { GameViewProps } from "../registry";
+import type { MessageKey } from "../../i18n";
 import {
   decodeImposterEvent,
   encodeAbstain,
@@ -20,7 +21,7 @@ import type {
   VoteProgress,
   VoteTally,
 } from "./gen/imposter_pb";
-import { clueErrorKey } from "./clueError";
+import { clueErrorKey, localClueWarning } from "./clueError";
 import { RoleView } from "./RoleView";
 import { ClueView } from "./ClueView";
 import { VoteView, type VoteChoice } from "./VoteView";
@@ -43,6 +44,10 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
 
   const [clueTurn, setClueTurn] = useState<ClueTurn | null>(null);
   const [myClue, setMyClue] = useState("");
+  // A warning this screen raised by itself, for a clue not worth sending at
+  // all. The server has the same rule, so a hand-rolled client still gets
+  // refused; this just saves the round trip and answers the player instantly.
+  const [clueWarning, setClueWarning] = useState<MessageKey | null>(null);
 
   const [votePhase, setVotePhase] = useState<VotePhase | null>(null);
   const [voteProgress, setVoteProgress] = useState<VoteProgress | null>(null);
@@ -98,6 +103,7 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
           // else's turn and the box is hidden), so the draft and any warning
           // about it are both spent.
           setMyClue("");
+          setClueWarning(null);
           actions.clearError();
           break;
         case "votePhase":
@@ -137,13 +143,18 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
   // Typing is the player acting on the warning, so the warning goes away.
   function editClue(text: string) {
     setMyClue(text);
+    setClueWarning(null);
     actions.clearError();
   }
 
   function sendClue() {
-    const text = myClue.trim();
-    if (!text) return;
-    actions.gameAction("imposter", encodeSubmitClue(text));
+    // Answer locally rather than send a clue the server is certain to refuse.
+    // Returning in silence was the bug: the button looked broken.
+    const warning = localClueWarning(myClue);
+    setClueWarning(warning);
+    if (warning) return;
+
+    actions.gameAction("imposter", encodeSubmitClue(myClue.trim()));
     // The draft deliberately stays put. The clue rules can bounce it back --
     // it is the secret word, or someone said it already -- and clearing the
     // box optimistically would make the player retype a clue they only need
@@ -199,7 +210,7 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
           value={myClue}
           onChange={editClue}
           onSubmit={sendClue}
-          error={clueErrorKey(snapshot.lastError)}
+          error={clueWarning ?? clueErrorKey(snapshot.lastError)}
         />
       );
     case "vote":

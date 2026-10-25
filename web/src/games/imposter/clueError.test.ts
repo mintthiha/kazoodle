@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clueErrorKey } from "./clueError";
+import { clueErrorKey, localClueWarning } from "./clueError";
 import { translate } from "../../i18n/messages";
 
 describe("clueErrorKey", () => {
@@ -38,5 +38,22 @@ describe("clueErrorKey", () => {
         expect(text.length).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe("localClueWarning", () => {
+  it("warns about a clue that is not worth sending", () => {
+    // Clicking Submit on an empty box used to do nothing at all, which read
+    // as a broken button.
+    expect(localClueWarning("")).toBe("imposter.clueErrorEmpty");
+    expect(localClueWarning("   ")).toBe("imposter.clueErrorEmpty");
+    expect(localClueWarning("\n\t")).toBe("imposter.clueErrorEmpty");
+  });
+
+  it("passes anything with content to the server, which owns the real rules", () => {
+    expect(localClueWarning("sand")).toBeNull();
+    expect(localClueWarning("  sand  ")).toBeNull();
+    // Even the secret word: this side does not know what it is.
+    expect(localClueWarning("Beach")).toBeNull();
   });
 });
