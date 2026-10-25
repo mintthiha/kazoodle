@@ -1,6 +1,7 @@
 package imposter
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/mintthiha/party-games/server/internal/game"
@@ -450,7 +451,7 @@ func TestLeaveMidRoundLetsTheRoundFinish(t *testing.T) {
 	up := crewIn(t, st.(*state))
 	for st.(*state).order[st.(*state).turn] != up {
 		cur := st.(*state)
-		st, _, err = (Game{}).Advance(st, clueEvent(cur.order[cur.turn], "clue"))
+		st, _, err = (Game{}).Advance(st, clueEvent(cur.order[cur.turn], fmt.Sprintf("clue-%d", len(cur.clues))))
 		if err != nil {
 			t.Fatalf("Advance(clue %s): %v", cur.order[cur.turn], err)
 		}
@@ -469,7 +470,7 @@ func TestLeaveMidRoundLetsTheRoundFinish(t *testing.T) {
 	// Everyone still here gives a clue, from whoever is up now.
 	for st.(*state).phase == phaseClues {
 		cur := st.(*state)
-		st, _, err = (Game{}).Advance(st, clueEvent(cur.order[cur.turn], "clue"))
+		st, _, err = (Game{}).Advance(st, clueEvent(cur.order[cur.turn], fmt.Sprintf("clue-%d", len(cur.clues))))
 		if err != nil {
 			t.Fatalf("Advance(clue %s): %v", cur.order[cur.turn], err)
 		}

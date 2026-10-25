@@ -9,6 +9,7 @@ import (
 	"github.com/coder/websocket"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/mintthiha/party-games/server/internal/game"
 	"github.com/mintthiha/party-games/server/internal/protocol"
 	"github.com/mintthiha/party-games/server/internal/room"
 )
@@ -196,8 +197,21 @@ func (c *conn) doGameAction(ctx context.Context, gameID, payload string) {
 		return
 	}
 	if err := c.mgr.GameAction(ctx, c.roomCode, c.playerID, gameID, []byte(payload)); err != nil {
-		c.Send(errMsg("game_action_failed", err.Error()))
+		c.Send(errMsg(actionErrCode(err), err.Error()))
 	}
+}
+
+// actionErrCode maps a GameAction failure to a stable client-facing code. A
+// game that refused the action for a reason the player can fix says so with a
+// *game.Rejected, and its Code passes straight through so the client can show
+// a translated sentence. Anything else is a bug or a bad payload and gets the
+// generic code.
+func actionErrCode(err error) string {
+	var rej *game.Rejected
+	if errors.As(err, &rej) {
+		return rej.Code
+	}
+	return "game_action_failed"
 }
 
 // startErrCode maps a StartGame failure to a stable client-facing code.

@@ -265,6 +265,12 @@ export class Connection {
         this.#ws!.send(encodeGameAction(gameId, payload));
       }
     },
+    /** Drop the last error. A screen showing a rejection ("that clue is the
+     * secret word") calls this once the player starts fixing it, so the
+     * warning does not outlive the mistake. */
+    clearError: (): void => {
+      if (this.#snapshot.lastError !== null) this.#patch({ lastError: null });
+    },
   };
 
   // ─── internals ───────────────────────────────────────────────────────────

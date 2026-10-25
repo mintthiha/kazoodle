@@ -99,6 +99,10 @@ const en = {
   "imposter.yourClueLabel": "Your clue",
   "imposter.yourCluePlaceholder": "One word",
   "imposter.submitClue": "Submit",
+  "imposter.clueErrorEmpty": "Type a clue first.",
+  "imposter.clueErrorIsTheWord": "That's the secret word. Give a clue about it instead.",
+  "imposter.clueErrorDuplicate": "That clue has already been given. Try another one.",
+  "imposter.clueErrorGeneric": "That clue didn't go through. Try again.",
   "imposter.waitingForClue": "Waiting for {who}…",
 
   "imposter.voteHeading": "Who's the imposter?",
@@ -242,6 +246,10 @@ const fr: Record<MessageKey, string> = {
   "imposter.yourClueLabel": "Votre indice",
   "imposter.yourCluePlaceholder": "Un mot",
   "imposter.submitClue": "Envoyer",
+  "imposter.clueErrorEmpty": "Entrez d'abord un indice.",
+  "imposter.clueErrorIsTheWord": "C'est le mot secret. Donnez plutôt un indice à son sujet.",
+  "imposter.clueErrorDuplicate": "Cet indice a déjà été donné. Essayez-en un autre.",
+  "imposter.clueErrorGeneric": "Cet indice n'est pas passé. Réessayez.",
   "imposter.waitingForClue": "En attente de {who}…",
 
   "imposter.voteHeading": "Qui est l’imposteur ?",

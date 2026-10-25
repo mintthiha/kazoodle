@@ -1,4 +1,5 @@
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n";
 import type { ClueTurn } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
 import { makeNameFor } from "./nameFor";
@@ -8,11 +9,22 @@ interface Props extends GameViewProps {
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
+  /** Why the server refused the last clue, if it did. */
+  error: MessageKey | null;
 }
 
 // One clue word per player, in the server-set order. Only the player whose
 // turn it is gets an input; everyone else watches the recap grow.
-export function ClueView({ turn, value, onChange, onSubmit, selfId, players, departed }: Props) {
+export function ClueView({
+  turn,
+  value,
+  onChange,
+  onSubmit,
+  error,
+  selfId,
+  players,
+  departed,
+}: Props) {
   const { t } = useT();
 
   const name = makeNameFor(players, departed, t);
@@ -64,6 +76,9 @@ export function ClueView({ turn, value, onChange, onSubmit, selfId, players, dep
               }}
             />
           </label>
+          {/* Above the button, not below: on a phone the keyboard covers the
+              bottom of the screen, and a warning nobody sees is no warning. */}
+          {error && <p className="hint">{t(error)}</p>}
           <button className="primary" onClick={onSubmit}>
             {t("imposter.submitClue")}
           </button>

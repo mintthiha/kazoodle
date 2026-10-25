@@ -20,6 +20,7 @@ import type {
   VoteProgress,
   VoteTally,
 } from "./gen/imposter_pb";
+import { clueErrorKey } from "./clueError";
 import { RoleView } from "./RoleView";
 import { ClueView } from "./ClueView";
 import { VoteView, type VoteChoice } from "./VoteView";
@@ -33,7 +34,7 @@ type Phase = "reveal" | "clues" | "vote" | "steal" | "outcome";
 // Container for the Imposter game. Folds the game-event stream into local
 // state and renders whichever phase the round is currently in.
 export function ImposterGame({ selfId, players, departed, isHost }: GameViewProps) {
-  const { actions, onGameEvent } = useConnection();
+  const { snapshot, actions, onGameEvent } = useConnection();
   const [phase, setPhase] = useState<Phase>("reveal");
 
   const [role, setRole] = useState<RoleAssignment | null>(null);
@@ -93,6 +94,11 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
         case "clueTurn":
           setPhase("clues");
           setClueTurn(msg.body.value);
+          // A new turn means the last clue was accepted (or it is someone
+          // else's turn and the box is hidden), so the draft and any warning
+          // about it are both spent.
+          setMyClue("");
+          actions.clearError();
           break;
         case "votePhase":
           setPhase("vote");
@@ -119,18 +125,30 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
           break;
       }
     });
-  }, [onGameEvent]);
+  // `actions` is the connection singleton's own object, so it never changes
+  // identity and listing it does not resubscribe the stream.
+  }, [onGameEvent, actions]);
 
   function confirmReady() {
     setReadyConfirmed(true);
     actions.gameAction("imposter", encodeMarkReady());
   }
 
+  // Typing is the player acting on the warning, so the warning goes away.
+  function editClue(text: string) {
+    setMyClue(text);
+    actions.clearError();
+  }
+
   function sendClue() {
     const text = myClue.trim();
     if (!text) return;
     actions.gameAction("imposter", encodeSubmitClue(text));
-    setMyClue("");
+    // The draft deliberately stays put. The clue rules can bounce it back --
+    // it is the secret word, or someone said it already -- and clearing the
+    // box optimistically would make the player retype a clue they only need
+    // to adjust. It is cleared when the next ClueTurn arrives, which is the
+    // server confirming the clue landed.
   }
 
   function lockInVote(choice: VoteChoice) {
@@ -179,8 +197,9 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
           isHost={isHost}
           turn={clueTurn}
           value={myClue}
-          onChange={setMyClue}
+          onChange={editClue}
           onSubmit={sendClue}
+          error={clueErrorKey(snapshot.lastError)}
         />
       );
     case "vote":

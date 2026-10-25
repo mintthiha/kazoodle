@@ -9,6 +9,13 @@ type localized struct {
 	fr string
 }
 
+// forms is every rendering of this string, for when the question is "did the
+// player type this word in ANY language" rather than "what does this player
+// see".
+func (l localized) forms() []string {
+	return []string{l.en, l.fr}
+}
+
 func (l localized) forLocale(locale string) string {
 	if locale == "fr" {
 		return l.fr

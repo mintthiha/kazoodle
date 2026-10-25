@@ -127,8 +127,8 @@ func advanceClue(st *state, playerID, text string) (game.State, []game.Effect, e
 		return st, nil, fmt.Errorf("imposter: it is not %s's turn", playerID)
 	}
 	text = strings.TrimSpace(text)
-	if text == "" {
-		return st, nil, fmt.Errorf("imposter: a clue can't be empty")
+	if err := validateClue(st, playerID, text); err != nil {
+		return st, nil, err
 	}
 
 	next := st.clone()
@@ -206,7 +206,7 @@ func advanceSteal(st *state, playerID, guess string) (game.State, []game.Effect,
 	next := st.clone()
 	next.phase = phaseOutcome
 	votedOutID, _ := tally(next) // still the imposter; votes are unchanged since the catch
-	correct := normalizeGuess(guess) == normalizeGuess(next.entry.word.forLocale(next.locales[playerID]))
+	correct := normalizeWord(guess) == normalizeWord(next.entry.word.forLocale(next.locales[playerID]))
 
 	applyAward(next, true, correct)
 	res := result{
@@ -241,12 +241,6 @@ func advancePlayAgain(st *state) (game.State, []game.Effect, error) {
 	}
 	next := st.beginRound()
 	return next, roundStart(next), nil
-}
-
-// normalizeGuess makes a steal guess forgiving of case and surrounding
-// whitespace without changing what counts as a match otherwise.
-func normalizeGuess(s string) string {
-	return strings.ToLower(strings.TrimSpace(s))
 }
 
 // tally returns who the room voted to remove and whether that was the

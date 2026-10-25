@@ -10,6 +10,10 @@
 // the word to steal the win. A finished round stays on screen until someone
 // sends PlayAgain.
 //
+// Two clues are refused outright: the secret word itself, and a clue already
+// given this round. The first rule applies only to crew — refusing it for the
+// imposter would turn the refusal into a way of discovering the word.
+//
 // A game is a match of several rounds, not a single round: PlayAgain deals the
 // next one, with the same players and the same host options but a fresh word,
 // a fresh imposter and a reshuffled turn order, and only the last round of the
