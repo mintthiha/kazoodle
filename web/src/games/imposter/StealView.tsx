@@ -1,4 +1,5 @@
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n";
 import type { StealPrompt } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
 import { makeNameFor } from "./nameFor";
@@ -8,11 +9,22 @@ interface Props extends GameViewProps {
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
+  /** Why the last guess was not accepted, if it was not. */
+  error: MessageKey | null;
 }
 
 // The vote caught the imposter. Only they get an input, for one blind guess
 // at the word; everyone else just watches and waits.
-export function StealView({ prompt, value, onChange, onSubmit, selfId, players, departed }: Props) {
+export function StealView({
+  prompt,
+  value,
+  onChange,
+  onSubmit,
+  error,
+  selfId,
+  players,
+  departed,
+}: Props) {
   const { t } = useT();
 
   const name = makeNameFor(players, departed, t);
@@ -54,6 +66,8 @@ export function StealView({ prompt, value, onChange, onSubmit, selfId, players, 
               }}
             />
           </label>
+          {/* Above the button, where the phone keyboard cannot hide it. */}
+          {error && <p className="hint">{t(error)}</p>}
           <button className="primary" onClick={onSubmit}>
             {t("imposter.stealSubmit")}
           </button>

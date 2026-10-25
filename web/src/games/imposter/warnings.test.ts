@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { clueErrorKey, localClueWarning } from "./clueError";
+import {
+  clueErrorKey,
+  guessErrorKey,
+  localClueWarning,
+  localGuessWarning,
+} from "./warnings";
 import { translate } from "../../i18n/messages";
 
 describe("clueErrorKey", () => {
@@ -55,5 +60,36 @@ describe("localClueWarning", () => {
     expect(localClueWarning("  sand  ")).toBeNull();
     // Even the secret word: this side does not know what it is.
     expect(localClueWarning("Beach")).toBeNull();
+  });
+});
+
+describe("the steal guess", () => {
+  it("warns about a guess that is not worth sending", () => {
+    // The worst place in the game for an unanswered click: one blind guess,
+    // and the round ends on it.
+    expect(localGuessWarning("")).toBe("imposter.guessErrorEmpty");
+    expect(localGuessWarning("   ")).toBe("imposter.guessErrorEmpty");
+  });
+
+  it("sends anything with content — a wrong guess is not a warning", () => {
+    expect(localGuessWarning("beach")).toBeNull();
+    expect(localGuessWarning("  nonsense  ")).toBeNull();
+  });
+
+  it("shows a generic warning when the server refuses a guess", () => {
+    expect(guessErrorKey("game_action_failed")).toBe("imposter.guessErrorGeneric");
+  });
+
+  it("ignores errors that are not about the guess", () => {
+    expect(guessErrorKey("room_not_found")).toBeNull();
+    expect(guessErrorKey(null)).toBeNull();
+  });
+
+  it("has a real sentence in both locales", () => {
+    for (const key of ["imposter.guessErrorEmpty", "imposter.guessErrorGeneric"] as const) {
+      for (const locale of ["en", "fr"] as const) {
+        expect(translate(locale, key)).not.toBe(key);
+      }
+    }
   });
 });

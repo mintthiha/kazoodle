@@ -121,6 +121,8 @@ const en = {
   "imposter.stealGuessLabel": "Your guess",
   "imposter.stealGuessPlaceholder": "The secret word",
   "imposter.stealSubmit": "Guess",
+  "imposter.guessErrorEmpty": "Type your guess first.",
+  "imposter.guessErrorGeneric": "That guess didn't go through. Try again.",
   "imposter.stealWaiting": "Waiting for {who} to guess…",
 
   "imposter.outcomeHeading": "Results",
@@ -268,6 +270,8 @@ const fr: Record<MessageKey, string> = {
   "imposter.stealGuessLabel": "Votre réponse",
   "imposter.stealGuessPlaceholder": "Le mot secret",
   "imposter.stealSubmit": "Deviner",
+  "imposter.guessErrorEmpty": "Entrez d'abord votre réponse.",
+  "imposter.guessErrorGeneric": "Cette réponse n'est pas passée. Réessayez.",
   "imposter.stealWaiting": "En attente de la réponse de {who}…",
 
   "imposter.outcomeHeading": "Résultats",

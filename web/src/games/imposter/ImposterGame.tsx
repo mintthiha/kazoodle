@@ -21,7 +21,7 @@ import type {
   VoteProgress,
   VoteTally,
 } from "./gen/imposter_pb";
-import { clueErrorKey, localClueWarning } from "./clueError";
+import { clueErrorKey, guessErrorKey, localClueWarning, localGuessWarning } from "./warnings";
 import { RoleView } from "./RoleView";
 import { ClueView } from "./ClueView";
 import { VoteView, type VoteChoice } from "./VoteView";
@@ -62,6 +62,8 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
   const [voteTally, setVoteTally] = useState<VoteTally | null>(null);
   const [stealPrompt, setStealPrompt] = useState<StealPrompt | null>(null);
   const [myGuess, setMyGuess] = useState("");
+  // Same two-source warning as the clue box — see editGuess and sendGuess.
+  const [guessWarning, setGuessWarning] = useState<MessageKey | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   useEffect(() => {
@@ -91,6 +93,7 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
           setVoteTally(null);
           setStealPrompt(null);
           setMyGuess("");
+          setGuessWarning(null);
           setOutcome(null);
           break;
         case "revealProgress":
@@ -124,6 +127,8 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
         case "stealPrompt":
           setPhase("steal");
           setStealPrompt(msg.body.value);
+          setGuessWarning(null);
+          actions.clearError();
           break;
         case "outcome":
           setPhase("outcome");
@@ -171,11 +176,23 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
     }
   }
 
+  function editGuess(text: string) {
+    setMyGuess(text);
+    setGuessWarning(null);
+    actions.clearError();
+  }
+
   function sendGuess() {
-    const text = myGuess.trim();
-    if (!text) return;
-    actions.gameAction("imposter", encodeGuessWord(text));
-    setMyGuess("");
+    // One blind guess decides the round, so an unanswered click is at its
+    // worst here. Warn instead of returning in silence.
+    const warning = localGuessWarning(myGuess);
+    setGuessWarning(warning);
+    if (warning) return;
+
+    actions.gameAction("imposter", encodeGuessWord(myGuess.trim()));
+    // The draft stays until the server moves the round on, for the same
+    // reason the clue draft does: a refused guess the player has to retype
+    // from memory is worse than a box that still holds it.
   }
 
   // "Next round", or "Finish" on the last round of the match — one message
@@ -236,8 +253,9 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
           isHost={isHost}
           prompt={stealPrompt}
           value={myGuess}
-          onChange={setMyGuess}
+          onChange={editGuess}
           onSubmit={sendGuess}
+          error={guessWarning ?? guessErrorKey(snapshot.lastError)}
         />
       );
     case "outcome":
