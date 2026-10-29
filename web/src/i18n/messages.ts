@@ -32,6 +32,7 @@ const en = {
   "join.codePlaceholder": "4 letters",
   "join.joinButton": "Join",
   "join.nameOptional": "Leave it blank to play as a guest.",
+  "player.unnamed": "Unnamed player",
   "join.codeRequired": "Enter a room code.",
 
   "lobby.heading": "Lobby",
@@ -188,6 +189,7 @@ const fr: Record<MessageKey, string> = {
   "join.codePlaceholder": "4 lettres",
   "join.joinButton": "Rejoindre",
   "join.nameOptional": "Laissez vide pour jouer en invité.",
+  "player.unnamed": "Joueur sans nom",
   "join.codeRequired": "Entrez un code de salon.",
 
   "lobby.heading": "Salon",

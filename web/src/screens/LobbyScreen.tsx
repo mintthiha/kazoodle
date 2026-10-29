@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useT } from "../i18n";
+import type { MessageKey } from "../i18n";
+import { displayNameOf } from "../displayName";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
 import { CATEGORY_OPTIONS } from "../games/imposter/categories";
@@ -122,7 +124,7 @@ export function LobbyScreen({
         <ul className="players">
           {room.players.map((p) => (
             <li key={p.id}>
-              {p.displayName}
+              {displayNameOf(p.displayName, t)}
               {p.id === room.selfId && <span className="you"> ({t("lobby.you")})</span>}
             </li>
           ))}
@@ -245,7 +247,7 @@ export function LobbyScreen({
                 who:
                   lastEcho.fromPlayerId === room.selfId
                     ? t("lobby.echoFromYou")
-                    : nameFor(room, lastEcho.fromPlayerId, t("lobby.echoFromOther")),
+                    : nameFor(room, lastEcho.fromPlayerId, t("lobby.echoFromOther"), t),
                 text: lastEcho.text,
               })
             : t("lobby.echoNone")}
@@ -259,6 +261,14 @@ export function LobbyScreen({
   );
 }
 
-function nameFor(room: RoomState, id: string, fallback: string): string {
-  return room.players.find((p) => p.id === id)?.displayName ?? fallback;
+// fallback covers an id that is no longer on the roster (the sender left);
+// displayNameOf covers a player who is here but has no name.
+function nameFor(
+  room: RoomState,
+  id: string,
+  fallback: string,
+  t: (key: MessageKey) => string,
+): string {
+  const player = room.players.find((p) => p.id === id);
+  return player ? displayNameOf(player.displayName, t) : fallback;
 }

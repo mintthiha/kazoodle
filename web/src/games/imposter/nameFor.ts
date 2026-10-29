@@ -1,4 +1,5 @@
 import type { MessageKey, Vars } from "../../i18n";
+import { displayNameOf } from "../../displayName";
 import type { GameViewProps } from "../registry";
 
 type Translate = (key: MessageKey, vars?: Vars) => string;
@@ -21,9 +22,9 @@ export function makeNameFor(
 ): (id: string) => string {
   return (id) => {
     const here = players.find((p) => p.id === id);
-    if (here) return here.displayName;
+    if (here) return displayNameOf(here.displayName, t);
     const gone = departed.find((p) => p.id === id);
-    if (gone) return t("imposter.nameLeft", { name: gone.displayName });
+    if (gone) return t("imposter.nameLeft", { name: displayNameOf(gone.displayName, t) });
     return t("imposter.nameGone");
   };
 }
