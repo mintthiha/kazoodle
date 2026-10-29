@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useT } from "../i18n";
-import type { MessageKey } from "../i18n";
 import { displayNameOf } from "../displayName";
+import { errorKey } from "../errorKey";
+import { ChatPanel } from "./ChatPanel";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
 import { CATEGORY_OPTIONS } from "../games/imposter/categories";
@@ -21,6 +22,9 @@ type CopyState = "idle" | "copied" | "failed";
 interface Props {
   room: RoomState;
   lastEcho: EchoLine | null;
+  /** The last server error code, or null. Shown under the Start button: a
+   * refusal the player cannot see is how a button comes to look broken. */
+  lastError: string | null;
   isHost: boolean;
   onStartGame: (opts: MatchOptions) => void;
   onSetOptions: (opts: MatchOptions) => void;
@@ -39,6 +43,7 @@ interface Props {
 export function LobbyScreen({
   room,
   lastEcho,
+  lastError,
   isHost,
   onStartGame,
   onSetOptions,
@@ -46,7 +51,6 @@ export function LobbyScreen({
   onLeave,
 }: Props) {
   const { t } = useT();
-  const [text, setText] = useState("");
   const [opts, setOpts] = useState<MatchOptions>(DEFAULT_MATCH_OPTIONS);
   // Result of the last "copy code" press. `n` increments on every press so
   // pressing twice restarts the confirmation timer even when the outcome is
@@ -90,13 +94,6 @@ export function LobbyScreen({
     } catch {
       setCopy((c) => ({ state: "failed", n: c.n + 1 }));
     }
-  }
-
-  function send() {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    onEcho(trimmed);
-    setText("");
   }
 
   return (
@@ -225,50 +222,13 @@ export function LobbyScreen({
         )
       )}
 
-      <section>
-        <label className="field">
-          <span>{t("lobby.echoLabel")}</span>
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={t("lobby.echoPlaceholder")}
-            enterKeyHint="send"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") send();
-            }}
-          />
-        </label>
-        <button className="secondary" onClick={send}>
-          {t("lobby.echoButton")}
-        </button>
-        <p className="echo-line">
-          {lastEcho
-            ? t("lobby.echoLast", {
-                who:
-                  lastEcho.fromPlayerId === room.selfId
-                    ? t("lobby.echoFromYou")
-                    : nameFor(room, lastEcho.fromPlayerId, t("lobby.echoFromOther"), t),
-                text: lastEcho.text,
-              })
-            : t("lobby.echoNone")}
-        </p>
-      </section>
+      <ChatPanel room={room} lastEcho={lastEcho} onSend={onEcho} />
+
+      {errorKey(lastError) && <p className="hint">{t(errorKey(lastError)!)}</p>}
 
       <button className="danger" onClick={onLeave}>
         {t("lobby.leaveButton")}
       </button>
     </main>
   );
-}
-
-// fallback covers an id that is no longer on the roster (the sender left);
-// displayNameOf covers a player who is here but has no name.
-function nameFor(
-  room: RoomState,
-  id: string,
-  fallback: string,
-  t: (key: MessageKey) => string,
-): string {
-  const player = room.players.find((p) => p.id === id);
-  return player ? displayNameOf(player.displayName, t) : fallback;
 }

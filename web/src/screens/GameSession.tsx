@@ -58,6 +58,7 @@ export function GameSession({ gameId, onExit }: Props) {
       <LobbyScreen
         room={snapshot.room}
         lastEcho={snapshot.lastEcho}
+        lastError={snapshot.lastError}
         isHost={snapshot.room.hostId === snapshot.room.selfId}
         onStartGame={(opts) => actions.startGame(gameId, encodeStartOptions(opts))}
         onSetOptions={(opts) => actions.setGameOptions(gameId, encodeStartOptions(opts))}

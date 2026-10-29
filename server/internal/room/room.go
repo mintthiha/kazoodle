@@ -244,8 +244,14 @@ func (r *Room) run(ctx context.Context) {
 }
 
 func (r *Room) applyJoin(cmd joinCmd) {
-	if cmd.player.DisplayName == "" {
-		cmd.player.DisplayName = guestName(cmd.player.Locale, r.displayNames())
+	// Naming happens here, not in the Manager, because the roster is the only
+	// place that knows which names are already taken — and because this
+	// goroutine is the only one reading it, two players joining at the same
+	// moment cannot both be told a name is free.
+	if taken := r.displayNames(); cmd.player.DisplayName == "" {
+		cmd.player.DisplayName = guestName(cmd.player.Locale, taken)
+	} else {
+		cmd.player.DisplayName = uniqueName(cmd.player.DisplayName, taken)
 	}
 	r.members[cmd.player.ID] = &member{player: cmd.player, sender: cmd.sender}
 	r.order = append(r.order, cmd.player.ID)

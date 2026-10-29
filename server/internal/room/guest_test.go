@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestCleanName(t *testing.T) {
@@ -176,5 +177,139 @@ func TestAGuestKeepsTheirNameWhileOthersComeAndGo(t *testing.T) {
 	}
 	if !guestPattern.MatchString(thirdRes.Self.DisplayName) {
 		t.Errorf("the new guest is %q, want a guest name", thirdRes.Self.DisplayName)
+	}
+}
+
+func TestCleanNameLength(t *testing.T) {
+	tests := []struct {
+		name  string
+		given string
+		want  string
+	}{
+		{
+			name:  "a long name is cut to the cap",
+			given: strings.Repeat("a", 100),
+			want:  strings.Repeat("a", maxNameLen),
+		},
+		{
+			name:  "a name at the cap is untouched",
+			given: strings.Repeat("a", maxNameLen),
+			want:  strings.Repeat("a", maxNameLen),
+		},
+		{
+			// Cutting by bytes would slice through the é and produce invalid
+			// UTF-8, which protojson then refuses to marshal — one player's
+			// name breaking the room for everyone.
+			name:  "accented characters count as one each",
+			given: strings.Repeat("é", 40),
+			want:  strings.Repeat("é", maxNameLen),
+		},
+		{
+			name:  "an emoji is one character, not four bytes",
+			given: strings.Repeat("🎉", 40),
+			want:  strings.Repeat("🎉", maxNameLen),
+		},
+		{
+			name:  "a cut that lands on a space does not leave one dangling",
+			given: strings.Repeat("a", maxNameLen-1) + " more",
+			want:  strings.Repeat("a", maxNameLen-1),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := cleanName(tt.given)
+			if got != tt.want {
+				t.Errorf("cleanName(%d chars) = %q, want %q", len([]rune(tt.given)), got, tt.want)
+			}
+			if n := len([]rune(got)); n > maxNameLen {
+				t.Errorf("result is %d characters, over the %d cap", n, maxNameLen)
+			}
+			if !utf8.ValidString(got) {
+				t.Errorf("result %q is not valid UTF-8", got)
+			}
+		})
+	}
+}
+
+func TestUniqueName(t *testing.T) {
+	tests := []struct {
+		name  string
+		given string
+		taken []string
+		want  string
+	}{
+		{name: "a free name is kept", given: "Ana", want: "Ana"},
+		{name: "a taken name is numbered", given: "Ana", taken: []string{"Ana"}, want: "Ana (2)"},
+		{
+			name:  "numbering continues past the ones here",
+			given: "Ana",
+			taken: []string{"Ana", "Ana (2)"},
+			want:  "Ana (3)",
+		},
+		{
+			name:  "a freed number is reused",
+			given: "Ana",
+			taken: []string{"Ana", "Ana (3)"},
+			want:  "Ana (2)",
+		},
+		{
+			// Two players called "ana" and "Ana" are just as unvotable as two
+			// called "Ana".
+			name:  "case does not get a duplicate past the check",
+			given: "ANA",
+			taken: []string{"ana"},
+			want:  "ANA (2)",
+		},
+		{name: "a different name is unaffected", given: "Ben", taken: []string{"Ana"}, want: "Ben"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := uniqueName(tt.given, tt.taken); got != tt.want {
+				t.Errorf("uniqueName(%q, %v) = %q, want %q", tt.given, tt.taken, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestANumberedNameStillFitsTheCap(t *testing.T) {
+	longest := strings.Repeat("a", maxNameLen)
+	got := uniqueName(longest, []string{longest})
+
+	if n := len([]rune(got)); n > maxNameLen {
+		t.Errorf("uniqueName produced %d characters, over the %d cap: %q", n, maxNameLen, got)
+	}
+	if !strings.HasSuffix(got, " (2)") {
+		t.Errorf("got %q, want it to end in a counter", got)
+	}
+}
+
+func TestTwoPlayersCannotShareATypedName(t *testing.T) {
+	m := newTestManager(t)
+
+	host := newCapture()
+	created, _ := m.Create(context.Background(), "Ana", "en", host)
+	if created.Self.DisplayName != "Ana" {
+		t.Fatalf("host is %q, want Ana", created.Self.DisplayName)
+	}
+
+	second := newCapture()
+	secondRes, _ := m.Join(context.Background(), created.RoomCode, "Ana", "en", second)
+	if secondRes.Self.DisplayName != "Ana (2)" {
+		t.Errorf("second Ana is %q, want Ana (2)", secondRes.Self.DisplayName)
+	}
+
+	// Nobody is refused entry over a name, and the ballot stays readable.
+	third := newCapture()
+	thirdRes, _ := m.Join(context.Background(), created.RoomCode, "  ana  ", "en", third)
+	if thirdRes.Self.DisplayName != "ana (3)" {
+		t.Errorf("third Ana is %q, want ana (3)", thirdRes.Self.DisplayName)
+	}
+
+	names := map[string]bool{}
+	for _, p := range thirdRes.Players {
+		if names[strings.ToLower(p.DisplayName)] {
+			t.Errorf("two players answer to %q", p.DisplayName)
+		}
+		names[strings.ToLower(p.DisplayName)] = true
 	}
 }

@@ -289,11 +289,74 @@ button.danger {
   color: var(--muted);
 }
 
-.echo-line {
-  min-height: 1.4em;
-  margin: 0;
+/* Chat, as a panel that is closed by default. The log scrolls inside its own
+   fixed height so that a busy room does not push the Start and Leave buttons
+   off the end of the lobby — the controls stay where they were whether anyone
+   is talking or not. */
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-toggle span[aria-hidden] {
+  margin-left: auto;
   color: var(--muted);
-  font-size: 0.9rem;
+}
+
+.chat-unread {
+  min-width: 1.4em;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 11rem;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.chat-line {
+  margin: 0;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+/* Visible to a screen reader, not on screen: the chat input is labelled by
+   its placeholder visually, but a placeholder is not a label. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Language switch */

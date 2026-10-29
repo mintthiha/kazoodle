@@ -44,6 +44,7 @@ const en = {
   "lobby.you": "you",
   "lobby.leaveButton": "Leave",
   "lobby.echoLabel": "Send a test message",
+  "lobby.chatHeading": "Chat",
   "lobby.echoPlaceholder": "Type something",
   "lobby.echoButton": "Send",
   "lobby.echoLast": "{who} sent: “{text}”",
@@ -157,6 +158,12 @@ const en = {
   "imposter.waitingForFinish": "Waiting for the host to wrap up…",
 
   "error.room_not_found": "No room with that code.",
+  "error.not_host": "Only the host can start the game.",
+  "error.game_in_progress": "A game is already running.",
+  "error.unknown_game": "That game isn't available.",
+  "error.start_failed": "The game couldn't start. Try again.",
+  "error.already_in_room": "You're already in a room.",
+  "error.not_in_room": "You're not in a room any more.",
   "error.generic": "Something went wrong.",
 } satisfies Record<string, string>;
 
@@ -201,6 +208,7 @@ const fr: Record<MessageKey, string> = {
   "lobby.you": "vous",
   "lobby.leaveButton": "Quitter",
   "lobby.echoLabel": "Envoyer un message test",
+  "lobby.chatHeading": "Discussion",
   "lobby.echoPlaceholder": "Écrivez quelque chose",
   "lobby.echoButton": "Envoyer",
   "lobby.echoLast": "{who} a envoyé : « {text} »",
@@ -314,6 +322,12 @@ const fr: Record<MessageKey, string> = {
   "imposter.waitingForFinish": "En attente que l’hôte termine la partie…",
 
   "error.room_not_found": "Aucun salon avec ce code.",
+  "error.not_host": "Seul l'hôte peut lancer la partie.",
+  "error.game_in_progress": "Une partie est déjà en cours.",
+  "error.unknown_game": "Ce jeu n'est pas disponible.",
+  "error.start_failed": "La partie n'a pas pu démarrer. Réessayez.",
+  "error.already_in_room": "Vous êtes déjà dans un salon.",
+  "error.not_in_room": "Vous n'êtes plus dans un salon.",
   "error.generic": "Une erreur est survenue.",
 };
 

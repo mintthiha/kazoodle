@@ -33,10 +33,64 @@ func guestLabel(locale string) string {
 	return guestLabels[defaultLocale]
 }
 
-// cleanName is what a submitted display name becomes. Empty — including a name
-// that was nothing but spaces — means "give me a guest name".
+// maxNameLen is the longest display name a player may have, in characters.
+// It exists because every screen treats a name as something that fits on a
+// line: a roster row, a ballot option, "waiting for X to give a clue". Long
+// enough for a real name with a surname; short enough that no amount of
+// pasting can break a phone layout for everyone else in the room.
+const maxNameLen = 24
+
+// cleanName is what a submitted display name becomes: trimmed, and cut to
+// maxNameLen. Empty — including a name that was nothing but spaces — means
+// "give me a guest name".
+//
+// The cut counts runes, not bytes. A name in bytes would slice "Zoé" through
+// the middle of the é and produce invalid UTF-8, which protojson then refuses
+// to marshal — turning someone else's accented name into a broken room for
+// everyone.
 func cleanName(displayName string) string {
-	return strings.TrimSpace(displayName)
+	trimmed := strings.TrimSpace(displayName)
+	runes := []rune(trimmed)
+	if len(runes) > maxNameLen {
+		return strings.TrimSpace(string(runes[:maxNameLen]))
+	}
+	return trimmed
+}
+
+// uniqueName keeps two players in one room from sharing a name. A name already
+// taken comes back with a counter — "Ana", then "Ana (2)" — rather than being
+// refused: being told your own name is unavailable by a party game is worse
+// than being briefly amused by the number.
+//
+// It matters more here than it looks. Imposter is played by voting for a
+// person by name, so two identical options on a ballot is not a cosmetic
+// problem — nobody can tell which Ana they just accused.
+//
+// The suffix is counted, not random, because a human reads it: "(2)" says
+// "you are the second Ana" where a random tag would just look like noise
+// attached to their name.
+func uniqueName(name string, taken []string) string {
+	if !containsFold(taken, name) {
+		return name
+	}
+	for n := 2; ; n++ {
+		candidate := fmt.Sprintf("%s (%d)", trimForSuffix(name, n), n)
+		if !containsFold(taken, candidate) {
+			return candidate
+		}
+	}
+}
+
+// trimForSuffix shortens a name far enough that adding " (n)" still fits in
+// maxNameLen, so a player who typed the longest allowed name does not end up
+// longer than one who did not.
+func trimForSuffix(name string, n int) string {
+	suffix := len(fmt.Sprintf(" (%d)", n))
+	runes := []rune(name)
+	if len(runes)+suffix <= maxNameLen {
+		return name
+	}
+	return strings.TrimSpace(string(runes[:maxNameLen-suffix]))
 }
 
 // guestSuffixLen is how many characters follow the dash. Four from a
