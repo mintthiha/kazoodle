@@ -50,6 +50,7 @@ type state struct {
 	round        int               // 1-based index of the round being played
 	totalRounds  int               // how many rounds this match runs for
 	cluePasses   int               // host option: how many times the table goes around giving clues
+	clueSeconds  int               // host option: seconds per clue turn; 0 for no clock
 	hintsEnabled bool              // host option: give the imposter the category
 	wordCategory string            // host option: StartOptions.category, so every round draws from the same pool
 
@@ -91,6 +92,7 @@ func (s *state) clone() *state {
 		round:        s.round,
 		totalRounds:  s.totalRounds,
 		cluePasses:   s.cluePasses,
+		clueSeconds:  s.clueSeconds,
 		hintsEnabled: s.hintsEnabled,
 		wordCategory: s.wordCategory,
 		phase:        s.phase,

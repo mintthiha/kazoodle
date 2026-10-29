@@ -14,17 +14,33 @@ export const ROUND_OPTIONS = [3, 5, 7] as const;
 
 export const DEFAULT_CLUE_PASSES = 2;
 
-/** How many clues each player gives before the vote. Two is the default: one
- * clue each is over before the imposter has heard enough to contradict
- * themselves, which is where the game actually happens. Labelled by what a
- * player experiences ("two clues each") rather than by the mechanism. */
-export interface CluePassOption {
-  passes: number;
+/** One entry in a numeric lobby picker: the value sent to the server, and the
+ * label the host reads. Labelled by what a player experiences ("two clues
+ * each") rather than by the mechanism. */
+export interface NumberChoice {
+  value: number;
   labelKey: MessageKey;
 }
 
-export const CLUE_PASS_OPTIONS: CluePassOption[] = [
-  { passes: 1, labelKey: "lobby.cluePassesOne" },
-  { passes: 2, labelKey: "lobby.cluePassesTwo" },
-  { passes: 3, labelKey: "lobby.cluePassesThree" },
+/** No clock, which is the default and how the game worked before the clock
+ * existed. Mirrors the server reading clue_seconds 0 as "off" — note that is
+ * the opposite of how rounds and clue passes read their zero, where 0 means
+ * "use the default". */
+export const DEFAULT_CLUE_SECONDS = 0;
+
+/** How long each player gets for one clue. Off first, because a timer should
+ * be something a room chooses rather than something it discovers. 20 seconds
+ * is enough to think of a word and not enough to agonise. */
+export const CLUE_SECONDS_OPTIONS: NumberChoice[] = [
+  { value: 0, labelKey: "lobby.clueSecondsOff" },
+  { value: 15, labelKey: "lobby.clueSeconds15" },
+  { value: 20, labelKey: "lobby.clueSeconds20" },
+  { value: 30, labelKey: "lobby.clueSeconds30" },
+];
+
+/** How many clues each player gives before the vote. */
+export const CLUE_PASS_OPTIONS: NumberChoice[] = [
+  { value: 1, labelKey: "lobby.cluePassesOne" },
+  { value: 2, labelKey: "lobby.cluePassesTwo" },
+  { value: 3, labelKey: "lobby.cluePassesThree" },
 ];

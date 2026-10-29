@@ -3,6 +3,8 @@ import type { MessageKey } from "../../i18n";
 import type { ClueTurn } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
 import { makeNameFor } from "./nameFor";
+import { ClueList } from "./clueList";
+import { useClueCountdown } from "./useClueCountdown";
 
 interface Props extends GameViewProps {
   turn: ClueTurn | null;
@@ -28,6 +30,7 @@ export function ClueView({
   const { t } = useT();
 
   const name = makeNameFor(players, departed, t);
+  const secondsLeft = useClueCountdown(turn);
 
   if (!turn) {
     return (
@@ -52,14 +55,17 @@ export function ClueView({
       <p className="status">
         {t("imposter.clueProgress", { turn: turn.turnIndex + 1, total: turn.total })}
       </p>
+      {/* Advisory only: the server's clock is the one that ends the turn, so
+          this can drift or pause with a sleeping phone without affecting the
+          round. It stops at zero rather than going negative, because the
+          server's timeout may land a moment later. */}
+      {secondsLeft !== null && (
+        <p className={secondsLeft <= 5 ? "hint" : "status"} role="status">
+          {t("imposter.clueCountdown", { n: secondsLeft })}
+        </p>
+      )}
 
-      <ul className="players">
-        {turn.cluesSoFar.map((c, i) => (
-          <li key={i}>
-            <strong>{name(c.playerId)}:</strong> {c.text}
-          </li>
-        ))}
-      </ul>
+      <ClueList clues={turn.cluesSoFar} name={name} t={t} />
 
       {isMyTurn ? (
         <section>

@@ -9,7 +9,7 @@ import {
   StartOptionsSchema,
   type ImposterServerMessage,
 } from "./gen/imposter_pb";
-import { DEFAULT_CLUE_PASSES, DEFAULT_ROUNDS } from "./rounds";
+import { DEFAULT_CLUE_PASSES, DEFAULT_CLUE_SECONDS, DEFAULT_ROUNDS } from "./rounds";
 
 /** The host's choices for a match: everything StartOptions carries, as the
  * lobby holds it. One object rather than three arguments because the lobby
@@ -21,6 +21,8 @@ export interface MatchOptions {
   rounds: number;
   /** How many clues each player gives before the vote. See ./rounds. */
   cluePasses: number;
+  /** Seconds allowed per clue turn, or 0 for no clock. See ./rounds. */
+  clueSeconds: number;
 }
 
 /** What a match is if the host touches nothing. */
@@ -29,6 +31,7 @@ export const DEFAULT_MATCH_OPTIONS: MatchOptions = {
   category: "",
   rounds: DEFAULT_ROUNDS,
   cluePasses: DEFAULT_CLUE_PASSES,
+  clueSeconds: DEFAULT_CLUE_SECONDS,
 };
 
 /** Decode one game-event payload string into a typed Imposter server message. */
@@ -60,6 +63,9 @@ export function decodeStartOptions(json: string): MatchOptions {
       category: opts.category,
       rounds: opts.rounds || DEFAULT_ROUNDS,
       cluePasses: opts.cluePasses || DEFAULT_CLUE_PASSES,
+      // No `||` fallback here: zero is a real choice (no clock), not an
+      // unset field standing in for a default.
+      clueSeconds: opts.clueSeconds,
     };
   } catch {
     return DEFAULT_MATCH_OPTIONS;

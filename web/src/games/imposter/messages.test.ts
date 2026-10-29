@@ -60,7 +60,13 @@ describe("imposter messages: encode", () => {
   it("startOptions omits fields left at their proto default", () => {
     expect(
       JSON.parse(
-        encodeStartOptions({ hintsEnabled: false, category: "", rounds: 0, cluePasses: 0 }),
+        encodeStartOptions({
+          hintsEnabled: false,
+          category: "",
+          rounds: 0,
+          cluePasses: 0,
+          clueSeconds: 0,
+        }),
       ),
     ).toEqual({});
   });
@@ -68,7 +74,7 @@ describe("imposter messages: encode", () => {
 
 describe("imposter messages: start options round-trip", () => {
   it("reads back what was encoded", () => {
-    const opts = { hintsEnabled: true, category: "food", rounds: 5, cluePasses: 3 };
+    const opts = { hintsEnabled: true, category: "food", rounds: 5, cluePasses: 3, clueSeconds: 20 };
     expect(decodeStartOptions(encodeStartOptions(opts))).toEqual(opts);
   });
 
@@ -78,7 +84,16 @@ describe("imposter messages: start options round-trip", () => {
       category: "food",
       rounds: DEFAULT_ROUNDS,
       cluePasses: DEFAULT_CLUE_PASSES,
+      // Not substituted for a default: zero means no clock, and that is what
+      // an unset field should play as.
+      clueSeconds: 0,
     });
+  });
+
+  it("a clue clock survives the round trip, and zero stays zero", () => {
+    const timed = { ...DEFAULT_MATCH_OPTIONS, clueSeconds: 30 };
+    expect(decodeStartOptions(encodeStartOptions(timed)).clueSeconds).toBe(30);
+    expect(decodeStartOptions(encodeStartOptions(DEFAULT_MATCH_OPTIONS)).clueSeconds).toBe(0);
   });
 
   it("empty and malformed payloads decode to the defaults", () => {
@@ -198,6 +213,35 @@ describe("imposter messages: decode", () => {
     expect(msg.body.value.totalCluePasses).toBe(2);
     expect(msg.body.value.turnIndex).toBe(0);
     expect(msg.body.value.cluesSoFar).toHaveLength(2);
+  });
+
+  it("clueTurn carries the clue clock, and an untimed turn reads as zero", () => {
+    const timed = decodeImposterEvent(
+      JSON.stringify({ clueTurn: { playerId: "p1", total: 3, clueSeconds: 20 } }),
+    );
+    if (timed.body.case !== "clueTurn") throw new Error("unreachable");
+    expect(timed.body.value.clueSeconds).toBe(20);
+
+    const untimed = decodeImposterEvent(JSON.stringify({ clueTurn: { playerId: "p1", total: 3 } }));
+    if (untimed.body.case !== "clueTurn") throw new Error("unreachable");
+    expect(untimed.body.value.clueSeconds).toBe(0);
+  });
+
+  it("a clue entry with no text is a turn whose clock ran out", () => {
+    // The server records a missed turn rather than skipping it; the UI tells
+    // the two apart by the empty text. See clueList.tsx.
+    const msg = decodeImposterEvent(
+      JSON.stringify({
+        clueTurn: {
+          playerId: "p2",
+          total: 3,
+          cluesSoFar: [{ playerId: "p1", text: "" }],
+        },
+      }),
+    );
+    if (msg.body.case !== "clueTurn") throw new Error("unreachable");
+    expect(msg.body.value.cluesSoFar[0].playerId).toBe("p1");
+    expect(msg.body.value.cluesSoFar[0].text).toBe("");
   });
 
   it("clueTurn from a one-pass round has no pass fields set", () => {

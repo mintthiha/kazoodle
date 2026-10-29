@@ -14,6 +14,13 @@
 // given this round. The first rule applies only to crew — refusing it for the
 // imposter would turn the refusal into a way of discovering the word.
 //
+// The host may also put a clock on each clue turn (StartOptions.clue_seconds;
+// 0, the default, means no clock). The clock is the server's: when it runs
+// out, the turn is recorded as missed and the round moves on by itself. A
+// missed turn is recorded rather than skipped so that stalling is visible —
+// saying nothing is the safest clue there is, and the imposter is the player
+// most tempted by it.
+//
 // A game is a match of several rounds, not a single round: PlayAgain deals the
 // next one, with the same players and the same host options but a fresh word,
 // a fresh imposter and a reshuffled turn order, and only the last round of the

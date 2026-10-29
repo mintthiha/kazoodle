@@ -3,6 +3,7 @@ import { useT } from "../../i18n";
 import type { VotePhase, VoteProgress } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
 import { makeNameFor } from "./nameFor";
+import { ClueList } from "./clueList";
 
 // What this player is choosing: a specific suspect, or abstaining. Kept as a
 // tagged union rather than a bare string so "no one picked yet" (null),
@@ -99,13 +100,7 @@ export function VoteView({
 
       <section>
         <h2>{t("imposter.cluesHeading")}</h2>
-        <ul className="players">
-          {votePhase.clues.map((c, i) => (
-            <li key={i}>
-              <strong>{name(c.playerId)}:</strong> {c.text}
-            </li>
-          ))}
-        </ul>
+        <ClueList clues={votePhase.clues} name={name} t={t} />
       </section>
 
       <section>

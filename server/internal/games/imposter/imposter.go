@@ -63,6 +63,7 @@ func (Game) Init(players []game.Player, options []byte) (game.State, []game.Effe
 		round:        0,
 		totalRounds:  roundsFromOption(opts.GetRounds()),
 		cluePasses:   cluePassesFromOption(opts.GetCluePasses()),
+		clueSeconds:  clueSecondsFromOption(opts.GetClueSeconds()),
 		hintsEnabled: opts.GetHintsEnabled(),
 		wordCategory: opts.GetCategory(),
 		order:        roster, // beginRound copies and shuffles this
@@ -78,6 +79,12 @@ func (Game) Advance(current game.State, ev game.Event) (game.State, []game.Effec
 	if !ok {
 		// The room only ever hands a game its own state; a mismatch is a bug.
 		return current, nil, fmt.Errorf("imposter: unexpected state type %T", current)
+	}
+
+	// A timer carries no payload and no player, so it is answered before any
+	// attempt to read a client message out of the event.
+	if ev.IsTimer() {
+		return advanceTimer(st, ev.Timer.Tag)
 	}
 
 	var msg pb.ImposterClientMessage
@@ -111,7 +118,7 @@ func advanceReady(st *state, playerID string) (game.State, []game.Effect, error)
 	next.ready[playerID] = true
 	if next.allReady() {
 		next.phase = phaseClues
-		return next, []game.Effect{game.Send{Msg: clueTurn(next)}}, nil
+		return next, clueTurnEffects(next), nil
 	}
 	return next, []game.Effect{game.Send{Msg: revealProgress(next)}}, nil
 }
@@ -335,6 +342,7 @@ func clueTurn(st *state) *pb.ImposterServerMessage {
 				CluesSoFar:      clueEntries(st),
 				CluePass:        int32(st.cluePass),
 				TotalCluePasses: int32(st.cluePasses),
+				ClueSeconds:     int32(st.clueSeconds),
 			},
 		},
 	}

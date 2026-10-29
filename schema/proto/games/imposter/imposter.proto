@@ -65,6 +65,15 @@ message StartOptions {
   // match. Scores carry across every round of a match.
   int32 rounds = 3;
 
+  // How long each player gets to give one clue, in seconds. 0 (the default)
+  // means no clock at all, which is how the game worked before this field
+  // existed; anything above 120 is clamped to 120.
+  //
+  // Note this field reads its zero differently from rounds and clue_passes
+  // above: there, 0 means "use the server's default", because every match has
+  // some number of rounds. Here there is a real "off", and off is the default.
+  int32 clue_seconds = 5;
+
   // Restricts the secret word to one category: "places", "food", "animals",
   // "objects", "activities", "jobs", or "weather". Empty (the default) draws
   // from every category. An unrecognized key is treated the same as empty
@@ -143,6 +152,16 @@ message ClueTurn {
   repeated ClueEntry clues_so_far = 4;
   int32 clue_pass = 5;        // 1-based
   int32 total_clue_passes = 6;
+
+  // How many seconds this turn has, or 0 for an untimed round. The clock that
+  // decides is the server's: when it runs out, the server records the turn as
+  // missed and moves on by itself. A client counting down from this number is
+  // showing the player what is about to happen, not causing it, so a phone
+  // that sleeps or drifts loses nothing but the display.
+  //
+  // (VotePhase.vote_seconds is the older, weaker pattern: that countdown runs
+  // only on the client, which auto-submits when it ends.)
+  int32 clue_seconds = 7;
 }
 
 // Broadcast once, when every player has given a clue and voting opens.

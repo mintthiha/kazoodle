@@ -2,6 +2,7 @@ package imposter
 
 import (
 	"math/rand/v2"
+	"time"
 
 	"github.com/mintthiha/party-games/server/internal/game"
 )
@@ -28,6 +29,7 @@ func (s *state) beginRound() *state {
 		round:        s.round + 1,
 		totalRounds:  s.totalRounds,
 		cluePasses:   s.cluePasses,
+		clueSeconds:  s.clueSeconds,
 		hintsEnabled: s.hintsEnabled,
 		wordCategory: s.wordCategory,
 
@@ -51,17 +53,43 @@ func (s *state) beginRound() *state {
 // already own, the same contract as resolveVote.
 func nextClue(next *state) []game.Effect {
 	if next.turn < len(next.order) {
-		return []game.Effect{game.Send{Msg: clueTurn(next)}}
+		return clueTurnEffects(next)
 	}
 	// The table has gone all the way around.
 	if next.cluePass < next.cluePasses {
 		next.cluePass++
 		next.turn = 0 // same order again, from the top
-		return []game.Effect{game.Send{Msg: clueTurn(next)}}
+		return clueTurnEffects(next)
 	}
 	next.phase = phaseVote
+	// No Timer among these effects, so the room drops the clue clock: it
+	// cannot fire into the vote.
 	return []game.Effect{game.Send{Msg: votePhase(next)}}
 }
+
+// clueTurnEffects announces whose turn it is and, if the host set a clock,
+// asks the platform for one. Every way into a clue turn goes through here —
+// the first turn of the phase, the next player, the start of a second pass,
+// and the turn left open by someone leaving — so no path can announce a turn
+// and forget its clock.
+//
+// The Timer is per turn by design: it is armed again on each new turn, and the
+// room drops the old one as it accepts the event that caused this one.
+func clueTurnEffects(st *state) []game.Effect {
+	effects := []game.Effect{game.Send{Msg: clueTurn(st)}}
+	if st.clueSeconds > 0 {
+		effects = append(effects, game.Timer{
+			After: time.Duration(st.clueSeconds) * time.Second,
+			Tag:   tagClueTurn,
+		})
+	}
+	return effects
+}
+
+// tagClueTurn names the clue clock on the way out and on the way back. One
+// game can arm clocks in more than one phase, so an expiry says which it was
+// rather than leaving the game to guess from its own state.
+const tagClueTurn = "clue-turn"
 
 // roundStart is the effects that open a round: a private RoleAssignment for
 // each player, then a RevealProgress broadcast so everyone sees "0 / 5 ready".

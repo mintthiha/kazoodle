@@ -15,13 +15,28 @@ type Player struct {
 	Locale string
 }
 
-// Event is one thing a player did, handed to the game by the room that owns it.
-// Data is the raw proto3-JSON payload the client sent inside a GameAction; the
-// game unmarshals it into its own message type.
+// Event is one thing that happened, handed to the game by the room that owns
+// it — usually something a player did, sometimes a timer the game itself
+// armed.
+//
+// For a player action, Data is the raw proto3-JSON payload the client sent
+// inside a GameAction and the game unmarshals it into its own message type.
+// For a timer, Timer is set, Data is nil and PlayerID is empty: no one did
+// this. Check Timer first, or IsTimer, since a nil PlayerID is not something
+// a game can look up in its roster.
 type Event struct {
 	PlayerID string
 	Data     []byte
+	// Timer is non-nil when this event is a Timer effect expiring rather
+	// than a player acting. A pointer, so the zero Event stays a plain
+	// player event and every existing game keeps compiling.
+	Timer *TimerFired
 }
+
+// IsTimer reports whether this event is an expired timer rather than a player
+// action. It exists so game code reads as a question about the event instead
+// of a nil check on a field.
+func (ev Event) IsTimer() bool { return ev.Timer != nil }
 
 // Effect is something the platform should do as a result of Init or Advance.
 // The set is closed — only this package can define effects — so a room can

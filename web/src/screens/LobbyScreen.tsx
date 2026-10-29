@@ -3,7 +3,7 @@ import { useT } from "../i18n";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
 import { CATEGORY_OPTIONS } from "../games/imposter/categories";
-import { CLUE_PASS_OPTIONS, ROUND_OPTIONS } from "../games/imposter/rounds";
+import { CLUE_PASS_OPTIONS, CLUE_SECONDS_OPTIONS, ROUND_OPTIONS } from "../games/imposter/rounds";
 import {
   DEFAULT_MATCH_OPTIONS,
   decodeStartOptions,
@@ -148,7 +148,20 @@ export function LobbyScreen({
               onChange={(e) => pick({ cluePasses: Number(e.target.value) })}
             >
               {CLUE_PASS_OPTIONS.map((o) => (
-                <option key={o.passes} value={o.passes}>
+                <option key={o.value} value={o.value}>
+                  {t(o.labelKey)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>{t("lobby.clueSecondsLabel")}</span>
+            <select
+              value={opts.clueSeconds}
+              onChange={(e) => pick({ clueSeconds: Number(e.target.value) })}
+            >
+              {CLUE_SECONDS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
                   {t(o.labelKey)}
                 </option>
               ))}
@@ -196,8 +209,14 @@ export function LobbyScreen({
             <p className="status">{t("lobby.roundsChosen", { n: pending.rounds })}</p>
             <p className="status">
               {t(
-                CLUE_PASS_OPTIONS.find((o) => o.passes === pending.cluePasses)?.labelKey ??
+                CLUE_PASS_OPTIONS.find((o) => o.value === pending.cluePasses)?.labelKey ??
                   "lobby.cluePassesTwo",
+              )}
+            </p>
+            <p className="status">
+              {t(
+                CLUE_SECONDS_OPTIONS.find((o) => o.value === pending.clueSeconds)?.labelKey ??
+                  "lobby.clueSecondsOff",
               )}
             </p>
           </section>

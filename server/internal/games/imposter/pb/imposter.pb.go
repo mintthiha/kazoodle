@@ -36,6 +36,14 @@ type StartOptions struct {
 	// above 10 is clamped to 10, so a client cannot ask for a thousand-round
 	// match. Scores carry across every round of a match.
 	Rounds int32 `protobuf:"varint,3,opt,name=rounds,proto3" json:"rounds,omitempty"`
+	// How long each player gets to give one clue, in seconds. 0 (the default)
+	// means no clock at all, which is how the game worked before this field
+	// existed; anything above 120 is clamped to 120.
+	//
+	// Note this field reads its zero differently from rounds and clue_passes
+	// above: there, 0 means "use the server's default", because every match has
+	// some number of rounds. Here there is a real "off", and off is the default.
+	ClueSeconds int32 `protobuf:"varint,5,opt,name=clue_seconds,json=clueSeconds,proto3" json:"clue_seconds,omitempty"`
 	// Restricts the secret word to one category: "places", "food", "animals",
 	// "objects", "activities", "jobs", or "weather". Empty (the default) draws
 	// from every category. An unrecognized key is treated the same as empty
@@ -93,6 +101,13 @@ func (x *StartOptions) GetCluePasses() int32 {
 func (x *StartOptions) GetRounds() int32 {
 	if x != nil {
 		return x.Rounds
+	}
+	return 0
+}
+
+func (x *StartOptions) GetClueSeconds() int32 {
+	if x != nil {
+		return x.ClueSeconds
 	}
 	return 0
 }
@@ -560,8 +575,17 @@ type ClueTurn struct {
 	CluesSoFar      []*ClueEntry           `protobuf:"bytes,4,rep,name=clues_so_far,json=cluesSoFar,proto3" json:"clues_so_far,omitempty"`
 	CluePass        int32                  `protobuf:"varint,5,opt,name=clue_pass,json=cluePass,proto3" json:"clue_pass,omitempty"` // 1-based
 	TotalCluePasses int32                  `protobuf:"varint,6,opt,name=total_clue_passes,json=totalCluePasses,proto3" json:"total_clue_passes,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// How many seconds this turn has, or 0 for an untimed round. The clock that
+	// decides is the server's: when it runs out, the server records the turn as
+	// missed and moves on by itself. A client counting down from this number is
+	// showing the player what is about to happen, not causing it, so a phone
+	// that sleeps or drifts loses nothing but the display.
+	//
+	// (VotePhase.vote_seconds is the older, weaker pattern: that countdown runs
+	// only on the client, which auto-submits when it ends.)
+	ClueSeconds   int32 `protobuf:"varint,7,opt,name=clue_seconds,json=clueSeconds,proto3" json:"clue_seconds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ClueTurn) Reset() {
@@ -632,6 +656,13 @@ func (x *ClueTurn) GetCluePass() int32 {
 func (x *ClueTurn) GetTotalCluePasses() int32 {
 	if x != nil {
 		return x.TotalCluePasses
+	}
+	return 0
+}
+
+func (x *ClueTurn) GetClueSeconds() int32 {
+	if x != nil {
+		return x.ClueSeconds
 	}
 	return 0
 }
@@ -1434,12 +1465,13 @@ var File_imposter_proto protoreflect.FileDescriptor
 
 const file_imposter_proto_rawDesc = "" +
 	"\n" +
-	"\x0eimposter.proto\x12\vimposter.v1\"\x88\x01\n" +
+	"\x0eimposter.proto\x12\vimposter.v1\"\xab\x01\n" +
 	"\fStartOptions\x12#\n" +
 	"\rhints_enabled\x18\x01 \x01(\bR\fhintsEnabled\x12\x1f\n" +
 	"\vclue_passes\x18\x04 \x01(\x05R\n" +
 	"cluePasses\x12\x16\n" +
-	"\x06rounds\x18\x03 \x01(\x05R\x06rounds\x12\x1a\n" +
+	"\x06rounds\x18\x03 \x01(\x05R\x06rounds\x12!\n" +
+	"\fclue_seconds\x18\x05 \x01(\x05R\vclueSeconds\x12\x1a\n" +
 	"\bcategory\x18\x02 \x01(\tR\bcategory\"\x8a\x04\n" +
 	"\x15ImposterServerMessage\x12F\n" +
 	"\x0frole_assignment\x18\x01 \x01(\v2\x1b.imposter.v1.RoleAssignmentH\x00R\x0eroleAssignment\x12F\n" +
@@ -1471,7 +1503,7 @@ const file_imposter_proto_rawDesc = "" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\"<\n" +
 	"\tClueEntry\x12\x1b\n" +
 	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x12\x12\n" +
-	"\x04text\x18\x02 \x01(\tR\x04text\"\xdf\x01\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\"\x82\x02\n" +
 	"\bClueTurn\x12\x1b\n" +
 	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x12\x1d\n" +
 	"\n" +
@@ -1480,7 +1512,8 @@ const file_imposter_proto_rawDesc = "" +
 	"\fclues_so_far\x18\x04 \x03(\v2\x16.imposter.v1.ClueEntryR\n" +
 	"cluesSoFar\x12\x1b\n" +
 	"\tclue_pass\x18\x05 \x01(\x05R\bcluePass\x12*\n" +
-	"\x11total_clue_passes\x18\x06 \x01(\x05R\x0ftotalCluePasses\"\x81\x01\n" +
+	"\x11total_clue_passes\x18\x06 \x01(\x05R\x0ftotalCluePasses\x12!\n" +
+	"\fclue_seconds\x18\a \x01(\x05R\vclueSeconds\"\x81\x01\n" +
 	"\tVotePhase\x12,\n" +
 	"\x05clues\x18\x01 \x03(\v2\x16.imposter.v1.ClueEntryR\x05clues\x12#\n" +
 	"\rcandidate_ids\x18\x02 \x03(\tR\fcandidateIds\x12!\n" +

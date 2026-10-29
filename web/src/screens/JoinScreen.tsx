@@ -8,7 +8,10 @@ interface Props {
   onJoin: (code: string, displayName: string) => void;
 }
 
-// First screen: pick a name, then either create a room or join one by code.
+// First screen: optionally pick a name, then either create a room or join one
+// by code. Leaving the name empty is a normal way in — the server names the
+// player "Guest 2" and the round plays the same. Nothing here enforces a name,
+// so the only thing standing between someone and a game is the room code.
 export function JoinScreen({ snapshot, onCreate, onJoin }: Props) {
   const { t } = useT();
   const [name, setName] = useState("");
@@ -18,19 +21,11 @@ export function JoinScreen({ snapshot, onCreate, onJoin }: Props) {
   const trimmedName = name.trim();
 
   function create() {
-    if (!trimmedName) {
-      setHint(t("join.nameRequired"));
-      return;
-    }
     setHint(null);
     onCreate(trimmedName);
   }
 
   function join() {
-    if (!trimmedName) {
-      setHint(t("join.nameRequired"));
-      return;
-    }
     if (!code.trim()) {
       setHint(t("join.codeRequired"));
       return;
@@ -58,6 +53,9 @@ export function JoinScreen({ snapshot, onCreate, onJoin }: Props) {
           enterKeyHint="done"
         />
       </label>
+      {/* Said once, under the field, rather than as a warning when they
+          submit: being a guest is a choice, not a mistake. */}
+      {!trimmedName && <p className="status">{t("join.nameOptional")}</p>}
 
       <button className="primary" onClick={create}>
         {t("join.createButton")}

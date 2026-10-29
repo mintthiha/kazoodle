@@ -35,6 +35,11 @@ type Manager struct {
 	// game_id when a host starts a game.
 	games *game.Registry
 
+	// clock is handed to every room this Manager creates, for scheduling game
+	// timers. Nil means the real one; tests set it to a fake they can fire by
+	// hand so no test ever has to sleep.
+	clock clock
+
 	mu    sync.RWMutex
 	rooms map[string]*Room
 }
@@ -63,6 +68,7 @@ func (m *Manager) Create(ctx context.Context, displayName, locale string, s Send
 		return JoinResult{}, err
 	}
 	r := newRoom(m.base, code, m.games, m.remove)
+	r.clock = m.clock
 	m.rooms[code] = r
 	m.mu.Unlock() // release before talking to the room goroutine
 
@@ -155,7 +161,10 @@ func (m *Manager) addPlayer(ctx context.Context, r *Room, displayName, locale st
 	if locale == "" {
 		locale = defaultLocale
 	}
-	p := Player{ID: newPlayerID(), DisplayName: displayName, Locale: locale}
+	// A blank name is not refused: the room gives the player a guest name
+	// instead, since it is the only thing that knows which names are already
+	// taken. See applyJoin.
+	p := Player{ID: newPlayerID(), DisplayName: cleanName(displayName), Locale: locale}
 	rep, err := r.join(ctx, p, s)
 	if err != nil {
 		return JoinResult{}, err

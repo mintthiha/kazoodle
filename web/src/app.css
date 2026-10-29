@@ -420,3 +420,9 @@ button.danger {
 .scores li[data-winner="true"] {
   border: 1px solid var(--good);
 }
+
+/* A clue turn whose clock ran out. Dimmed rather than coloured: it is an
+   absence, not an error. */
+.missed-clue {
+  color: var(--muted);
+}

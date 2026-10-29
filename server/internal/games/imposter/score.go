@@ -29,6 +29,11 @@ const (
 	maxCluePasses     = 3
 )
 
+// maxClueSeconds caps the per-turn clock. Two minutes is far longer than
+// anyone would set; it exists so a client cannot ask for a clock measured in
+// years, which would amount to no clock while looking like one.
+const maxClueSeconds = 120
+
 // roundsFromOption turns the host's requested round count into one this game
 // will actually play. Out-of-range values are corrected rather than rejected,
 // so an older or sloppier client gets a sane match instead of a failed start.
@@ -52,6 +57,26 @@ func cluePassesFromOption(requested int32) int {
 		return defaultCluePasses
 	case requested > maxCluePasses:
 		return maxCluePasses
+	default:
+		return int(requested)
+	}
+}
+
+// clueSecondsFromOption turns StartOptions.clue_seconds into the per-turn
+// clock, in seconds. Zero means no clock, and so does anything negative; an
+// over-long request is clamped rather than refused, the same forgiving
+// treatment the other options get.
+//
+// Unlike roundsFromOption and cluePassesFromOption, zero is NOT replaced with
+// a default here. Every match has some number of rounds, so a zero there can
+// only mean "you choose"; a clue clock has a real off position, and off is
+// where the game was before it existed.
+func clueSecondsFromOption(requested int32) int {
+	switch {
+	case requested <= 0:
+		return 0
+	case requested > maxClueSeconds:
+		return maxClueSeconds
 	default:
 		return int(requested)
 	}

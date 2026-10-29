@@ -80,12 +80,27 @@ type setGameOptionsCmd struct {
 	reply    chan error
 }
 
+// timerCmd is an expired game.Timer coming back in. It is the one command not
+// sent by a player: the clock's goroutine sends it so that the expiry is
+// handled by the room goroutine like everything else, in line behind any
+// player action already waiting.
+//
+// gen says which arming this is. A timer that fired just as the room moved on
+// has already queued this command and cannot be recalled, so run compares gen
+// against the room's current one and drops a stale expiry. There is no reply
+// channel: nothing is waiting for the answer.
+type timerCmd struct {
+	gen uint64
+	tag string
+}
+
 func (joinCmd) isCommand()           {}
 func (leaveCmd) isCommand()          {}
 func (echoCmd) isCommand()           {}
 func (startGameCmd) isCommand()      {}
 func (gameActionCmd) isCommand()     {}
 func (setGameOptionsCmd) isCommand() {}
+func (timerCmd) isCommand()          {}
 
 // ─── Room ────────────────────────────────────────────────────────────────────
 
@@ -115,6 +130,10 @@ type Room struct {
 	// context it derived from the Manager's.
 	cancel context.CancelFunc
 
+	// clock is how timers are scheduled. Nil means the real one; tests
+	// substitute a fake they can fire by hand.
+	clock clock
+
 	// ─── below: touched only by run ───
 	members map[string]*member
 	order   []string // player IDs in join order, for a stable roster
@@ -124,6 +143,23 @@ type Room struct {
 	gm        game.Game
 	gameID    string
 	gameState game.State
+
+	// The outstanding game timer, if the running game asked for one. timer is
+	// the handle to cancel it with; timerGen identifies the current arming so
+	// that an expiry already in flight can be told apart from a live one.
+	// Both are only ever touched by run.
+	timer    stopper
+	timerGen uint64
+}
+
+// clockOf returns the room's clock, defaulting to the real one. Rooms built
+// by a Manager get whatever clock that Manager was given, which is how tests
+// drive time without sleeping.
+func (r *Room) clockOf() clock {
+	if r.clock == nil {
+		return realClock{}
+	}
+	return r.clock
 }
 
 type member struct {
@@ -157,6 +193,11 @@ func (r *Room) run(ctx context.Context) {
 	// already done.
 	defer close(r.closed)
 	defer r.cancel()
+	// Stop any outstanding game timer as the room goes away. Its goroutine
+	// would exit on its own anyway — it selects on r.closed — but leaving a
+	// clock running for a room that no longer exists is how phantom players
+	// happen.
+	defer r.cancelTimer()
 
 	for {
 		select {
@@ -183,6 +224,9 @@ func (r *Room) run(ctx context.Context) {
 			case setGameOptionsCmd:
 				cmd.reply <- r.applySetGameOptions(cmd)
 
+			case timerCmd:
+				r.applyTimer(cmd)
+
 			case leaveCmd:
 				r.applyLeave(cmd)
 				if len(r.members) == 0 {
@@ -200,6 +244,9 @@ func (r *Room) run(ctx context.Context) {
 }
 
 func (r *Room) applyJoin(cmd joinCmd) {
+	if cmd.player.DisplayName == "" {
+		cmd.player.DisplayName = guestName(cmd.player.Locale, r.displayNames())
+	}
 	r.members[cmd.player.ID] = &member{player: cmd.player, sender: cmd.sender}
 	r.order = append(r.order, cmd.player.ID)
 	if r.hostID == "" {
@@ -342,7 +389,19 @@ func (r *Room) applyGameAction(cmd gameActionCmd) error {
 }
 
 // applyEffects carries out what a game returned from Init or Advance.
+//
+// It also enforces a game timer's lifetime: reaching here means the game
+// accepted an event, so whatever clock was running for the previous one is
+// now void. A game that still wants a clock returns a game.Timer among these
+// effects and gets a fresh one. Nothing has to remember to cancel, and a clue
+// timer cannot fire into the voting phase.
+//
+// Note what is NOT here: a refused action returns an error, applyEffects is
+// never reached, and the clock keeps running — so submitting clues the rules
+// reject does not buy a player more time.
 func (r *Room) applyEffects(effects []game.Effect) {
+	r.cancelTimer()
+
 	for _, e := range effects {
 		switch ef := e.(type) {
 		case game.Send:
@@ -363,6 +422,15 @@ func (r *Room) applyEffects(effects []game.Effect) {
 		case game.EndGame:
 			r.broadcast(msgGameEnded(r.gameID, ef.Reason))
 			r.clearGame()
+
+		case game.Timer:
+			r.armTimer(ef)
+
+		default:
+			// The effect set is closed, so this means a new effect type was
+			// added and this switch was not. Silently dropping it would look
+			// like the game misbehaving.
+			log.Printf("room %s: game %q returned an unhandled effect %T", r.code, r.gameID, e)
 		}
 	}
 }
@@ -385,6 +453,20 @@ func (r *Room) wrapGameEvent(m proto.Message) *protocol.ServerMessage {
 
 func (r *Room) clearGame() {
 	r.gm, r.gameID, r.gameState = nil, "", nil
+	// Belt and braces: applyEffects already cancelled on the way in, but a
+	// game can also be cleared from paths that never produced effects at all
+	// (a Leave that errored, a game with no Leaver).
+	r.cancelTimer()
+}
+
+// displayNames is every name currently in use in the room, in no particular
+// order. Used to keep a guest name from colliding with anything.
+func (r *Room) displayNames() []string {
+	out := make([]string, 0, len(r.members))
+	for _, m := range r.members {
+		out = append(out, m.player.DisplayName)
+	}
+	return out
 }
 
 // roster returns the members in join order as a fresh slice. Player is an
