@@ -15,10 +15,59 @@ const missedClue = ""
 // so the only way to get here out of phase would be a bug, and ending a live
 // round over it would be worse than doing nothing.
 func advanceTimer(st *state, tag string) (game.State, []game.Effect, error) {
-	if tag != tagClueTurn || st.phase != phaseClues {
+	switch {
+	case tag == tagClueTurn && st.phase == phaseClues:
+		return clueTurnTimedOut(st)
+	case tag == tagVote && st.phase == phaseVote:
+		return voteTimedOut(st)
+	case tag == tagSteal && st.phase == phaseSteal:
+		return stealTimedOut(st)
+	default:
 		return st, nil, nil
 	}
+}
 
+// voteTimedOut closes the ballot on time. Everyone who has not voted is
+// recorded as abstaining, which is the honest reading of saying nothing, and
+// the round resolves on the votes that did arrive.
+//
+// Abstentions do not count towards any suspect, so a room where nobody voted
+// ends in no removal and the imposter escaping — the same outcome as a room
+// that deliberately all abstained. A phone that died should not be able to
+// convict anyone.
+func voteTimedOut(st *state) (game.State, []game.Effect, error) {
+	next := st.clone()
+	for _, id := range next.order {
+		if _, voted := next.votes[id]; !voted {
+			next.votes[id] = "" // the sentinel for "no suspect"
+		}
+	}
+	return next, resolveVote(next), nil
+}
+
+// stealTimedOut ends a caught imposter's guess that never came. An unmade
+// guess is a wrong guess: the crew's win stands, exactly as it would have if
+// the imposter had guessed and missed.
+func stealTimedOut(st *state) (game.State, []game.Effect, error) {
+	next := st.clone()
+	next.phase = phaseOutcome
+	votedOutID, _ := tally(next)
+	applyAward(next, true, false)
+
+	res := result{
+		votedOutID:     votedOutID,
+		crewWon:        true,
+		stealAttempted: false,
+	}
+	effects := make([]game.Effect, 0, len(next.order))
+	for _, id := range next.order {
+		effects = append(effects, game.Send{To: []string{id}, Msg: outcomeFor(next, id, res)})
+	}
+	return next, effects, nil
+}
+
+// clueTurnTimedOut ends one player's clue turn.
+func clueTurnTimedOut(st *state) (game.State, []game.Effect, error) {
 	next := st.clone()
 
 	// The missed turn is recorded, not skipped. Skipping looks kinder, but it

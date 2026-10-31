@@ -48,27 +48,29 @@ export function VoteView({
 
   const [selected, setSelected] = useState<VoteChoice | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
-  const [timedOut, setTimedOut] = useState(false);
 
   // A fresh VotePhase means a new round of voting: start the countdown over
   // and clear this player's local pick.
   useEffect(() => {
     if (!votePhase) return;
     setSelected(null);
-    setTimedOut(false);
     setSecondsLeft(votePhase.voteSeconds || null);
   }, [votePhase]);
 
+  // Display only. This countdown used to submit a vote of its own when it hit
+  // zero, which made every client responsible for closing the ballot: a phone
+  // asleep in a pocket held the round open, and a client that simply never
+  // submitted could hold it open on purpose. The server now owns the
+  // deadline and abstains whoever has not answered, so this stops at zero and
+  // waits for the server to say what happened.
   useEffect(() => {
-    if (secondsLeft === null || timedOut) return;
-    if (secondsLeft <= 0) {
-      setTimedOut(true);
-      onLockIn(selected ?? { kind: "abstain" });
-      return;
-    }
+    if (secondsLeft === null || secondsLeft <= 0) return;
     const id = setTimeout(() => setSecondsLeft((s) => (s === null ? null : s - 1)), 1000);
     return () => clearTimeout(id);
-  }, [secondsLeft, timedOut, selected, onLockIn]);
+  }, [secondsLeft]);
+
+  // Zero means "the server is about to close this", not "it is closed".
+  const timedOut = secondsLeft !== null && secondsLeft <= 0;
 
   if (!votePhase) {
     return (

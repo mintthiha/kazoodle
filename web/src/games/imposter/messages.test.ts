@@ -328,3 +328,22 @@ describe("imposter messages: decode", () => {
     expect(() => decodeImposterEvent("not json")).toThrow();
   });
 });
+
+describe("imposter messages: server-run deadlines", () => {
+  it("stealPrompt carries how long the imposter has", () => {
+    const msg = decodeImposterEvent(
+      JSON.stringify({ stealPrompt: { imposterId: "p2", stealSeconds: 30 } }),
+    );
+    if (msg.body.case !== "stealPrompt") throw new Error("unreachable");
+    expect(msg.body.value.imposterId).toBe("p2");
+    expect(msg.body.value.stealSeconds).toBe(30);
+  });
+
+  it("votePhase carries the voting deadline", () => {
+    const msg = decodeImposterEvent(
+      JSON.stringify({ votePhase: { candidateIds: ["p1", "p2"], voteSeconds: 30 } }),
+    );
+    if (msg.body.case !== "votePhase") throw new Error("unreachable");
+    expect(msg.body.value.voteSeconds).toBe(30);
+  });
+});

@@ -40,6 +40,24 @@ type Timer struct {
 
 func (Timer) isEffect() {}
 
+// KeepTimer tells the platform to leave the running timer where it is.
+//
+// It is the exception to the rule on Timer above. Normally a clock lasts until
+// the next event the game accepts, which is right when the clock belongs to
+// one player's turn: the next turn brings its own. It is wrong when the clock
+// belongs to a whole phase — a voting deadline must not restart every time
+// somebody votes, or the last person to vote decides how long everyone has.
+//
+// A game in that situation returns KeepTimer among its effects, and the
+// platform leaves the existing clock running. Returning neither a Timer nor a
+// KeepTimer still cancels, so the phase that ends the vote ends its clock by
+// saying nothing — which is the behaviour worth having by default, since a
+// forgotten cancel fires into the next phase and a forgotten KeepTimer only
+// ends a deadline early.
+type KeepTimer struct{}
+
+func (KeepTimer) isEffect() {}
+
 // TimerFired is what the platform delivers when a Timer runs out: an ordinary
 // Event, carrying the Tag the game armed it with. The room sends it into its
 // own queue rather than calling the game directly, so a timeout is serialized

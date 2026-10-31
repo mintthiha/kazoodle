@@ -14,12 +14,22 @@ import (
 // at least two others to give clues.
 const minPlayers = 3
 
-// voteSeconds is how long clients should run their countdown before
-// auto-submitting whatever is currently selected (or abstaining). The timer
-// itself lives entirely on the client — see VoteView.tsx — the same trust
-// level as any other vote: a player who never sends anything just leaves the
-// round waiting on them, exactly as before this existed.
-const voteSeconds = 30
+// voteSeconds is how long the room has to vote, and stealSeconds how long a
+// caught imposter has to guess. Both clocks are the server's: when one runs
+// out, the round resolves itself.
+//
+// They used to be advisory numbers each client counted down and acted on by
+// itself, which meant one sleeping phone could hold a round open forever —
+// and a client that simply never submitted could do it on purpose. The
+// countdown still shows on screen; it just no longer decides anything.
+//
+// Not host options, deliberately: these are the limits that stop a round
+// hanging, not pacing to tune. The clue clock sets the pace, and the host
+// chooses that one.
+const (
+	voteSeconds  = 30
+	stealSeconds = 30
+)
 
 var unmarshal = protojson.UnmarshalOptions{DiscardUnknown: true}
 
@@ -166,7 +176,9 @@ func advanceVote(st *state, voterID, suspectID string, abstain bool) (game.State
 	next := st.clone()
 	next.votes[voterID] = suspectID
 	if !next.allVoted() {
-		return next, []game.Effect{game.Send{Msg: voteProgress(next)}}, nil
+		// KeepTimer, or the deadline would restart on every vote and whoever
+		// voted last would decide how long everyone else had.
+		return next, []game.Effect{game.Send{Msg: voteProgress(next)}, game.KeepTimer{}}, nil
 	}
 	return next, resolveVote(next), nil
 }
@@ -181,7 +193,7 @@ func resolveVote(next *state) []game.Effect {
 
 	if caught {
 		next.phase = phaseSteal
-		return append(effects, game.Send{Msg: stealPrompt(next)})
+		return append(effects, stealPhaseEffects(next)...)
 	}
 
 	next.phase = phaseOutcome
@@ -467,7 +479,7 @@ func scoreEntries(st *state) []*pb.ScoreEntry {
 func stealPrompt(st *state) *pb.ImposterServerMessage {
 	return &pb.ImposterServerMessage{
 		Body: &pb.ImposterServerMessage_StealPrompt{
-			StealPrompt: &pb.StealPrompt{ImposterId: st.imposterID},
+			StealPrompt: &pb.StealPrompt{ImposterId: st.imposterID, StealSeconds: stealSeconds},
 		},
 	}
 }

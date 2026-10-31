@@ -62,9 +62,30 @@ func nextClue(next *state) []game.Effect {
 		return clueTurnEffects(next)
 	}
 	next.phase = phaseVote
-	// No Timer among these effects, so the room drops the clue clock: it
-	// cannot fire into the vote.
-	return []game.Effect{game.Send{Msg: votePhase(next)}}
+	// The clue clock is replaced rather than dropped: this Timer is the
+	// voting deadline, and arming it supersedes whatever the clue turn had.
+	return votePhaseEffects(next)
+}
+
+// votePhaseEffects opens the vote and starts the deadline for it. Every way
+// into the vote comes through here — the last clue, the last timed-out turn,
+// and a ballot reissued because somebody left — so no path can open a vote
+// that nothing ever closes.
+func votePhaseEffects(st *state) []game.Effect {
+	return []game.Effect{
+		game.Send{Msg: votePhase(st)},
+		game.Timer{After: voteSeconds * time.Second, Tag: tagVote},
+	}
+}
+
+// stealPhaseEffects does the same for the caught imposter's one guess. Alone
+// on that screen with everyone watching is exactly where someone puts their
+// phone down.
+func stealPhaseEffects(st *state) []game.Effect {
+	return []game.Effect{
+		game.Send{Msg: stealPrompt(st)},
+		game.Timer{After: stealSeconds * time.Second, Tag: tagSteal},
+	}
 }
 
 // clueTurnEffects announces whose turn it is and, if the host set a clock,
@@ -86,10 +107,14 @@ func clueTurnEffects(st *state) []game.Effect {
 	return effects
 }
 
-// tagClueTurn names the clue clock on the way out and on the way back. One
-// game can arm clocks in more than one phase, so an expiry says which it was
-// rather than leaving the game to guess from its own state.
-const tagClueTurn = "clue-turn"
+// These name each clock on the way out and on the way back. The game arms
+// clocks in three phases, so an expiry says which one it was rather than
+// leaving the game to infer it from state that may have moved on.
+const (
+	tagClueTurn = "clue-turn"
+	tagVote     = "vote"
+	tagSteal    = "steal"
+)
 
 // roundStart is the effects that open a round: a private RoleAssignment for
 // each player, then a RevealProgress broadcast so everyone sees "0 / 5 ready".

@@ -669,10 +669,14 @@ func (x *ClueTurn) GetClueSeconds() int32 {
 
 // Broadcast once, when every player has given a clue and voting opens.
 type VotePhase struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Clues         []*ClueEntry           `protobuf:"bytes,1,rep,name=clues,proto3" json:"clues,omitempty"`                                   // the full recap, in turn order
-	CandidateIds  []string               `protobuf:"bytes,2,rep,name=candidate_ids,json=candidateIds,proto3" json:"candidate_ids,omitempty"` // who can be voted for, in turn order
-	VoteSeconds   int32                  `protobuf:"varint,3,opt,name=vote_seconds,json=voteSeconds,proto3" json:"vote_seconds,omitempty"`   // how long clients should run their countdown before auto-submitting
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Clues        []*ClueEntry           `protobuf:"bytes,1,rep,name=clues,proto3" json:"clues,omitempty"`                                   // the full recap, in turn order
+	CandidateIds []string               `protobuf:"bytes,2,rep,name=candidate_ids,json=candidateIds,proto3" json:"candidate_ids,omitempty"` // who can be voted for, in turn order
+	// How long the room has to vote. The deadline is the server's: when it
+	// expires, every player who has not voted is recorded as abstaining and the
+	// round resolves. A client counts down from this number to show the player
+	// what is coming, and submits nothing of its own when it reaches zero.
+	VoteSeconds   int32 `protobuf:"varint,3,opt,name=vote_seconds,json=voteSeconds,proto3" json:"vote_seconds,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -898,8 +902,12 @@ func (x *VoteTally) GetAbstainCount() int32 {
 // Broadcast once, instead of Outcome, when the vote catches the imposter.
 // Everyone waits while the imposter gets one blind guess at the word.
 type StealPrompt struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ImposterId    string                 `protobuf:"bytes,1,opt,name=imposter_id,json=imposterId,proto3" json:"imposter_id,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	ImposterId string                 `protobuf:"bytes,1,opt,name=imposter_id,json=imposterId,proto3" json:"imposter_id,omitempty"`
+	// How long the imposter has to guess, on the same terms as
+	// VotePhase.vote_seconds: the server ends it, and an unmade guess counts as
+	// a wrong one.
+	StealSeconds  int32 `protobuf:"varint,2,opt,name=steal_seconds,json=stealSeconds,proto3" json:"steal_seconds,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -939,6 +947,13 @@ func (x *StealPrompt) GetImposterId() string {
 		return x.ImposterId
 	}
 	return ""
+}
+
+func (x *StealPrompt) GetStealSeconds() int32 {
+	if x != nil {
+		return x.StealSeconds
+	}
+	return 0
 }
 
 // Sent privately to each player once the round is fully decided — right after
@@ -1528,10 +1543,11 @@ const file_imposter_proto_rawDesc = "" +
 	"\x06counts\x18\x01 \x03(\v2\x16.imposter.v1.VoteCountR\x06counts\x12 \n" +
 	"\fvoted_out_id\x18\x02 \x01(\tR\n" +
 	"votedOutId\x12#\n" +
-	"\rabstain_count\x18\x03 \x01(\x05R\fabstainCount\".\n" +
+	"\rabstain_count\x18\x03 \x01(\x05R\fabstainCount\"S\n" +
 	"\vStealPrompt\x12\x1f\n" +
 	"\vimposter_id\x18\x01 \x01(\tR\n" +
-	"imposterId\"\xc2\x03\n" +
+	"imposterId\x12#\n" +
+	"\rsteal_seconds\x18\x02 \x01(\x05R\fstealSeconds\"\xc2\x03\n" +
 	"\aOutcome\x12\x1f\n" +
 	"\vimposter_id\x18\x01 \x01(\tR\n" +
 	"imposterId\x12\x12\n" +

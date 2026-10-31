@@ -357,3 +357,58 @@ func TestAGameRefusingItsOwnTimerIsSurvivable(t *testing.T) {
 		t.Fatalf("got %q, want still here", text)
 	}
 }
+
+func TestKeepTimerLeavesTheClockRunning(t *testing.T) {
+	g := newTimedGame()
+	// A phase-wide deadline: the game says something on each event but does
+	// not want the clock restarted — a vote, in Imposter's case.
+	g.effectsFor = func(ev game.Event) ([]game.Effect, error) {
+		if ev.IsTimer() {
+			return []game.Effect{gameMsg("deadline")}, nil
+		}
+		return []game.Effect{gameMsg("progress"), game.KeepTimer{}}, nil
+	}
+	m, clk, created, host := startTimedGame(t, g)
+
+	// Three events arrive before the deadline. None of them may re-arm, and
+	// none of them may cancel.
+	for i := 0; i < 3; i++ {
+		act(t, m, created)
+		_ = g.nextEvent(t)
+		if _, text := gameEventPayload(t, host); text != "progress" {
+			t.Fatalf("got %q, want progress", text)
+		}
+	}
+	if clk.armed() != 1 {
+		t.Fatalf("armed %d timers, want 1 — KeepTimer must not re-arm", clk.armed())
+	}
+
+	// The original clock is still the one that fires.
+	clk.nth(t, 0).fire()
+	if ev := g.nextEvent(t); !ev.IsTimer() {
+		t.Fatalf("event is %+v, want the deadline", ev)
+	}
+	if _, text := gameEventPayload(t, host); text != "deadline" {
+		t.Fatalf("got %q, want deadline", text)
+	}
+}
+
+func TestKeepTimerOnAnEventWithNoClockIsHarmless(t *testing.T) {
+	g := newTimedGame()
+	g.effectsFor = func(game.Event) ([]game.Effect, error) {
+		return []game.Effect{game.KeepTimer{}}, nil
+	}
+	m, clk, created, host := startTimedGame(t, g)
+
+	// Cancel the Init clock by firing it, then ask to keep a clock that is no
+	// longer there.
+	clk.nth(t, 0).fire()
+	_ = g.nextEvent(t)
+
+	act(t, m, created)
+	_ = g.nextEvent(t)
+	if clk.armed() != 1 {
+		t.Errorf("armed %d timers, want 1 — KeepTimer must not arm one of its own", clk.armed())
+	}
+	host.expectSilent(t)
+}

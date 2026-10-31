@@ -4,7 +4,7 @@ import type { ClueTurn } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
 import { makeNameFor } from "./nameFor";
 import { ClueList } from "./clueList";
-import { useClueCountdown } from "./useClueCountdown";
+import { useCountdown } from "./useCountdown";
 
 interface Props extends GameViewProps {
   turn: ClueTurn | null;
@@ -30,7 +30,12 @@ export function ClueView({
   const { t } = useT();
 
   const name = makeNameFor(players, departed, t);
-  const secondsLeft = useClueCountdown(turn);
+  // A new turn, a new pass, or a turn reissued because someone left: each is
+  // a fresh clock on the server, so each restarts the display here.
+  const secondsLeft = useCountdown(
+    turn?.clueSeconds ?? 0,
+    turn ? `${turn.playerId}:${turn.cluePass}:${turn.cluesSoFar.length}` : "",
+  );
 
   if (!turn) {
     return (

@@ -3,6 +3,7 @@ import { useT } from "../i18n";
 import { displayNameOf } from "../displayName";
 import { errorKey } from "../errorKey";
 import { ChatPanel } from "./ChatPanel";
+import { RulesCard } from "../games/imposter/RulesCard";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
 import { CATEGORY_OPTIONS } from "../games/imposter/categories";
@@ -97,7 +98,7 @@ export function LobbyScreen({
   }
 
   return (
-    <main className="screen">
+    <main className="screen lobby">
       <h1>{t("lobby.heading")}</h1>
 
       <section className="room-code">
@@ -222,7 +223,14 @@ export function LobbyScreen({
         )
       )}
 
-      <ChatPanel room={room} lastEcho={lastEcho} onSend={onEcho} />
+      {/* Two columns on anything wider than a phone, stacked below that.
+          The rules are the thing a new player needs and the chat is the thing
+          that grows, so neither belongs in the single column that holds the
+          controls. */}
+      <div className="lobby-columns">
+        <RulesCard />
+        <ChatPanel room={room} lastEcho={lastEcho} onSend={onEcho} />
+      </div>
 
       {errorKey(lastError) && <p className="hint">{t(errorKey(lastError)!)}</p>}
 

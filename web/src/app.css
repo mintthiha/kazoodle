@@ -489,3 +489,51 @@ button.danger {
 .missed-clue {
   color: var(--muted);
 }
+
+/* Lobby: rules and chat as two columns on a wide screen, stacked on a phone.
+   Phone first — the single-column fallback is the default and the grid only
+   appears once there is room for it. align-items: start keeps a short rules
+   card from stretching to match a long chat. */
+.lobby-columns {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+/* The app is a 30rem phone column everywhere else and stays that way. The
+   lobby is the one screen with something to put beside something else, so it
+   is the only one allowed wider — and only when the viewport can actually
+   hold two readable columns. :has() keeps that decision in CSS instead of
+   threading a "wide" flag through the component tree. */
+@media (min-width: 60rem) {
+  .app:has(.lobby) {
+    max-width: 56rem;
+  }
+
+  .lobby-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.rules-card {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.rules-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}

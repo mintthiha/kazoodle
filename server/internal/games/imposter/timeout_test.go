@@ -94,7 +94,7 @@ func TestATimedRoundArmsAClockOnEveryTurn(t *testing.T) {
 	_ = next
 }
 
-func TestTheVoteDropsTheClueClock(t *testing.T) {
+func TestTheVoteReplacesTheClueClockWithItsOwn(t *testing.T) {
 	st := startTimed(t, 3, 30)
 	st, _ = readyAll(t, st, st.(*state).order)
 
@@ -113,8 +113,17 @@ func TestTheVoteDropsTheClueClock(t *testing.T) {
 	if st.(*state).phase != phaseVote {
 		t.Fatalf("phase = %s, want vote", st.(*state).phase)
 	}
-	if tm := timerIn(effects); tm != nil {
-		t.Errorf("opening the vote armed a %v clock; the clue clock should simply end", tm.After)
+	// The clue clock does not survive into the vote — but the vote is not
+	// left open-ended either, or one sleeping phone holds the round forever.
+	tm := timerIn(effects)
+	if tm == nil {
+		t.Fatal("opening the vote armed no clock; a vote nothing closes can hang the round")
+	}
+	if tm.Tag != tagVote {
+		t.Errorf("the vote armed a %q clock, want %q", tm.Tag, tagVote)
+	}
+	if tm.After != voteSeconds*time.Second {
+		t.Errorf("the vote clock is %v, want %ds", tm.After, voteSeconds)
 	}
 }
 
@@ -275,5 +284,180 @@ func anyClueTurn(t *testing.T, effects []game.Effect) *pb.ClueTurn {
 		}
 	}
 	t.Fatal("no ClueTurn among the effects")
+	return nil
+}
+
+// ─── the vote clock ─────────────────────────────────────────────────────────
+
+// voteOpen drives a round to an open ballot and returns it.
+func voteOpen(t *testing.T, n int) game.State {
+	t.Helper()
+	st := startTimed(t, n, 0) // no clue clock; this is about the vote
+	st, _ = readyAll(t, st, st.(*state).order)
+	for st.(*state).phase == phaseClues {
+		cur := st.(*state)
+		var err error
+		st, _, err = (Game{}).Advance(st, clueEvent(cur.order[cur.turn], clueFor(cur)))
+		if err != nil {
+			t.Fatalf("Advance(clue): %v", err)
+		}
+	}
+	if st.(*state).phase != phaseVote {
+		t.Fatalf("phase = %s, want vote", st.(*state).phase)
+	}
+	return st
+}
+
+func TestAVoteDoesNotRestartTheDeadline(t *testing.T) {
+	st := voteOpen(t, 4)
+	order := st.(*state).order
+
+	// One player votes; three have not, so the ballot stays open. If this
+	// re-armed, the deadline would restart on every vote and whoever voted
+	// last would decide how long everyone else had.
+	next, effects, err := (Game{}).Advance(st, voteEvent(order[0], order[1]))
+	if err != nil {
+		t.Fatalf("Advance(vote): %v", err)
+	}
+	if next.(*state).phase != phaseVote {
+		t.Fatalf("phase = %s, want the ballot still open", next.(*state).phase)
+	}
+	if tm := timerIn(effects); tm != nil {
+		t.Errorf("a vote re-armed a %v clock; the deadline must keep running", tm.After)
+	}
+	if !keepsTimerIn(effects) {
+		t.Error("a vote returned no KeepTimer, so the room would cancel the deadline")
+	}
+}
+
+func TestTheVoteDeadlineAbstainsWhoeverDidNotVote(t *testing.T) {
+	st := voteOpen(t, 4)
+	cur := st.(*state)
+	order, imposter := cur.order, cur.imposterID
+
+	// Two players vote for the imposter; two never answer at all.
+	voters := crewPair(t, cur)
+	var err error
+	for _, id := range voters {
+		st, _, err = (Game{}).Advance(st, voteEvent(id, imposter))
+		if err != nil {
+			t.Fatalf("Advance(vote %s): %v", id, err)
+		}
+	}
+
+	st, effects, err := (Game{}).Advance(st, timerEvent(tagVote))
+	if err != nil {
+		t.Fatalf("Advance(vote timer): %v", err)
+	}
+	got := st.(*state)
+
+	if len(got.votes) != len(order) {
+		t.Errorf("recorded %d votes, want one per player", len(got.votes))
+	}
+	for _, id := range order {
+		if _, voted := got.votes[id]; !voted {
+			t.Errorf("%s has no vote recorded after the deadline", id)
+		}
+	}
+	// Two votes against the imposter and two abstentions is still a catch.
+	if got.phase != phaseSteal {
+		t.Fatalf("phase = %s, want steal — two votes caught the imposter", got.phase)
+	}
+	// And the steal gets its own clock, or the round hangs here instead.
+	if tm := timerIn(effects); tm == nil || tm.Tag != tagSteal {
+		t.Errorf("the steal armed %v, want a %q clock", tm, tagSteal)
+	}
+}
+
+func TestNobodyVotingLetsTheImposterEscape(t *testing.T) {
+	st := voteOpen(t, 3)
+
+	st, _, err := (Game{}).Advance(st, timerEvent(tagVote))
+	if err != nil {
+		t.Fatalf("Advance(vote timer): %v", err)
+	}
+	got := st.(*state)
+
+	// A room full of dead phones must not convict anyone: abstentions count
+	// towards nobody.
+	if got.phase != phaseOutcome {
+		t.Fatalf("phase = %s, want outcome", got.phase)
+	}
+	if got.deltas[got.imposterID] != pointsEscape {
+		t.Errorf("imposter scored %d, want %d for escaping", got.deltas[got.imposterID], pointsEscape)
+	}
+}
+
+func TestTheStealDeadlineCountsAsAMissedGuess(t *testing.T) {
+	st := voteOpen(t, 3)
+	cur := st.(*state)
+	imposter := cur.imposterID
+
+	var err error
+	for _, id := range cur.order {
+		st, _, err = (Game{}).Advance(st, voteEvent(id, imposter))
+		if err != nil {
+			t.Fatalf("Advance(vote %s): %v", id, err)
+		}
+	}
+	if st.(*state).phase != phaseSteal {
+		t.Fatalf("phase = %s, want steal", st.(*state).phase)
+	}
+
+	st, effects, err := (Game{}).Advance(st, timerEvent(tagSteal))
+	if err != nil {
+		t.Fatalf("Advance(steal timer): %v", err)
+	}
+	got := st.(*state)
+
+	if got.phase != phaseOutcome {
+		t.Fatalf("phase = %s, want outcome", got.phase)
+	}
+	// An unmade guess is a wrong guess: the crew keeps the win.
+	if got.deltas[imposter] != 0 {
+		t.Errorf("the imposter scored %d for never guessing, want 0", got.deltas[imposter])
+	}
+	for _, id := range got.order {
+		if id == imposter {
+			continue
+		}
+		if got.deltas[id] != pointsCatch {
+			t.Errorf("crew member %s scored %d, want %d", id, got.deltas[id], pointsCatch)
+		}
+	}
+	if anyOutcome(t, effects).GetStealAttempted() {
+		t.Error("the outcome claims a steal was attempted; nobody guessed")
+	}
+	// Nothing left to wait for, so nothing should still be ticking.
+	if tm := timerIn(effects); tm != nil {
+		t.Errorf("the outcome armed a %v clock, want none", tm.After)
+	}
+}
+
+// keepsTimerIn reports whether these effects ask the room to leave the running
+// clock alone. Mirrors the room's own check.
+func keepsTimerIn(effects []game.Effect) bool {
+	for _, e := range effects {
+		if _, ok := e.(game.KeepTimer); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// crewPair returns two players who are not the imposter.
+func crewPair(t *testing.T, st *state) []string {
+	t.Helper()
+	var out []string
+	for _, id := range st.order {
+		if id == st.imposterID {
+			continue
+		}
+		out = append(out, id)
+		if len(out) == 2 {
+			return out
+		}
+	}
+	t.Fatalf("fewer than two crew in %v", st.order)
 	return nil
 }

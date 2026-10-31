@@ -406,7 +406,9 @@ func (r *Room) applyGameAction(cmd gameActionCmd) error {
 // never reached, and the clock keeps running — so submitting clues the rules
 // reject does not buy a player more time.
 func (r *Room) applyEffects(effects []game.Effect) {
-	r.cancelTimer()
+	if !keepsTimer(effects) {
+		r.cancelTimer()
+	}
 
 	for _, e := range effects {
 		switch ef := e.(type) {
@@ -432,6 +434,10 @@ func (r *Room) applyEffects(effects []game.Effect) {
 		case game.Timer:
 			r.armTimer(ef)
 
+		case game.KeepTimer:
+			// Already acted on, above: its only effect is that the clock was
+			// not cancelled on the way in.
+
 		default:
 			// The effect set is closed, so this means a new effect type was
 			// added and this switch was not. Silently dropping it would look
@@ -439,6 +445,19 @@ func (r *Room) applyEffects(effects []game.Effect) {
 			log.Printf("room %s: game %q returned an unhandled effect %T", r.code, r.gameID, e)
 		}
 	}
+}
+
+// keepsTimer reports whether these effects ask for the running clock to be
+// left alone. Checked before anything is applied, because cancelling and then
+// discovering the game wanted the clock kept is not recoverable — the timer
+// is already gone.
+func keepsTimer(effects []game.Effect) bool {
+	for _, e := range effects {
+		if _, ok := e.(game.KeepTimer); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // wrapGameEvent JSON-encodes a game message and puts it in a ServerMessage.

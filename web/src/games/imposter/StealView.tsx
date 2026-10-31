@@ -3,6 +3,7 @@ import type { MessageKey } from "../../i18n";
 import type { StealPrompt } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
 import { makeNameFor } from "./nameFor";
+import { useCountdown } from "./useCountdown";
 
 interface Props extends GameViewProps {
   prompt: StealPrompt | null;
@@ -28,6 +29,9 @@ export function StealView({
   const { t } = useT();
 
   const name = makeNameFor(players, departed, t);
+  // Everyone sees this, not just the imposter: the table watching a clock run
+  // down is most of what makes the steal worth having.
+  const secondsLeft = useCountdown(prompt?.stealSeconds ?? 0, prompt?.imposterId ?? "");
 
   if (!prompt) {
     return (
@@ -42,6 +46,11 @@ export function StealView({
   return (
     <main className="screen">
       <h1>{t("imposter.stealHeading")}</h1>
+      {secondsLeft !== null && (
+        <p className={secondsLeft <= 5 ? "hint" : "status"} role="status">
+          {t("imposter.clueCountdown", { n: secondsLeft })}
+        </p>
+      )}
 
       <section className="role-card role-imposter">
         <p className="role-hint">

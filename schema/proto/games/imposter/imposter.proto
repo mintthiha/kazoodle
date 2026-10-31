@@ -168,7 +168,11 @@ message ClueTurn {
 message VotePhase {
   repeated ClueEntry clues = 1;      // the full recap, in turn order
   repeated string candidate_ids = 2; // who can be voted for, in turn order
-  int32 vote_seconds = 3;            // how long clients should run their countdown before auto-submitting
+  // How long the room has to vote. The deadline is the server's: when it
+  // expires, every player who has not voted is recorded as abstaining and the
+  // round resolves. A client counts down from this number to show the player
+  // what is coming, and submits nothing of its own when it reaches zero.
+  int32 vote_seconds = 3;
 }
 
 // Broadcast as votes come in, so clients can show "2 / 5 voted".
@@ -194,6 +198,11 @@ message VoteTally {
 // Everyone waits while the imposter gets one blind guess at the word.
 message StealPrompt {
   string imposter_id = 1;
+
+  // How long the imposter has to guess, on the same terms as
+  // VotePhase.vote_seconds: the server ends it, and an unmade guess counts as
+  // a wrong one.
+  int32 steal_seconds = 2;
 }
 
 // Sent privately to each player once the round is fully decided — right after
