@@ -82,12 +82,14 @@ export function ChatPanel({ room, lastEcho, onSend }: Props) {
         aria-controls="chat-body"
       >
         {t("lobby.chatHeading")}
-        {!open && unread > 0 && <span className="chat-unread">{unread}</span>}
-        <span aria-hidden="true">{open ? "▾" : "▸"}</span>
+        {!open && unread > 0 && <span className="chat-unread num">{unread}</span>}
+        <svg className="chat-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" />
+        </svg>
       </button>
 
       {open && (
-        <div id="chat-body">
+        <div id="chat-body" className="chat-body">
           <div className="chat-log" role="log">
             {lines.length === 0 ? (
               <p className="status">{t("lobby.echoNone")}</p>
@@ -101,22 +103,24 @@ export function ChatPanel({ room, lastEcho, onSend }: Props) {
             <div ref={listEnd} />
           </div>
 
-          <label className="field">
-            <span className="visually-hidden">{t("lobby.echoLabel")}</span>
-            <input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={t("lobby.echoPlaceholder")}
-              enterKeyHint="send"
-              maxLength={200}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") send();
-              }}
-            />
-          </label>
-          <button className="secondary" onClick={send}>
-            {t("lobby.echoButton")}
-          </button>
+          <div className="entry-row">
+            <label className="field" style={{ flex: 1, minWidth: 0 }}>
+              <span className="visually-hidden">{t("lobby.echoLabel")}</span>
+              <input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder={t("lobby.echoPlaceholder")}
+                enterKeyHint="send"
+                maxLength={200}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") send();
+                }}
+              />
+            </label>
+            <button className="secondary" onClick={send}>
+              {t("lobby.echoButton")}
+            </button>
+          </div>
         </div>
       )}
     </section>

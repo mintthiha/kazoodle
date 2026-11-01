@@ -1,6 +1,11 @@
+import { useState } from "react";
 import { useT } from "../../i18n";
+import { Avatar } from "../../players/Avatar";
+import { makeHueFor } from "../../players/hues";
 import type { RevealProgress, RoleAssignment } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
+import { makeNameFor } from "./nameFor";
+import { RevealSlip } from "./WordSlip";
 
 interface Props extends GameViewProps {
   role: RoleAssignment | null;
@@ -11,8 +16,10 @@ interface Props extends GameViewProps {
 
 // The reveal screen: show this player their role, let them confirm, and show
 // how many others have.
-export function RoleView({ role, progress, ready, selfId, players, onConfirm }: Props) {
+export function RoleView({ role, progress, ready, selfId, players, departed, onConfirm }: Props) {
   const { t } = useT();
+  // "Got it" means "I have read my word", so it waits until they have.
+  const [seen, setSeen] = useState(false);
 
   if (!role) {
     return (
@@ -22,51 +29,42 @@ export function RoleView({ role, progress, ready, selfId, players, onConfirm }: 
     );
   }
 
+  const name = makeNameFor(players, departed, t);
+  const hue = makeHueFor(players, departed);
   const readyIds = new Set(progress?.readyPlayerIds ?? []);
   const total = progress?.total ?? players.length;
 
   return (
     <main className="screen">
-      {role.totalRounds > 1 && (
-        <p className="round-badge">
-          {t("imposter.roundOf", { round: role.round, total: role.totalRounds })}
-        </p>
-      )}
       <h1>{t("imposter.heading")}</h1>
 
-      {role.isImposter ? (
-        <section className="role-card role-imposter">
-          <p className="role-word">{t("imposter.youAreImposter")}</p>
-          <p className="role-label">{t("imposter.categoryLabel", { category: role.category })}</p>
-          {role.hint ? (
-            <p className="role-hint">{t("imposter.imposterHintText", { hint: role.hint })}</p>
-          ) : (
-            <p className="role-hint">{t("imposter.imposterHint")}</p>
-          )}
-        </section>
-      ) : (
-        <section className="role-card role-crew">
-          <p className="role-label">{role.category}</p>
-          <p className="role-word">{role.word}</p>
-          <p className="role-hint">{t("imposter.crewHint")}</p>
-        </section>
-      )}
-
-      <button className="primary" onClick={onConfirm} disabled={ready}>
-        {ready ? t("imposter.waiting") : t("imposter.gotIt")}
-      </button>
+      <RevealSlip role={role} onReveal={() => setSeen(true)} />
 
       <section>
-        <h2>{t("imposter.readyCount", { ready: readyIds.size, total })}</h2>
-        <ul className="players">
+        <h2 className="num">{t("imposter.readyCount", { ready: readyIds.size, total })}</h2>
+        <ul className="roster">
           {players.map((p) => (
-            <li key={p.id}>
-              <span>{readyIds.has(p.id) ? "✓" : "…"}</span> {p.displayName}
-              {p.id === selfId && <span className="you"> ({t("lobby.you")})</span>}
+            <li key={p.id} className="roster-row" data-ready={readyIds.has(p.id)}>
+              <Avatar name={name(p.id)} hue={hue(p.id)} />
+              <span className="roster-name">
+                {name(p.id)}
+                {p.id === selfId && <span className="you"> ({t("lobby.you")})</span>}
+              </span>
+              {readyIds.has(p.id) && (
+                <svg className="ready-tick" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M5 13l4.5 4.5L19 7" fill="none" stroke="currentColor" strokeWidth="2.5" />
+                </svg>
+              )}
             </li>
           ))}
         </ul>
       </section>
+
+      <div className="dock">
+        <button className="primary" onClick={onConfirm} disabled={ready || !seen}>
+          {ready ? t("imposter.waiting") : t("imposter.gotIt")}
+        </button>
+      </div>
     </main>
   );
 }

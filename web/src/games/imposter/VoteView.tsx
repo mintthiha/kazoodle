@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { useT } from "../../i18n";
-import type { VotePhase, VoteProgress } from "./gen/imposter_pb";
+import { makeHueFor } from "../../players/hues";
+import type { RoleAssignment, VotePhase, VoteProgress } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
 import { makeNameFor } from "./nameFor";
-import { ClueList } from "./clueList";
+import { ClueLedger } from "./ClueLedger";
+import { Countdown } from "./Countdown";
+import { buildLedger } from "./ledger";
+import { WordPeek } from "./WordSlip";
 
 // What this player is choosing: a specific suspect, or abstaining. Kept as a
 // tagged union rather than a bare string so "no one picked yet" (null),
@@ -12,6 +16,7 @@ import { ClueList } from "./clueList";
 export type VoteChoice = { kind: "suspect"; id: string } | { kind: "abstain" };
 
 interface Props extends GameViewProps {
+  role: RoleAssignment | null;
   votePhase: VotePhase | null;
   progress: VoteProgress | null;
   myVote: VoteChoice | null; // the choice actually sent to the server so far, if any
@@ -33,6 +38,7 @@ function sameChoice(a: VoteChoice | null, b: VoteChoice | null): boolean {
 // hits zero, at which point whatever is currently selected (or abstain, if
 // nothing was ever picked) is sent automatically.
 export function VoteView({
+  role,
   votePhase,
   progress,
   myVote,
@@ -45,6 +51,7 @@ export function VoteView({
   const { t } = useT();
 
   const name = makeNameFor(players, departed, t);
+  const hue = makeHueFor(players, departed);
 
   const [selected, setSelected] = useState<VoteChoice | null>(null);
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
@@ -84,9 +91,19 @@ export function VoteView({
     return choice.kind === "abstain" ? t("imposter.abstain") : name(choice.id);
   }
 
+  const rows = buildLedger(votePhase.candidateIds, votePhase.clues);
+
   return (
     <main className="screen">
-      <h1>{t("imposter.voteHeading")}</h1>
+      <div>
+        <h1>{t("imposter.voteHeading")}</h1>
+        <p className="status num">
+          {t("imposter.voteProgress", {
+            voted: progress?.votedPlayerIds.length ?? 0,
+            total: progress?.total ?? players.length,
+          })}
+        </p>
+      </div>
 
       {reopened && (
         <p className="notice-line" role="status">
@@ -95,60 +112,48 @@ export function VoteView({
       )}
 
       {secondsLeft !== null && (
-        <p className="status">
-          {timedOut ? t("imposter.voteTimeUp") : t("imposter.voteTimeLeft", { seconds: secondsLeft })}
-        </p>
+        <Countdown
+          seconds={secondsLeft}
+          total={votePhase.voteSeconds}
+          label={
+            timedOut ? t("imposter.voteTimeUp") : t("imposter.voteTimeLeft", { seconds: secondsLeft })
+          }
+        />
       )}
 
-      <section>
-        <h2>{t("imposter.cluesHeading")}</h2>
-        <ClueList clues={votePhase.clues} name={name} t={t} />
-      </section>
+      <WordPeek role={role} />
 
-      <section>
-        <h2>
-          {t("imposter.voteProgress", {
-            voted: progress?.votedPlayerIds.length ?? 0,
-            total: progress?.total ?? players.length,
-          })}
-        </h2>
-        <ul className="players">
-          {votePhase.candidateIds.map((id) => {
-            const choice: VoteChoice = { kind: "suspect", id };
-            return (
-              <li key={id}>
-                <button
-                  className={sameChoice(selected, choice) ? "primary" : "secondary"}
-                  disabled={timedOut}
-                  onClick={() => setSelected(choice)}
-                >
-                  {name(id)}
-                  {id === selfId && <span className="you"> ({t("lobby.you")})</span>}
-                </button>
-              </li>
-            );
-          })}
-          <li>
-            <button
-              className={selected?.kind === "abstain" ? "primary" : "secondary"}
-              disabled={timedOut}
-              onClick={() => setSelected({ kind: "abstain" })}
-            >
-              {t("imposter.abstain")}
-            </button>
-          </li>
-        </ul>
-      </section>
-
-      {myVote && <p className="status">{t("imposter.voteLockedIn", { who: describe(myVote) })}</p>}
+      <ClueLedger
+        rows={rows}
+        passes={0}
+        selfId={selfId}
+        name={name}
+        hue={hue}
+        candidates={votePhase.candidateIds}
+        selectedId={selected?.kind === "suspect" ? selected.id : null}
+        disabled={timedOut}
+        onPick={(id) => setSelected({ kind: "suspect", id })}
+      />
 
       <button
-        className="primary"
-        disabled={timedOut || !selected || sameChoice(selected, myVote)}
-        onClick={() => selected && onLockIn(selected)}
+        className="abstain"
+        aria-pressed={selected?.kind === "abstain"}
+        disabled={timedOut}
+        onClick={() => setSelected({ kind: "abstain" })}
       >
-        {myVote ? t("imposter.changeVote") : t("imposter.lockIn")}
+        {t("imposter.abstain")}
       </button>
+
+      <div className="dock">
+        {myVote && <p className="status">{t("imposter.voteLockedIn", { who: describe(myVote) })}</p>}
+        <button
+          className="primary"
+          disabled={timedOut || !selected || sameChoice(selected, myVote)}
+          onClick={() => selected && onLockIn(selected)}
+        >
+          {myVote ? t("imposter.changeVote") : t("imposter.lockIn")}
+        </button>
+      </div>
     </main>
   );
 }

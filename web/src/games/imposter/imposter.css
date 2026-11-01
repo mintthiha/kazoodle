@@ -1,0 +1,552 @@
+/* Styles for Imposter. Its material is the paper slip the word is written on:
+   white paper with the word in marker yellow for the crew, a red slip for the
+   imposter. Slips sit slightly crooked because they are paper; nothing else on
+   screen does. */
+
+/* Where the room is in the round */
+.game-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  padding: 14px var(--margin) 0;
+  font-size: var(--fs-small);
+}
+
+.stages {
+  list-style: none;
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  color: var(--faint);
+}
+
+.stages [aria-current="step"] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.round-count {
+  color: var(--muted);
+}
+
+/* The slip */
+.slip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  /* Tall enough for the crew's face, so nothing below the slip jumps when it
+     is turned over. */
+  min-height: 16rem;
+  padding: 24px 20px;
+  border-radius: var(--radius-slip);
+  font-weight: 400;
+  text-align: center;
+  transform: rotate(-1deg);
+  /* Lets .slip-word size itself against this slip's width with cqw units. */
+  container-type: inline-size;
+}
+
+.slip-down {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.slip-eye {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+
+.slip-prompt {
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+.slip-note {
+  max-width: 34ch;
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: 1.35;
+}
+
+.slip-down .slip-note {
+  color: var(--muted);
+}
+
+.slip-paper {
+  background: var(--paper);
+  color: var(--paper-ink);
+}
+
+.slip-paper .slip-note {
+  color: var(--paper-muted);
+}
+
+/* Fits the longest word on one line: the slip's width divided by roughly how
+   wide this many letters are at 1em, and never larger than 4.5rem. */
+.slip-word {
+  font-family: var(--display);
+  font-size: min(4.5rem, calc(84cqw / (var(--len) * 0.58)));
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.slip-word mark {
+  padding: 0 0.12em;
+  background: var(--accent);
+  color: var(--paper-ink);
+}
+
+.slip-imposter {
+  background: var(--negative);
+  color: var(--on-colour);
+}
+
+.slip-verdict {
+  font-family: var(--display);
+  font-size: clamp(2.25rem, 12cqw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.slip-hide {
+  margin-top: 4px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* A slip holding a heading rather than being a button. */
+.slip-static {
+  align-items: flex-start;
+  min-height: 0;
+  text-align: left;
+  transform: rotate(-0.5deg);
+}
+
+.slip-static h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+}
+
+.ready-tick {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
+}
+
+/* The word again, on request, for the rest of the round */
+.peek {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap-small);
+  padding: 4px 16px 4px 14px;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  text-align: left;
+  background: var(--surface);
+  border-radius: 14px;
+}
+
+.peek .slip-eye {
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+}
+
+.peek-chip {
+  padding: 2px 10px;
+  border-radius: var(--radius-slip);
+  background: var(--accent);
+  color: var(--on-colour);
+  font-family: var(--display);
+  font-size: var(--fs-lead);
+  font-weight: 700;
+}
+
+.peek-chip-imposter {
+  background: var(--negative);
+}
+
+.peek-meta {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.peek-action {
+  margin-left: auto;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* The ledger: one row per person, their clues side by side. */
+.ledger {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.ledger-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 12px 14px;
+  font-size: var(--fs-body);
+  font-weight: 400;
+  text-align: left;
+  color: var(--text);
+  background: var(--surface);
+  border-radius: 14px;
+}
+
+.ledger-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ledger-name {
+  font-size: var(--fs-small);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.ledger-clues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+}
+
+/* One minimum width for filled and empty cells alike, so a clue lands in the
+   same column on every row and the slots do not shift as they fill. */
+.clue {
+  min-width: 5rem;
+  min-height: 28px;
+  font-family: var(--display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.clue-empty,
+.clue-now {
+  border-radius: var(--radius-slip);
+}
+
+.clue-empty {
+  outline: 1px dashed var(--control);
+  outline-offset: -1px;
+}
+
+/* The slot being filled right now, wherever in the room that is. */
+.clue-now {
+  background: var(--accent);
+}
+
+.clue-missed {
+  font-family: var(--font);
+  font-size: var(--fs-small);
+  font-weight: 400;
+  line-height: 2;
+  color: var(--faint);
+}
+
+/* Whose turn it is. */
+.ledger-row[data-active="true"] {
+  background: var(--raised);
+}
+
+.ledger-row[data-active="true"] .ledger-name {
+  color: var(--text);
+}
+
+/* As a ballot: selected is inverted, the same way the primary button is. */
+button.ledger-row[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--ground);
+}
+
+button.ledger-row[aria-pressed="true"] .ledger-name,
+button.ledger-row[aria-pressed="true"] .you,
+button.ledger-row[aria-pressed="true"] .clue-missed {
+  color: #3a3a3a;
+}
+
+button.ledger-row:disabled {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.abstain {
+  min-height: var(--tap-small);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  background: transparent;
+  color: var(--muted);
+}
+
+.abstain[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--ground);
+}
+
+/* The countdown */
+.countdown {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.countdown-bar {
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--raised);
+}
+
+.countdown-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transform: scaleX(var(--share));
+  transform-origin: left;
+}
+
+.countdown-label {
+  flex: none;
+  max-width: 60%;
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+.countdown[data-low="true"] .countdown-fill {
+  background: var(--negative);
+}
+
+.countdown[data-low="true"] .countdown-label {
+  color: var(--negative);
+}
+
+/* Results */
+.match-winner {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.verdict {
+  gap: 16px;
+  padding: 22px 20px;
+  border-radius: var(--radius-card);
+  color: var(--on-colour);
+}
+
+.verdict[data-side="crew"] {
+  background: var(--accent);
+}
+
+.verdict[data-side="imposter"] {
+  background: var(--negative);
+}
+
+.verdict-line {
+  font-family: var(--display);
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+}
+
+/* At the end of a match the match winner is the headline, and this round's
+   verdict is a footnote to it. */
+.match-winner + .verdict .verdict-line {
+  font-size: 1.5rem;
+  letter-spacing: -0.015em;
+}
+
+.verdict-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+
+.verdict-facts dt {
+  margin-bottom: 4px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+
+.verdict-facts dd {
+  margin: 0;
+}
+
+.verdict-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.verdict-word {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.verdict-slip {
+  padding: 6px 14px;
+  border-radius: var(--radius-slip);
+  background: var(--paper);
+  color: var(--paper-ink);
+  font-family: var(--display);
+  font-size: 1.625rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  transform: rotate(-1deg);
+}
+
+.verdict-category {
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+.story {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--fs-lead);
+}
+
+.story p {
+  margin: 0;
+}
+
+.standings .roster-name {
+  display: flex;
+  flex-direction: column;
+}
+
+.score-delta {
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.score-total {
+  flex: none;
+  min-width: 2ch;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.standings [data-winner="true"] .score-total {
+  color: var(--accent);
+}
+
+.votes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.vote-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+}
+
+.vote-label {
+  overflow-wrap: anywhere;
+}
+
+.vote-count {
+  font-weight: 600;
+}
+
+.vote-bar {
+  grid-column: 1 / -1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.vote-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--muted);
+  transform: scaleX(var(--share));
+  transform-origin: left;
+}
+
+.vote-row[data-out="true"] .vote-fill {
+  background: var(--accent);
+}
+
+.scoring-note {
+  font-size: var(--fs-small);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The clock ticks once a second, so easing across that second turns a stepping
+     bar into a smooth one. */
+  .countdown-fill {
+    transition:
+      transform 1s linear,
+      background-color 200ms ease;
+  }
+
+  /* Turning a slip over: feedback for the tap, not an entrance. */
+  .slip-turned {
+    animation: slip-turn 240ms cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+
+  @keyframes slip-turn {
+    from {
+      opacity: 0.2;
+      transform: rotate(-1deg) rotateX(70deg);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(-1deg) rotateX(0deg);
+    }
+  }
+}

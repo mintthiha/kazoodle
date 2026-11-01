@@ -19,6 +19,9 @@ export function JoinScreen({ snapshot, onCreate, onJoin }: Props) {
   const [hint, setHint] = useState<string | null>(null);
 
   const trimmedName = name.trim();
+  // Someone typing a code has told us which of the two doors they want, so that
+  // door becomes the primary one. There is only ever one filled button.
+  const joining = code.trim() !== "";
 
   function create() {
     setHint(null);
@@ -39,7 +42,7 @@ export function JoinScreen({ snapshot, onCreate, onJoin }: Props) {
     : null;
 
   return (
-    <main className="screen">
+    <main className="screen join">
       <h1>{t("join.heading")}</h1>
 
       <label className="field">
@@ -57,7 +60,7 @@ export function JoinScreen({ snapshot, onCreate, onJoin }: Props) {
           submit: being a guest is a choice, not a mistake. */}
       {!trimmedName && <p className="status">{t("join.nameOptional")}</p>}
 
-      <button className="primary" onClick={create}>
+      <button className={joining ? "secondary" : "primary"} onClick={create}>
         {t("join.createButton")}
       </button>
 
@@ -65,24 +68,26 @@ export function JoinScreen({ snapshot, onCreate, onJoin }: Props) {
 
       <label className="field">
         <span>{t("join.codeLabel")}</span>
-        <input
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          placeholder={t("join.codePlaceholder")}
-          autoComplete="off"
-          autoCapitalize="characters"
-          spellCheck={false}
-          maxLength={8}
-          enterKeyHint="go"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") join();
-          }}
-        />
+        <span className="entry-row">
+          <input
+            className="code-input"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder={t("join.codePlaceholder")}
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            maxLength={8}
+            enterKeyHint="go"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") join();
+            }}
+          />
+          <button className={joining ? "primary" : "secondary"} onClick={join}>
+            {t("join.joinButton")}
+          </button>
+        </span>
       </label>
-
-      <button className="secondary" onClick={join}>
-        {t("join.joinButton")}
-      </button>
 
       {(hint || error) && <p className="hint">{hint ?? error}</p>}
     </main>

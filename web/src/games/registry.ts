@@ -16,8 +16,8 @@ export interface GameViewProps {
 }
 
 /** One game as the hub advertises it: how to render it, how to describe it,
- * and the two colours its tile is drawn in. Adding a game means adding one
- * entry here — the hub list, the URL slug and the view map all read from it. */
+ * and the colour of its cover. Adding a game means adding one entry here — the
+ * hub list, the URL slug and the view map all read from it. */
 export interface GameListing {
   id: string;
   view: ComponentType<GameViewProps>;
@@ -26,9 +26,9 @@ export interface GameListing {
   hookKey: MessageKey;
   lengthKey: MessageKey;
   minPlayers: number;
-  /** Gradient stops for the tile's mark and wash, so a shelf of games reads as
+  /** The flat colour behind the tile's cover art, so a shelf of games reads as
    * distinct games rather than one card repeated. */
-  tint: [string, string];
+  cover: string;
 }
 
 export const GAMES: GameListing[] = [
@@ -39,7 +39,7 @@ export const GAMES: GameListing[] = [
     hookKey: "game.imposter.hook",
     lengthKey: "game.imposter.length",
     minPlayers: 3,
-    tint: ["#5a4bff", "#ff3d7f"],
+    cover: "#ffd60a",
   },
 ];
 

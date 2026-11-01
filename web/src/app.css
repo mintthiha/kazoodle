@@ -1,13 +1,54 @@
+/* The shared look: tokens, the shell, and the handful of controls every screen
+   uses. Anything belonging to one screen lives beside that screen (home.css,
+   lobby.css, imposter.css).
+
+   The style is "true-black flat": surfaces are told apart by lightness alone,
+   with no borders or shadows at rest, and the primary action is primary because
+   it is inverted (white on black), not because it is coloured. Colour is spent
+   on game state only: marker yellow for what is live or winning, red for the
+   imposter. */
 :root {
-  --bg: #101014;
-  --panel: #1b1b22;
-  --fg: #eeeef6;
-  --muted: #9a9aae;
-  --border: #33333d;
-  --accent: #4f7cff;
-  --danger: #ff5a5a;
-  --warn: #ffd166;
-  --good: #3ddc97;
+  --ground: #000000;
+  --surface: #111111;
+  --raised: #2a2a2a;
+  --rule: #1f1f1f;
+  --control: #444444;
+
+  --text: #ffffff;
+  --muted: #b4b4b4;
+  --faint: #949494;
+
+  --accent: #ffd60a; /* marker yellow: the highlighter on the word slip */
+  --negative: #e5484d; /* the imposter, and things that went wrong */
+  --on-colour: #000000; /* ink on a yellow or red field */
+
+  --paper: #f5f5f0;
+  --paper-ink: #0a0a0a;
+  --paper-muted: #55554f;
+
+  --pill-warning-bg: #2b2414;
+  --pill-warning-ink: #e5a93b;
+  --pill-negative-bg: #2c1a20;
+  --pill-negative-ink: #f0707f;
+
+  --radius-card: 20px;
+  --radius-chip: 10px;
+  --radius-slip: 4px;
+
+  /* Bigger than a desktop app's controls on purpose. This is used one-handed,
+     standing up, possibly after a drink. */
+  --tap: 56px;
+  --tap-small: 44px;
+  --gap: 14px;
+  --margin: 16px;
+
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+
+  --fs-small: 0.875rem;
+  --fs-body: 1rem;
+  --fs-lead: 1.125rem;
+  --fs-title: 1.75rem;
 
   color-scheme: dark;
 }
@@ -25,16 +66,19 @@ body {
 }
 
 body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  font-size: 16px;
-  line-height: 1.4;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  line-height: 1.45;
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
+/* A phone column everywhere except the two screens with something to put
+   beside something else (see home.css and lobby.css). */
 .app {
-  max-width: 30rem;
+  max-width: 34rem;
   margin: 0 auto;
   min-height: 100dvh;
   display: flex;
@@ -43,111 +87,128 @@ body {
 
 .screen {
   flex: 1;
-  padding: 1.5rem;
+  padding: 20px var(--margin);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--gap);
+}
+
+h1,
+h2 {
+  margin: 0;
+  text-wrap: balance;
 }
 
 h1 {
-  font-size: 1.5rem;
-  margin: 0.25rem 0 0.5rem;
+  font-family: var(--display);
+  font-size: var(--fs-title);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 h2 {
-  font-size: 1rem;
-  margin: 0 0 0.5rem;
-  color: var(--muted);
+  font-size: var(--fs-body);
   font-weight: 600;
 }
 
 section {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 10px;
 }
 
-/* Forms — thumb-sized targets, 16px text so iOS doesn't zoom on focus. */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Forms. 16px or larger text, or iOS zooms the page on focus. */
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 8px;
 }
 
-.field > span {
-  font-size: 0.85rem;
+.field > span:first-child {
+  font-size: var(--fs-small);
+  font-weight: 500;
   color: var(--muted);
 }
 
-/* A checkbox + label row, generous enough to tap one-handed. */
-.field-inline {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  min-height: 48px;
-}
-
-.field-inline input[type="checkbox"] {
-  width: 24px;
-  height: 24px;
-  min-height: 0;
-  flex-shrink: 0;
-}
-
-input {
+input:not([type="radio"], [type="checkbox"]) {
   width: 100%;
-  min-height: 48px;
-  padding: 0.85rem;
-  font-size: 1rem;
-  color: var(--fg);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  min-height: var(--tap);
+  padding: 0 22px;
+  font: inherit;
+  font-size: var(--fs-lead);
+  color: var(--text);
+  background: var(--surface);
+  border: 0;
+  border-radius: 999px;
 }
 
-input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+input::placeholder {
+  color: var(--faint);
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }
 
 button {
   width: 100%;
-  min-height: 48px;
-  padding: 0.9rem 1rem;
-  font-size: 1rem;
+  min-height: var(--tap);
+  padding: 0 24px;
+  font: inherit;
+  font-size: var(--fs-lead);
   font-weight: 600;
+  color: var(--text);
+  background: var(--raised);
   border: 0;
-  border-radius: 10px;
+  border-radius: 999px;
   cursor: pointer;
 }
 
 button.primary {
-  background: var(--accent);
-  color: #fff;
+  background: var(--text);
+  color: var(--ground);
 }
 
 button.secondary {
-  background: var(--panel);
-  color: var(--fg);
-  border: 1px solid var(--border);
+  background: var(--raised);
+  color: var(--text);
 }
 
+/* Disabled stays readable: it has to say what it would do once it can. */
+button:disabled {
+  background: var(--surface);
+  color: var(--faint);
+  cursor: default;
+}
+
+/* A way out rather than a thing to do, so it is words and not a filled shape. */
 button.danger {
+  width: auto;
+  min-height: var(--tap-small);
+  padding: 0 4px;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--negative);
   background: transparent;
-  color: var(--danger);
-  border: 1px solid var(--danger);
 }
 
 .divider {
   text-align: center;
-  font-size: 0.85rem;
+  font-size: var(--fs-small);
   color: var(--muted);
 }
 
 .hint {
   margin: 0;
-  color: var(--danger);
-  font-size: 0.9rem;
+  color: var(--negative);
+  font-size: var(--fs-body);
 }
 
 /* Neutral status text — "dealing roles…", "waiting for X…" — as opposed to
@@ -155,32 +216,68 @@ button.danger {
 .status {
   margin: 0;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-body);
+}
+
+/* The bottom of the screen is where the thumb already is, so the one thing to
+   do on a screen stays pinned there however long the screen gets. It has to be
+   a direct child of .screen: sticky only travels inside its parent. */
+.dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: auto calc(var(--margin) * -1) 0;
+  padding: 12px var(--margin) calc(12px + env(safe-area-inset-bottom));
+  background: var(--ground);
+  border-top: 1px solid var(--rule);
+}
+
+/* A text box with its action on the same line, so a phone keyboard cannot put
+   a gap between them. */
+.entry-row {
+  display: flex;
+  gap: 8px;
+}
+
+.entry-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.entry-row button {
+  width: auto;
+  flex: none;
 }
 
 /* Connection status strip */
 .conn-banner {
-  padding: 0.6rem 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 10px var(--margin);
   text-align: center;
-  font-size: 0.9rem;
-  background: var(--warn);
-  color: #000;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  background: var(--pill-warning-bg);
+  color: var(--pill-warning-ink);
 }
 
 .conn-banner[data-state="closed"] {
-  background: var(--danger);
-  color: #fff;
+  background: var(--pill-negative-bg);
+  color: var(--pill-negative-ink);
 }
 
 /* Transient room notices — "Ben left.", "The imposter left — the round was
-   abandoned." Sits under the connection strip, reads as information rather
-   than as an error, and takes itself away after a few seconds. */
+   abandoned." Reads as information rather than as an error, and takes itself
+   away after a few seconds. */
 .room-notice {
-  padding: 0.7rem 1.5rem;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-  color: var(--fg);
-  font-size: 0.9375rem;
+  padding: 12px var(--margin);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-body);
 }
 
 .room-notice p {
@@ -188,7 +285,7 @@ button.danger {
 }
 
 .room-notice p + p {
-  margin-top: 0.25rem;
+  margin-top: 4px;
   color: var(--muted);
 }
 
@@ -197,157 +294,117 @@ button.danger {
    .hint (their mistake): this is the game telling them to look again. */
 .notice-line {
   margin: 0;
-  padding: 0.6rem 0.75rem;
-  border-left: 3px solid var(--warn);
-  background: var(--panel);
-  color: var(--fg);
-  font-size: 0.9375rem;
+  padding: 12px 16px;
+  border-radius: var(--radius-chip);
+  background: var(--pill-warning-bg);
+  color: var(--pill-warning-ink);
+  font-size: var(--fs-body);
 }
 
 /* Session chrome */
 .session-nav {
-  padding: 1rem 1.5rem 0;
+  padding: 12px var(--margin) 0;
 }
 
 .session-nav .back {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 4px;
   width: auto;
-  min-height: 44px;
-  padding: 0.5rem 0.75rem 0.5rem 0.5rem;
-  font-size: 0.9375rem;
+  min-height: var(--tap-small);
+  padding: 0 12px 0 0;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: var(--muted);
   background: transparent;
 }
 
 .session-nav .back:hover {
-  color: var(--fg);
+  color: var(--text);
 }
 
 .session-nav .back svg {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 20px;
+  height: 20px;
 }
 
-/* Lobby */
-.room-code {
-  align-items: center;
-  padding: 1rem;
-  background: var(--panel);
-  border-radius: 12px;
-}
-
-.room-code .label {
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.room-code .code {
-  font-size: 2rem;
-  font-weight: 700;
-  letter-spacing: 0.25em;
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-}
-
-.room-code .copy-code {
-  width: auto;
-  margin-top: 0.25rem;
-  padding: 0.75rem 1.25rem;
-}
-
-.room-code .copy-status {
-  margin: 0;
-  min-height: 1.2em;
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.room-code .copy-status[data-state="failed"] {
-  color: var(--danger);
-}
-
-.players {
+/* A player in a list. Lobby and game share one row so a person looks the same
+   from the moment they join to the final standings. */
+.roster {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 6px;
 }
 
-.players li {
-  padding: 0.75rem 1rem;
-  background: var(--panel);
-  border-radius: 10px;
-}
-
-.players .you {
-  color: var(--muted);
-}
-
-/* Chat, as a panel that is closed by default. The log scrolls inside its own
-   fixed height so that a busy room does not push the Start and Leave buttons
-   off the end of the lobby — the controls stay where they were whether anyone
-   is talking or not. */
-.chat-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.chat-toggle {
+.roster-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--fg);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border-radius: 14px;
 }
 
-.chat-toggle span[aria-hidden] {
-  margin-left: auto;
+.roster-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-lead);
+  font-weight: 500;
+}
+
+.you {
+  font-weight: 400;
   color: var(--muted);
 }
 
-.chat-unread {
-  min-width: 1.4em;
-  padding: 0 0.4em;
+/* Each person's identity: a stable hue from players/hues.ts. A dark tint with a
+   bright letter, so it stays identity and never competes with the game's own
+   yellow and red. */
+.avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  background: hsl(var(--hue) 42% 20%);
+  color: hsl(var(--hue) 85% 84%);
+}
+
+/* A chip that names a role inside a row. */
+.pill {
+  flex: none;
+  padding: 3px 10px;
   border-radius: 999px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--raised);
+  color: var(--text);
+}
+
+/* The wordmark: the name, with its first letter on a slip of marker yellow. */
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.15em;
+  height: 1.15em;
+  margin-right: 0.28em;
+  border-radius: var(--radius-slip);
   background: var(--accent);
-  color: #fff;
-  font-size: 0.8rem;
-  text-align: center;
+  color: var(--on-colour);
+  font-size: 0.9em;
+  transform: rotate(-6deg);
 }
 
-.chat-log {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  max-height: 11rem;
-  overflow-y: auto;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-}
-
-.chat-line {
-  margin: 0;
-  font-size: 0.95rem;
-  overflow-wrap: anywhere;
-}
-
-/* Visible to a screen reader, not on screen: the chat input is labelled by
-   its placeholder visually, but a placeholder is not a label. */
+/* Visible to a screen reader, not on screen. */
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -363,177 +420,42 @@ button.danger {
 .lang {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1rem 1.5rem;
+  gap: 8px;
+  padding: 12px var(--margin) calc(12px + env(safe-area-inset-bottom));
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--fs-small);
+}
+
+.lang span {
+  margin-right: auto;
 }
 
 .lang button {
   width: auto;
-  min-height: 36px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.85rem;
-  background: var(--panel);
-  color: var(--fg);
-  border: 1px solid var(--border);
+  min-height: var(--tap-small);
+  min-width: var(--tap-small);
+  padding: 0 12px;
+  font-size: var(--fs-small);
+  background: transparent;
+  color: var(--muted);
 }
 
 .lang button[aria-pressed="true"] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--raised);
+  color: var(--text);
 }
 
-/* Imposter — role card */
-.role-card {
-  padding: 1.5rem 1rem;
-  border-radius: 14px;
-  text-align: center;
-  border: 1px solid var(--border);
-  background: var(--panel);
-}
-
-.role-card.role-imposter {
-  border-color: var(--danger);
-}
-
-.role-card.role-crew {
-  border-color: var(--good);
-}
-
-.role-label {
-  margin: 0 0 0.25rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.role-word {
-  margin: 0.25rem 0;
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-
-.role-card.role-imposter .role-word {
-  color: var(--danger);
-  letter-spacing: 0.04em;
-}
-
-.role-card.role-crew .role-word {
-  color: var(--good);
-}
-
-.role-hint {
-  margin: 0.75rem 0 0;
-  font-size: 0.9rem;
-  color: var(--muted);
-}
-
-/* Imposter — match progress and standings */
-.round-badge {
-  margin: 0;
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-/* The winner line at the end of a match. Loud on purpose: it is the one
-   moment the whole room looks at the same phone. */
-.winner-banner {
-  margin: 0;
-  padding: 1rem;
-  border-radius: 14px;
-  border: 1px solid var(--good);
-  background: var(--panel);
-  text-align: center;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--good);
-}
-
-/* Standings. Built on .players so a score row looks like a roster row, with
-   the name pushed left and the total pushed right. */
-.scores li {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-}
-
-.scores .score-name {
-  flex: 1;
-}
-
-.scores .score-delta {
-  font-size: 0.8rem;
-  color: var(--good);
-}
-
-.scores .score-total {
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  font-size: 1.1rem;
-  min-width: 2ch;
-  text-align: right;
-}
-
-/* The leader, once the match is decided. */
-.scores li[data-winner="true"] {
-  border: 1px solid var(--good);
-}
-
-/* A clue turn whose clock ran out. Dimmed rather than coloured: it is an
-   absence, not an error. */
-.missed-clue {
-  color: var(--muted);
-}
-
-/* Lobby: rules and chat as two columns on a wide screen, stacked on a phone.
-   Phone first — the single-column fallback is the default and the grid only
-   appears once there is room for it. align-items: start keeps a short rules
-   card from stretching to match a long chat. */
-.lobby-columns {
-  display: grid;
-  gap: 1rem;
-  align-items: start;
-}
-
-/* The app is a 30rem phone column everywhere else and stays that way. The
-   lobby is the one screen with something to put beside something else, so it
-   is the only one allowed wider — and only when the viewport can actually
-   hold two readable columns. :has() keeps that decision in CSS instead of
-   threading a "wide" flag through the component tree. */
-@media (min-width: 60rem) {
-  .app:has(.lobby) {
-    max-width: 56rem;
+/* Press feedback. The app has no entrances: things respond when touched, and
+   otherwise hold still. */
+@media (prefers-reduced-motion: no-preference) {
+  button {
+    transition:
+      transform 120ms ease,
+      background-color 120ms ease,
+      color 120ms ease;
   }
 
-  .lobby-columns {
-    grid-template-columns: 1fr 1fr;
+  button:active:not(:disabled) {
+    transform: scale(0.98);
   }
-}
-
-.rules-card {
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-}
-
-.rules-card h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-}
-
-.rules-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin: 0;
-  padding-left: 1.2rem;
-  color: var(--muted);
-  font-size: 0.9rem;
-  line-height: 1.35;
 }

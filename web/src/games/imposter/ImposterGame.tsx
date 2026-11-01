@@ -27,10 +27,22 @@ import { ClueView } from "./ClueView";
 import { VoteView, type VoteChoice } from "./VoteView";
 import { StealView } from "./StealView";
 import { OutcomeView } from "./OutcomeView";
+import { GameHeader, type Stage } from "./GameHeader";
+import "./imposter.css";
 
 // Which screen to show. Message types map to phases 1:1, except the two
 // *Progress messages, which update within a phase rather than changing it.
 type Phase = "reveal" | "clues" | "vote" | "steal" | "outcome";
+
+// What the header calls each phase. The steal is the vote's aftermath, not a
+// stage of its own.
+const STAGE_OF: Record<Phase, Stage> = {
+  reveal: "word",
+  clues: "clues",
+  vote: "vote",
+  steal: "vote",
+  outcome: "results",
+};
 
 // Container for the Imposter game. Folds the game-event stream into local
 // state and renders whichever phase the round is currently in.
@@ -202,73 +214,92 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
     actions.gameAction("imposter", encodePlayAgain());
   }
 
-  switch (phase) {
-    case "reveal":
-      return (
-        <RoleView
-          selfId={selfId}
-          players={players}
-          departed={departed}
-          isHost={isHost}
-          role={role}
-          progress={revealProgress}
-          ready={readyConfirmed}
-          onConfirm={confirmReady}
-        />
-      );
-    case "clues":
-      return (
-        <ClueView
-          selfId={selfId}
-          players={players}
-          departed={departed}
-          isHost={isHost}
-          turn={clueTurn}
-          value={myClue}
-          onChange={editClue}
-          onSubmit={sendClue}
-          error={clueWarning ?? clueErrorKey(snapshot.lastError)}
-        />
-      );
-    case "vote":
-      return (
-        <VoteView
-          selfId={selfId}
-          players={players}
-          departed={departed}
-          isHost={isHost}
-          votePhase={votePhase}
-          reopened={ballots > 1}
-          progress={voteProgress}
-          myVote={myVote}
-          onLockIn={lockInVote}
-        />
-      );
-    case "steal":
-      return (
-        <StealView
-          selfId={selfId}
-          players={players}
-          departed={departed}
-          isHost={isHost}
-          prompt={stealPrompt}
-          value={myGuess}
-          onChange={editGuess}
-          onSubmit={sendGuess}
-          error={guessWarning ?? guessErrorKey(snapshot.lastError)}
-        />
-      );
-    case "outcome":
-      return (
-        <OutcomeView
-          selfId={selfId}
-          players={players}
-          departed={departed}
-          isHost={isHost}
-          tally={voteTally}
-          outcome={outcome}
-          onPlayAgain={playAgain}
-        />
-      );
+  // Which screen the current phase shows. A function rather than a bare switch
+  // so that every phase gets the same header above it.
+  function renderPhase() {
+    switch (phase) {
+      case "reveal":
+        return (
+          <RoleView
+            key={role?.round ?? 0}
+            selfId={selfId}
+            players={players}
+            departed={departed}
+            isHost={isHost}
+            role={role}
+            progress={revealProgress}
+            ready={readyConfirmed}
+            onConfirm={confirmReady}
+          />
+        );
+      case "clues":
+        return (
+          <ClueView
+            role={role}
+            selfId={selfId}
+            players={players}
+            departed={departed}
+            isHost={isHost}
+            turn={clueTurn}
+            value={myClue}
+            onChange={editClue}
+            onSubmit={sendClue}
+            error={clueWarning ?? clueErrorKey(snapshot.lastError)}
+          />
+        );
+      case "vote":
+        return (
+          <VoteView
+            role={role}
+            selfId={selfId}
+            players={players}
+            departed={departed}
+            isHost={isHost}
+            votePhase={votePhase}
+            reopened={ballots > 1}
+            progress={voteProgress}
+            myVote={myVote}
+            onLockIn={lockInVote}
+          />
+        );
+      case "steal":
+        return (
+          <StealView
+            selfId={selfId}
+            players={players}
+            departed={departed}
+            isHost={isHost}
+            prompt={stealPrompt}
+            clues={votePhase?.clues ?? []}
+            value={myGuess}
+            onChange={editGuess}
+            onSubmit={sendGuess}
+            error={guessWarning ?? guessErrorKey(snapshot.lastError)}
+          />
+        );
+      case "outcome":
+        return (
+          <OutcomeView
+            selfId={selfId}
+            players={players}
+            departed={departed}
+            isHost={isHost}
+            tally={voteTally}
+            outcome={outcome}
+            onPlayAgain={playAgain}
+          />
+        );
+    }
   }
+
+  return (
+    <>
+      <GameHeader
+        stage={STAGE_OF[phase]}
+        round={role?.round ?? 0}
+        totalRounds={role?.totalRounds ?? 0}
+      />
+      {renderPhase()}
+    </>
+  );
 }

@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { useT } from "../i18n";
 import { displayNameOf } from "../displayName";
 import { errorKey } from "../errorKey";
+import { Avatar } from "../players/Avatar";
+import { makeHueFor } from "../players/hues";
 import { ChatPanel } from "./ChatPanel";
+import { Segmented } from "./Segmented";
 import { RulesCard } from "../games/imposter/RulesCard";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
@@ -13,6 +16,7 @@ import {
   decodeStartOptions,
   type MatchOptions,
 } from "../games/imposter/messages";
+import "./lobby.css";
 
 // IMPOSTER_MIN_PLAYERS mirrors the server's minPlayers for Imposter. If they
 // drift, the server still rejects the start — this only gates the button.
@@ -23,7 +27,7 @@ type CopyState = "idle" | "copied" | "failed";
 interface Props {
   room: RoomState;
   lastEcho: EchoLine | null;
-  /** The last server error code, or null. Shown under the Start button: a
+  /** The last server error code, or null. Shown above the Start button: a
    * refusal the player cannot see is how a button comes to look broken. */
   lastError: string | null;
   isHost: boolean;
@@ -34,8 +38,7 @@ interface Props {
 }
 
 // Second screen: the room's code, who is in it, the host-only match setup
-// (category, match length, imposter-hints) and start control, and a tiny echo
-// box that proves a message round-trips.
+// (category, match length, imposter-hints) and start control, and the chat.
 //
 // The host's picks are live choices, not just start-time ones: every change
 // calls onSetOptions, which the app wires to SetGameOptions, so the whole
@@ -58,6 +61,8 @@ export function LobbyScreen({
   // the same both times (React skips a re-render if the value is unchanged).
   const [copy, setCopy] = useState<{ state: CopyState; n: number }>({ state: "idle", n: 0 });
   const canStart = room.players.length >= IMPOSTER_MIN_PLAYERS;
+  const hueFor = makeHueFor(room.players, room.departed);
+  const openSeats = Math.max(0, IMPOSTER_MIN_PLAYERS - room.players.length);
 
   // Clear the copy confirmation a couple of seconds after it appears. The
   // returned function is the cleanup: React runs it before the next effect and
@@ -69,14 +74,17 @@ export function LobbyScreen({
     return () => clearTimeout(timer);
   }, [copy.state, copy.n]);
 
-  // Non-host players (and the host, on reconnect) read the live pick back out
-  // of the room's broadcast pendingOptions instead of local state.
+  // Non-host players read the live pick back out of the room's broadcast
+  // pendingOptions. Until the host touches anything nothing has been broadcast,
+  // and what will be played is exactly the defaults, so that is what they see.
   const pending =
     room.pendingOptions && room.pendingOptions.gameId === "imposter"
       ? decodeStartOptions(room.pendingOptions.options)
-      : null;
+      : DEFAULT_MATCH_OPTIONS;
 
-  // One setter for all three options: a partial update is merged into what the
+  const host = room.players.find((p) => p.id === room.hostId);
+
+  // One setter for all the options: a partial update is merged into what the
   // host already picked, then the whole set goes out, since SetGameOptions
   // carries the options as one payload rather than a patch.
   function pick(change: Partial<MatchOptions>) {
@@ -99,144 +107,183 @@ export function LobbyScreen({
 
   return (
     <main className="screen lobby">
-      <h1>{t("lobby.heading")}</h1>
-
-      <section className="room-code">
-        <span className="label">{t("lobby.roomCode")}</span>
-        <span className="code">{room.code}</span>
-        <button className="secondary copy-code" onClick={copyCode}>
-          {t("lobby.copyCode")}
+      <header className="lobby-head">
+        <h1>{t("lobby.heading")}</h1>
+        <button className="danger" onClick={onLeave}>
+          {t("lobby.leaveButton")}
         </button>
-        {/* aria-live so a screen reader announces the result of a press that
-            otherwise changes nothing on screen. */}
-        <p className="copy-status" data-state={copy.state} aria-live="polite">
-          {copy.state === "copied" && t("lobby.codeCopied")}
-          {copy.state === "failed" && t("lobby.copyFailed")}
-        </p>
-      </section>
+      </header>
 
-      <section>
-        <h2>
-          {t("lobby.players")} ({room.players.length})
-        </h2>
-        <ul className="players">
-          {room.players.map((p) => (
-            <li key={p.id}>
-              {displayNameOf(p.displayName, t)}
-              {p.id === room.selfId && <span className="you"> ({t("lobby.you")})</span>}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {isHost ? (
-        <section>
-          <label className="field">
-            <span>{t("lobby.categoryLabel")}</span>
-            <select value={opts.category} onChange={(e) => pick({ category: e.target.value })}>
-              {CATEGORY_OPTIONS.map((o) => (
-                <option key={o.key} value={o.key}>
-                  {t(o.labelKey)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>{t("lobby.cluePassesLabel")}</span>
-            <select
-              value={opts.cluePasses}
-              onChange={(e) => pick({ cluePasses: Number(e.target.value) })}
-            >
-              {CLUE_PASS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {t(o.labelKey)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>{t("lobby.clueSecondsLabel")}</span>
-            <select
-              value={opts.clueSeconds}
-              onChange={(e) => pick({ clueSeconds: Number(e.target.value) })}
-            >
-              {CLUE_SECONDS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {t(o.labelKey)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>{t("lobby.roundsLabel")}</span>
-            <select
-              value={opts.rounds}
-              onChange={(e) => pick({ rounds: Number(e.target.value) })}
-            >
-              {ROUND_OPTIONS.map((n) => (
-                <option key={n} value={n}>
-                  {t("lobby.roundsOption", { n })}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field-inline">
-            <input
-              type="checkbox"
-              checked={opts.hintsEnabled}
-              onChange={(e) => pick({ hintsEnabled: e.target.checked })}
-            />
-            <span>{t("lobby.hintsToggle")}</span>
-          </label>
-          <button className="primary" onClick={() => onStartGame(opts)} disabled={!canStart}>
-            {t("lobby.startImposter")}
-          </button>
-          {!canStart && (
-            <p className="hint">{t("lobby.needPlayers", { min: IMPOSTER_MIN_PLAYERS })}</p>
-          )}
-        </section>
-      ) : (
-        pending && (
-          <section>
-            <p className="status">
-              {t("lobby.categoryChosen", {
-                category: t(
-                  CATEGORY_OPTIONS.find((o) => o.key === pending.category)?.labelKey ??
-                    "imposter.category.any",
-                ),
-              })}
-            </p>
-            <p className="status">{t("lobby.roundsChosen", { n: pending.rounds })}</p>
-            <p className="status">
-              {t(
-                CLUE_PASS_OPTIONS.find((o) => o.value === pending.cluePasses)?.labelKey ??
-                  "lobby.cluePassesTwo",
-              )}
-            </p>
-            <p className="status">
-              {t(
-                CLUE_SECONDS_OPTIONS.find((o) => o.value === pending.clueSeconds)?.labelKey ??
-                  "lobby.clueSecondsOff",
-              )}
+      <div className="lobby-grid">
+        <div className="lobby-col">
+          {/* The code is what gets read aloud across a room, so it is the
+              biggest thing on the screen. */}
+          <section className="room-code">
+            <div className="room-code-row">
+              <div>
+                <span className="room-code-label">{t("lobby.roomCode")}</span>
+                <span className="room-code-value">{room.code}</span>
+              </div>
+              <button className="secondary copy-code" onClick={copyCode}>
+                {copy.state === "copied" ? t("lobby.codeCopied") : t("lobby.copyCode")}
+              </button>
+            </div>
+            {/* aria-live so a screen reader announces the result of a press. */}
+            <p className="copy-status" aria-live="polite">
+              {copy.state === "failed" && t("lobby.copyFailed")}
             </p>
           </section>
-        )
-      )}
 
-      {/* Two columns on anything wider than a phone, stacked below that.
-          The rules are the thing a new player needs and the chat is the thing
-          that grows, so neither belongs in the single column that holds the
-          controls. */}
-      <div className="lobby-columns">
-        <RulesCard />
-        <ChatPanel room={room} lastEcho={lastEcho} onSend={onEcho} />
+          <section>
+            <h2>
+              {t("lobby.players")} <span className="num">({room.players.length})</span>
+            </h2>
+            <ul className="roster">
+              {room.players.map((p) => {
+                const name = displayNameOf(p.displayName, t);
+                return (
+                  <li key={p.id} className="roster-row">
+                    <Avatar name={name} hue={hueFor(p.id)} />
+                    <span className="roster-name">
+                      {name}
+                      {p.id === room.selfId && <span className="you"> ({t("lobby.you")})</span>}
+                    </span>
+                    {p.id === room.hostId && <span className="pill">{t("lobby.host")}</span>}
+                  </li>
+                );
+              })}
+              {/* Seats still to fill before a game can start, drawn empty so a
+                  disabled Start button has a visible reason. */}
+              {Array.from({ length: openSeats }, (_, i) => (
+                <li key={i} className="roster-row roster-seat">
+                  <span className="avatar-empty" aria-hidden="true" />
+                  <span>{t("lobby.emptySeat")}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <RulesCard />
+        </div>
+
+        <div className="lobby-col">
+          <section className="setup">
+            <h2>{t("lobby.setupHeading")}</h2>
+            {isHost ? (
+              <>
+                <Segmented
+                  name="category"
+                  legend={t("lobby.categoryLabel")}
+                  wrap
+                  value={opts.category}
+                  options={CATEGORY_OPTIONS.map((o) => ({ value: o.key, label: t(o.labelKey) }))}
+                  onChange={(category) => pick({ category })}
+                />
+                <Segmented
+                  name="rounds"
+                  legend={t("lobby.roundsLabel")}
+                  value={opts.rounds}
+                  options={ROUND_OPTIONS.map((n) => ({
+                    value: n as number,
+                    label: t("lobby.roundsOption", { n }),
+                  }))}
+                  onChange={(rounds) => pick({ rounds })}
+                />
+                <Segmented
+                  name="clue-passes"
+                  legend={t("lobby.cluePassesLabel")}
+                  value={opts.cluePasses}
+                  options={CLUE_PASS_OPTIONS.map((o) => ({
+                    value: o.value,
+                    label: String(o.value),
+                  }))}
+                  onChange={(cluePasses) => pick({ cluePasses })}
+                />
+                <Segmented
+                  name="clue-seconds"
+                  legend={t("lobby.clueSecondsLabel")}
+                  value={opts.clueSeconds}
+                  options={CLUE_SECONDS_OPTIONS.map((o) => ({
+                    value: o.value,
+                    label:
+                      o.value === 0
+                        ? t("lobby.clueSecondsOffShort")
+                        : t("lobby.clueSecondsShort", { n: o.value }),
+                  }))}
+                  onChange={(clueSeconds) => pick({ clueSeconds })}
+                />
+                <label className="switch-row">
+                  <span>{t("lobby.hintsToggle")}</span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    className="visually-hidden"
+                    checked={opts.hintsEnabled}
+                    onChange={(e) => pick({ hintsEnabled: e.target.checked })}
+                  />
+                  <span className="switch" aria-hidden="true" />
+                </label>
+              </>
+            ) : (
+              <dl className="setup-readout">
+                <div>
+                  <dt>{t("lobby.categoryLabel")}</dt>
+                  <dd>
+                    {t(
+                      CATEGORY_OPTIONS.find((o) => o.key === pending.category)?.labelKey ??
+                        "imposter.category.any",
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t("lobby.roundsLabel")}</dt>
+                  <dd>{t("lobby.roundsOption", { n: pending.rounds })}</dd>
+                </div>
+                <div>
+                  <dt>{t("lobby.cluePassesLabel")}</dt>
+                  <dd>
+                    {t(
+                      CLUE_PASS_OPTIONS.find((o) => o.value === pending.cluePasses)?.labelKey ??
+                        "lobby.cluePassesTwo",
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t("lobby.clueSecondsLabel")}</dt>
+                  <dd>
+                    {t(
+                      CLUE_SECONDS_OPTIONS.find((o) => o.value === pending.clueSeconds)?.labelKey ??
+                        "lobby.clueSecondsOff",
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            )}
+          </section>
+
+          <ChatPanel room={room} lastEcho={lastEcho} onSend={onEcho} />
+        </div>
       </div>
 
-      {errorKey(lastError) && <p className="hint">{t(errorKey(lastError)!)}</p>}
-
-      <button className="danger" onClick={onLeave}>
-        {t("lobby.leaveButton")}
-      </button>
+      <div className="dock lobby-dock">
+        {errorKey(lastError) && <p className="hint">{t(errorKey(lastError)!)}</p>}
+        {isHost ? (
+          <>
+            {!canStart && (
+              <p className="status">{t("lobby.needPlayers", { min: IMPOSTER_MIN_PLAYERS })}</p>
+            )}
+            <button className="primary" onClick={() => onStartGame(opts)} disabled={!canStart}>
+              {t("lobby.startImposter")}
+            </button>
+          </>
+        ) : (
+          <p className="status">
+            {t("lobby.waitingForHost", {
+              who: host ? displayNameOf(host.displayName, t) : t("lobby.host"),
+            })}
+          </p>
+        )}
+      </div>
     </main>
   );
 }

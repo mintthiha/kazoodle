@@ -1,0 +1,374 @@
+/* Styles for the lobby: the room code, the match setup, the rules and the chat. */
+
+.lobby-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* One stack on a phone: the columns dissolve, and the setup moves above the
+   rules, because the host has to reach it and the rules are reference. None of
+   the rules are focusable, so the tab order still matches what is on screen. On
+   a laptop the columns come back, sized to finish level with each other. */
+.lobby-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+.lobby-col {
+  display: contents;
+}
+
+.setup {
+  order: 1;
+}
+
+.rules-card {
+  order: 2;
+}
+
+.chat-panel {
+  order: 3;
+}
+
+/* The room code */
+.room-code {
+  padding: 18px 20px;
+  gap: 0;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+}
+
+.room-code-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.room-code-label {
+  display: block;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.room-code-value {
+  display: block;
+  font-family: var(--display);
+  font-size: clamp(2.75rem, 15vw, 4rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.04em;
+}
+
+.copy-code {
+  flex: none;
+  width: auto;
+  min-height: var(--tap-small);
+  padding: 0 18px;
+  font-size: var(--fs-body);
+}
+
+.copy-status {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--negative);
+}
+
+.copy-status:empty {
+  display: none;
+}
+
+.roster-seat {
+  background: transparent;
+  outline: 1px dashed var(--raised);
+  outline-offset: -1px;
+  color: var(--faint);
+}
+
+.avatar-empty {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 1px dashed var(--control);
+  border-radius: 50%;
+}
+
+/* Match setup */
+.setup {
+  gap: 18px;
+  padding: 18px 20px 20px;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+}
+
+.choice {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choice legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.choice-track {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--raised);
+}
+
+.choice-track .choice-option {
+  flex: 1;
+  min-width: 0;
+}
+
+.choice-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.choice-option {
+  position: relative;
+  cursor: pointer;
+}
+
+.choice-option > span {
+  display: grid;
+  place-items: center;
+  min-height: var(--tap-small);
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: var(--fs-body);
+  font-weight: 500;
+  text-align: center;
+}
+
+/* A chip has no track behind it, so it needs its own step of lightness. */
+.choice-chips .choice-option > span {
+  background: var(--raised);
+}
+
+/* Selected is inverted, the same way the primary button is. */
+.choice-option input:checked + span {
+  background: var(--text);
+  color: var(--ground);
+}
+
+.choice-option input:focus-visible + span {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* A switch, drawn on a real checkbox. */
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--tap-small);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.switch {
+  flex: none;
+  position: relative;
+  width: 52px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--raised);
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.switch-row input:checked + .switch {
+  background: var(--text);
+}
+
+.switch-row input:checked + .switch::after {
+  transform: translateX(20px);
+  background: var(--ground);
+}
+
+.switch-row input:focus-visible + .switch {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* The setup as everyone but the host sees it. */
+.setup-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.setup-readout div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.setup-readout dt {
+  color: var(--muted);
+}
+
+.setup-readout dd {
+  margin: 0;
+  font-weight: 500;
+  text-align: right;
+}
+
+/* How to play */
+.rules-card {
+  padding: 18px 20px 20px;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+}
+
+.rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.4;
+}
+
+.rules-list li::marker {
+  color: var(--faint);
+}
+
+/* Chat, closed by default. The log scrolls inside its own fixed height so that a
+   busy room does not push everything else down the screen. */
+.chat-panel {
+  gap: 0;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+}
+
+.chat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  background: transparent;
+  font-size: var(--fs-body);
+  text-align: left;
+}
+
+.chat-chevron {
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.chat-toggle[aria-expanded="true"] .chat-chevron {
+  transform: rotate(90deg);
+}
+
+.chat-unread {
+  min-width: 1.6em;
+  padding: 0 0.45em;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-colour);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-align: center;
+}
+
+.chat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 11rem;
+  min-height: 3rem;
+  overflow-y: auto;
+  padding: 0 4px;
+}
+
+.chat-line {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.chat-line strong {
+  font-weight: 600;
+}
+
+.chat-body input:not([type="radio"], [type="checkbox"]) {
+  background: var(--raised);
+}
+
+/* On a laptop: who and what on the left, the setup on the right, the reference
+   material underneath, and the Start button no longer needs to follow a thumb. */
+@media (min-width: 60rem) {
+  .app:has(.lobby) {
+    max-width: 64rem;
+  }
+
+  .lobby-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap);
+    align-items: start;
+  }
+
+  .lobby-col {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+  }
+
+  .lobby-dock {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+  }
+
+  .lobby-dock .primary {
+    width: auto;
+    padding: 0 40px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .switch::after,
+  .chat-chevron {
+    transition: transform 140ms ease;
+  }
+}

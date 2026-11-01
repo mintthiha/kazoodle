@@ -1,12 +1,19 @@
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
-import type { StealPrompt } from "./gen/imposter_pb";
+import { makeHueFor } from "../../players/hues";
+import type { ClueEntry, StealPrompt } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
 import { makeNameFor } from "./nameFor";
+import { ClueLedger } from "./ClueLedger";
+import { Countdown } from "./Countdown";
+import { buildLedger } from "./ledger";
 import { useCountdown } from "./useCountdown";
 
 interface Props extends GameViewProps {
   prompt: StealPrompt | null;
+  /** The round's clues, carried over from the vote. They are the only evidence
+   * the imposter has, and the table wants to watch them be read. */
+  clues: ClueEntry[];
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
@@ -18,6 +25,7 @@ interface Props extends GameViewProps {
 // at the word; everyone else just watches and waits.
 export function StealView({
   prompt,
+  clues,
   value,
   onChange,
   onSubmit,
@@ -29,6 +37,7 @@ export function StealView({
   const { t } = useT();
 
   const name = makeNameFor(players, departed, t);
+  const hue = makeHueFor(players, departed);
   // Everyone sees this, not just the imposter: the table watching a clock run
   // down is most of what makes the steal worth having.
   const secondsLeft = useCountdown(prompt?.stealSeconds ?? 0, prompt?.imposterId ?? "");
@@ -45,47 +54,59 @@ export function StealView({
 
   return (
     <main className="screen">
-      <h1>{t("imposter.stealHeading")}</h1>
-      {secondsLeft !== null && (
-        <p className={secondsLeft <= 5 ? "hint" : "status"} role="status">
-          {t("imposter.clueCountdown", { n: secondsLeft })}
-        </p>
-      )}
-
-      <section className="role-card role-imposter">
-        <p className="role-hint">
+      <section className="slip slip-imposter slip-static">
+        <h1>{t("imposter.stealHeading")}</h1>
+        <p className="slip-note">
           {isImposter
             ? t("imposter.stealHintImposter")
             : t("imposter.stealHintOther", { who: name(prompt.imposterId) })}
         </p>
       </section>
 
-      {isImposter ? (
-        <section>
-          <label className="field">
-            <span>{t("imposter.stealGuessLabel")}</span>
-            <input
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              placeholder={t("imposter.stealGuessPlaceholder")}
-              enterKeyHint="send"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") onSubmit();
-              }}
-            />
-          </label>
-          {/* Above the button, where the phone keyboard cannot hide it. */}
-          {error && <p className="hint">{t(error)}</p>}
-          <button className="primary" onClick={onSubmit}>
-            {t("imposter.stealSubmit")}
-          </button>
-        </section>
-      ) : (
-        <p className="status">
-          {t("imposter.stealWaiting", { who: name(prompt.imposterId) })}
-        </p>
+      {secondsLeft !== null && (
+        <Countdown
+          seconds={secondsLeft}
+          total={prompt.stealSeconds}
+          label={t("imposter.clueCountdown", { n: secondsLeft })}
+        />
       )}
+
+      <ClueLedger
+        rows={buildLedger(players.map((p) => p.id), clues)}
+        passes={0}
+        selfId={selfId}
+        name={name}
+        hue={hue}
+      />
+
+      <div className="dock">
+        {isImposter ? (
+          <>
+            {/* Above the box, where the phone keyboard cannot hide it. */}
+            {error && <p className="hint">{t(error)}</p>}
+            <label className="field">
+              <span>{t("imposter.stealGuessLabel")}</span>
+              <span className="entry-row">
+                <input
+                  value={value}
+                  onChange={(e) => onChange(e.target.value)}
+                  placeholder={t("imposter.stealGuessPlaceholder")}
+                  enterKeyHint="send"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") onSubmit();
+                  }}
+                />
+                <button className="primary" onClick={onSubmit}>
+                  {t("imposter.stealSubmit")}
+                </button>
+              </span>
+            </label>
+          </>
+        ) : (
+          <p className="status">{t("imposter.stealWaiting", { who: name(prompt.imposterId) })}</p>
+        )}
+      </div>
     </main>
   );
 }
