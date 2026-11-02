@@ -1,0 +1,707 @@
+[
+  {
+    "categoryKey": "places",
+    "category": {
+      "en": "Places",
+      "fr": "Lieux"
+    },
+    "word": {
+      "en": "Beach",
+      "fr": "Plage"
+    },
+    "hint": {
+      "en": "Sandcastle",
+      "fr": "Château de sable"
+    }
+  },
+  {
+    "categoryKey": "places",
+    "category": {
+      "en": "Places",
+      "fr": "Lieux"
+    },
+    "word": {
+      "en": "Airport",
+      "fr": "Aéroport"
+    },
+    "hint": {
+      "en": "Runway",
+      "fr": "Piste"
+    }
+  },
+  {
+    "categoryKey": "places",
+    "category": {
+      "en": "Places",
+      "fr": "Lieux"
+    },
+    "word": {
+      "en": "Library",
+      "fr": "Bibliothèque"
+    },
+    "hint": {
+      "en": "Shelves",
+      "fr": "Étagères"
+    }
+  },
+  {
+    "categoryKey": "places",
+    "category": {
+      "en": "Places",
+      "fr": "Lieux"
+    },
+    "word": {
+      "en": "Hospital",
+      "fr": "Hôpital"
+    },
+    "hint": {
+      "en": "Stretcher",
+      "fr": "Civière"
+    }
+  },
+  {
+    "categoryKey": "places",
+    "category": {
+      "en": "Places",
+      "fr": "Lieux"
+    },
+    "word": {
+      "en": "Museum",
+      "fr": "Musée"
+    },
+    "hint": {
+      "en": "Exhibit",
+      "fr": "Exposition"
+    }
+  },
+  {
+    "categoryKey": "places",
+    "category": {
+      "en": "Places",
+      "fr": "Lieux"
+    },
+    "word": {
+      "en": "Castle",
+      "fr": "Château"
+    },
+    "hint": {
+      "en": "Moat",
+      "fr": "Douves"
+    }
+  },
+  {
+    "categoryKey": "places",
+    "category": {
+      "en": "Places",
+      "fr": "Lieux"
+    },
+    "word": {
+      "en": "Desert",
+      "fr": "Désert"
+    },
+    "hint": {
+      "en": "Cactus",
+      "fr": "Cactus"
+    }
+  },
+  {
+    "categoryKey": "places",
+    "category": {
+      "en": "Places",
+      "fr": "Lieux"
+    },
+    "word": {
+      "en": "Mountain",
+      "fr": "Montagne"
+    },
+    "hint": {
+      "en": "Summit",
+      "fr": "Sommet"
+    }
+  },
+  {
+    "categoryKey": "places",
+    "category": {
+      "en": "Places",
+      "fr": "Lieux"
+    },
+    "word": {
+      "en": "Farm",
+      "fr": "Ferme"
+    },
+    "hint": {
+      "en": "Tractor",
+      "fr": "Tracteur"
+    }
+  },
+  {
+    "categoryKey": "places",
+    "category": {
+      "en": "Places",
+      "fr": "Lieux"
+    },
+    "word": {
+      "en": "Subway",
+      "fr": "Métro"
+    },
+    "hint": {
+      "en": "Turnstile",
+      "fr": "Tourniquet"
+    }
+  },
+  {
+    "categoryKey": "food",
+    "category": {
+      "en": "Food",
+      "fr": "Nourriture"
+    },
+    "word": {
+      "en": "Pizza",
+      "fr": "Pizza"
+    },
+    "hint": {
+      "en": "Slice",
+      "fr": "Part"
+    }
+  },
+  {
+    "categoryKey": "food",
+    "category": {
+      "en": "Food",
+      "fr": "Nourriture"
+    },
+    "word": {
+      "en": "Sushi",
+      "fr": "Sushi"
+    },
+    "hint": {
+      "en": "Chopsticks",
+      "fr": "Baguettes"
+    }
+  },
+  {
+    "categoryKey": "food",
+    "category": {
+      "en": "Food",
+      "fr": "Nourriture"
+    },
+    "word": {
+      "en": "Pancakes",
+      "fr": "Crêpes"
+    },
+    "hint": {
+      "en": "Syrup",
+      "fr": "Sirop"
+    }
+  },
+  {
+    "categoryKey": "food",
+    "category": {
+      "en": "Food",
+      "fr": "Nourriture"
+    },
+    "word": {
+      "en": "Cheese",
+      "fr": "Fromage"
+    },
+    "hint": {
+      "en": "Wedge",
+      "fr": "Morceau"
+    }
+  },
+  {
+    "categoryKey": "food",
+    "category": {
+      "en": "Food",
+      "fr": "Nourriture"
+    },
+    "word": {
+      "en": "Soup",
+      "fr": "Soupe"
+    },
+    "hint": {
+      "en": "Ladle",
+      "fr": "Louche"
+    }
+  },
+  {
+    "categoryKey": "food",
+    "category": {
+      "en": "Food",
+      "fr": "Nourriture"
+    },
+    "word": {
+      "en": "Baguette",
+      "fr": "Baguette"
+    },
+    "hint": {
+      "en": "Crust",
+      "fr": "Croûte"
+    }
+  },
+  {
+    "categoryKey": "food",
+    "category": {
+      "en": "Food",
+      "fr": "Nourriture"
+    },
+    "word": {
+      "en": "Chocolate",
+      "fr": "Chocolat"
+    },
+    "hint": {
+      "en": "Cocoa",
+      "fr": "Cacao"
+    }
+  },
+  {
+    "categoryKey": "food",
+    "category": {
+      "en": "Food",
+      "fr": "Nourriture"
+    },
+    "word": {
+      "en": "Popcorn",
+      "fr": "Popcorn"
+    },
+    "hint": {
+      "en": "Kernel",
+      "fr": "Grain"
+    }
+  },
+  {
+    "categoryKey": "animals",
+    "category": {
+      "en": "Animals",
+      "fr": "Animaux"
+    },
+    "word": {
+      "en": "Penguin",
+      "fr": "Manchot"
+    },
+    "hint": {
+      "en": "Tuxedo",
+      "fr": "Smoking"
+    }
+  },
+  {
+    "categoryKey": "animals",
+    "category": {
+      "en": "Animals",
+      "fr": "Animaux"
+    },
+    "word": {
+      "en": "Elephant",
+      "fr": "Éléphant"
+    },
+    "hint": {
+      "en": "Trunk",
+      "fr": "Trompe"
+    }
+  },
+  {
+    "categoryKey": "animals",
+    "category": {
+      "en": "Animals",
+      "fr": "Animaux"
+    },
+    "word": {
+      "en": "Octopus",
+      "fr": "Poulpe"
+    },
+    "hint": {
+      "en": "Tentacles",
+      "fr": "Tentacules"
+    }
+  },
+  {
+    "categoryKey": "animals",
+    "category": {
+      "en": "Animals",
+      "fr": "Animaux"
+    },
+    "word": {
+      "en": "Kangaroo",
+      "fr": "Kangourou"
+    },
+    "hint": {
+      "en": "Pouch",
+      "fr": "Poche"
+    }
+  },
+  {
+    "categoryKey": "animals",
+    "category": {
+      "en": "Animals",
+      "fr": "Animaux"
+    },
+    "word": {
+      "en": "Owl",
+      "fr": "Hibou"
+    },
+    "hint": {
+      "en": "Hoot",
+      "fr": "Hululement"
+    }
+  },
+  {
+    "categoryKey": "animals",
+    "category": {
+      "en": "Animals",
+      "fr": "Animaux"
+    },
+    "word": {
+      "en": "Squirrel",
+      "fr": "Écureuil"
+    },
+    "hint": {
+      "en": "Acorn",
+      "fr": "Gland"
+    }
+  },
+  {
+    "categoryKey": "animals",
+    "category": {
+      "en": "Animals",
+      "fr": "Animaux"
+    },
+    "word": {
+      "en": "Shark",
+      "fr": "Requin"
+    },
+    "hint": {
+      "en": "Fin",
+      "fr": "Aileron"
+    }
+  },
+  {
+    "categoryKey": "objects",
+    "category": {
+      "en": "Objects",
+      "fr": "Objets"
+    },
+    "word": {
+      "en": "Umbrella",
+      "fr": "Parapluie"
+    },
+    "hint": {
+      "en": "Rain",
+      "fr": "Pluie"
+    }
+  },
+  {
+    "categoryKey": "objects",
+    "category": {
+      "en": "Objects",
+      "fr": "Objets"
+    },
+    "word": {
+      "en": "Telescope",
+      "fr": "Télescope"
+    },
+    "hint": {
+      "en": "Lens",
+      "fr": "Lentille"
+    }
+  },
+  {
+    "categoryKey": "objects",
+    "category": {
+      "en": "Objects",
+      "fr": "Objets"
+    },
+    "word": {
+      "en": "Backpack",
+      "fr": "Sac à dos"
+    },
+    "hint": {
+      "en": "Straps",
+      "fr": "Bretelles"
+    }
+  },
+  {
+    "categoryKey": "objects",
+    "category": {
+      "en": "Objects",
+      "fr": "Objets"
+    },
+    "word": {
+      "en": "Candle",
+      "fr": "Bougie"
+    },
+    "hint": {
+      "en": "Wax",
+      "fr": "Cire"
+    }
+  },
+  {
+    "categoryKey": "objects",
+    "category": {
+      "en": "Objects",
+      "fr": "Objets"
+    },
+    "word": {
+      "en": "Compass",
+      "fr": "Boussole"
+    },
+    "hint": {
+      "en": "North",
+      "fr": "Nord"
+    }
+  },
+  {
+    "categoryKey": "objects",
+    "category": {
+      "en": "Objects",
+      "fr": "Objets"
+    },
+    "word": {
+      "en": "Mirror",
+      "fr": "Miroir"
+    },
+    "hint": {
+      "en": "Reflection",
+      "fr": "Reflet"
+    }
+  },
+  {
+    "categoryKey": "objects",
+    "category": {
+      "en": "Objects",
+      "fr": "Objets"
+    },
+    "word": {
+      "en": "Suitcase",
+      "fr": "Valise"
+    },
+    "hint": {
+      "en": "Zipper",
+      "fr": "Fermeture éclair"
+    }
+  },
+  {
+    "categoryKey": "activities",
+    "category": {
+      "en": "Activities",
+      "fr": "Activités"
+    },
+    "word": {
+      "en": "Camping",
+      "fr": "Camping"
+    },
+    "hint": {
+      "en": "Tent",
+      "fr": "Tente"
+    }
+  },
+  {
+    "categoryKey": "activities",
+    "category": {
+      "en": "Activities",
+      "fr": "Activités"
+    },
+    "word": {
+      "en": "Karaoke",
+      "fr": "Karaoké"
+    },
+    "hint": {
+      "en": "Microphone",
+      "fr": "Microphone"
+    }
+  },
+  {
+    "categoryKey": "activities",
+    "category": {
+      "en": "Activities",
+      "fr": "Activités"
+    },
+    "word": {
+      "en": "Painting",
+      "fr": "Peinture"
+    },
+    "hint": {
+      "en": "Canvas",
+      "fr": "Toile"
+    }
+  },
+  {
+    "categoryKey": "activities",
+    "category": {
+      "en": "Activities",
+      "fr": "Activités"
+    },
+    "word": {
+      "en": "Fishing",
+      "fr": "Pêche"
+    },
+    "hint": {
+      "en": "Bait",
+      "fr": "Appât"
+    }
+  },
+  {
+    "categoryKey": "activities",
+    "category": {
+      "en": "Activities",
+      "fr": "Activités"
+    },
+    "word": {
+      "en": "Juggling",
+      "fr": "Jonglerie"
+    },
+    "hint": {
+      "en": "Balls",
+      "fr": "Balles"
+    }
+  },
+  {
+    "categoryKey": "activities",
+    "category": {
+      "en": "Activities",
+      "fr": "Activités"
+    },
+    "word": {
+      "en": "Skiing",
+      "fr": "Ski"
+    },
+    "hint": {
+      "en": "Slope",
+      "fr": "Pente"
+    }
+  },
+  {
+    "categoryKey": "jobs",
+    "category": {
+      "en": "Jobs",
+      "fr": "Métiers"
+    },
+    "word": {
+      "en": "Firefighter",
+      "fr": "Pompier"
+    },
+    "hint": {
+      "en": "Pole",
+      "fr": "Poteau"
+    }
+  },
+  {
+    "categoryKey": "jobs",
+    "category": {
+      "en": "Jobs",
+      "fr": "Métiers"
+    },
+    "word": {
+      "en": "Teacher",
+      "fr": "Enseignant"
+    },
+    "hint": {
+      "en": "Chalkboard",
+      "fr": "Tableau"
+    }
+  },
+  {
+    "categoryKey": "jobs",
+    "category": {
+      "en": "Jobs",
+      "fr": "Métiers"
+    },
+    "word": {
+      "en": "Pilot",
+      "fr": "Pilote"
+    },
+    "hint": {
+      "en": "Cockpit",
+      "fr": "Cabine"
+    }
+  },
+  {
+    "categoryKey": "jobs",
+    "category": {
+      "en": "Jobs",
+      "fr": "Métiers"
+    },
+    "word": {
+      "en": "Chef",
+      "fr": "Chef cuisinier"
+    },
+    "hint": {
+      "en": "Apron",
+      "fr": "Tablier"
+    }
+  },
+  {
+    "categoryKey": "jobs",
+    "category": {
+      "en": "Jobs",
+      "fr": "Métiers"
+    },
+    "word": {
+      "en": "Plumber",
+      "fr": "Plombier"
+    },
+    "hint": {
+      "en": "Wrench",
+      "fr": "Clé à molette"
+    }
+  },
+  {
+    "categoryKey": "weather",
+    "category": {
+      "en": "Weather",
+      "fr": "Météo"
+    },
+    "word": {
+      "en": "Thunderstorm",
+      "fr": "Orage"
+    },
+    "hint": {
+      "en": "Lightning",
+      "fr": "Éclair"
+    }
+  },
+  {
+    "categoryKey": "weather",
+    "category": {
+      "en": "Weather",
+      "fr": "Météo"
+    },
+    "word": {
+      "en": "Rainbow",
+      "fr": "Arc-en-ciel"
+    },
+    "hint": {
+      "en": "Prism",
+      "fr": "Prisme"
+    }
+  },
+  {
+    "categoryKey": "weather",
+    "category": {
+      "en": "Weather",
+      "fr": "Météo"
+    },
+    "word": {
+      "en": "Fog",
+      "fr": "Brouillard"
+    },
+    "hint": {
+      "en": "Mist",
+      "fr": "Brume"
+    }
+  },
+  {
+    "categoryKey": "weather",
+    "category": {
+      "en": "Weather",
+      "fr": "Météo"
+    },
+    "word": {
+      "en": "Snowstorm",
+      "fr": "Tempête de neige"
+    },
+    "hint": {
+      "en": "Blizzard",
+      "fr": "Blizzard"
+    }
+  }
+]

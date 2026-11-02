@@ -24,6 +24,22 @@ npm test               # vitest run
 npm run build          # tsc + vite build
 ```
 
+## Browser tests
+
+Playwright, driving a phone-sized Edge. Run on demand, not part of `npm test`.
+Starts the dev server if one isn't running. No Go server is needed except for the
+one test that proves the online door still opens a socket.
+
+```bash
+npm run test:e2e         # headless, about two minutes
+npm run test:e2e:watch   # in a real window you can watch
+npm run test:e2e:report  # the HTML report, with a video of every test
+```
+
+Setting `PW_SLOWMO=400` slows it down enough to follow (in PowerShell,
+`$env:PW_SLOWMO=400; npm run test:e2e:watch`), and `PW_CHANNEL=chrome` uses Chrome
+instead of Edge.
+
 ## Layout
 
 ```
@@ -41,7 +57,10 @@ src/
     JoinScreen.tsx        name + create / join by code
     LobbyScreen.tsx       room code, player list, echo box, leave
     ConnBanner.tsx        connecting / reconnecting / disconnected strip
-  App.tsx                picks the screen from the connection snapshot
+  games/imposter/local/  Imposter on one phone: no server, no socket
+    localGame.ts           the rules, as pure functions
+    words.gen.json         generated from the server's word list (see below)
+  App.tsx                picks the screen from the URL
   main.tsx               entry
 ```
 
@@ -51,6 +70,17 @@ src/
 - Wire types are always imported from `net/gen`, never hand-written.
 - Every screen has a visible reconnecting state; a dropped connection is normal.
 - Every user-facing string goes through `t()`; English and French ship together.
+
+### The one-phone word list
+
+`server/internal/games/imposter/words.go` is the only list anyone edits. After
+changing it, regenerate the web copy from `server/`:
+
+```bash
+go test ./internal/games/imposter -run TestWebWordsMatch -update
+```
+
+`go test ./...` fails if the copy is out of date.
 
 ### Known gaps (intentional, pre-alpha)
 

@@ -16,6 +16,8 @@ go.work.sum
 /web/dist/
 /web/dist-ssr/
 node_modules/.vite/
+/web/test-results/
+/web/playwright-report/
 *.local
 
 # Env

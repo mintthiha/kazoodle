@@ -17,7 +17,9 @@ function EyeIcon() {
 }
 
 interface RevealProps {
-  role: RoleAssignment;
+  /** Only what a slip draws, so one-phone mode can show one with no wire message
+   * behind it. */
+  role: Pick<RoleAssignment, "isImposter" | "word" | "category" | "hint">;
   /** Called every time the slip is turned face up. */
   onReveal: () => void;
 }

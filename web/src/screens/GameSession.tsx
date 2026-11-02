@@ -3,6 +3,7 @@ import { useConnection } from "../net/useConnection";
 import { useT } from "../i18n";
 import { gameViews } from "../games/registry";
 import { encodeStartOptions } from "../games/imposter/messages";
+import { BackNav } from "./BackNav";
 import { ConnBanner } from "./ConnBanner";
 import { JoinScreen } from "./JoinScreen";
 import { LobbyScreen } from "./LobbyScreen";
@@ -87,16 +88,7 @@ export function GameSession({ gameId, onExit }: Props) {
       {/* Back to the shelf, offered only before joining a room: once players
           are in a room, Leave is the way out, and two exits side by side is
           one too many. */}
-      {!snapshot.room && (
-        <nav className="session-nav">
-          <button className="back" onClick={onExit}>
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2.25" />
-            </svg>
-            {t("nav.allGames")}
-          </button>
-        </nav>
-      )}
+      {!snapshot.room && <BackNav onExit={onExit} />}
       {content}
     </>
   );

@@ -6,12 +6,13 @@ import "./home.css";
 
 interface Props {
   onPick: (gameId: string) => void;
+  onPickLocal: (gameId: string) => void;
 }
 
 // The hub: the shelf of games, and the first thing anyone sees. It holds no
 // connection — the socket opens only once a game is picked (see GameSession),
 // so browsing the shelf costs the server nothing.
-export function HomeScreen({ onPick }: Props) {
+export function HomeScreen({ onPick, onPickLocal }: Props) {
   const { t } = useT();
 
   return (
@@ -31,7 +32,7 @@ export function HomeScreen({ onPick }: Props) {
       <ul className="shelf">
         {GAMES.map((game) => (
           <li key={game.id}>
-            <GameTile game={game} onPick={onPick} />
+            <GameTile game={game} onPick={onPick} onPickLocal={onPickLocal} />
           </li>
         ))}
         <li className="soon">

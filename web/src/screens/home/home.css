@@ -37,6 +37,14 @@
   padding: 0;
 }
 
+.tile-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border-radius: var(--radius-card);
+}
+
 .tile {
   display: flex;
   flex-direction: column;
@@ -48,7 +56,16 @@
   font-weight: 400;
   color: var(--text);
   background: var(--surface);
-  border-radius: var(--radius-card);
+  /* Square, or the global pill shape for buttons would round off the cover. The
+     card around it is what has the rounded corners. */
+  border-radius: 0;
+}
+
+/* Its own line under the tile. The margins keep it clear of the card's corners. */
+.tile-local {
+  flex: none;
+  width: auto;
+  margin: 0 20px 20px;
 }
 
 /* The cover. Its colour comes from the game's registry entry, so a shelf of
@@ -150,9 +167,11 @@
   font-weight: 600;
 }
 
+/* Drawn inside the tile, because the card around it clips anything outside. */
 .tile:focus-visible {
   outline: 2px solid var(--text);
-  outline-offset: 3px;
+  outline-offset: -4px;
+  border-radius: var(--radius-card);
 }
 
 /* The empty slot is an invitation, not an apology. Dashed because it is an
@@ -197,6 +216,11 @@
 
   .tile {
     flex-direction: row;
+  }
+
+  /* The cover reaches the bottom of the tile here, so nothing else separates them. */
+  .tile-local {
+    margin-top: 20px;
   }
 
   .tile-cover {
