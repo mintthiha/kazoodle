@@ -8,6 +8,7 @@
 // device. It also means the mode works with no server and no signal.
 
 import type { Locale } from "../../../i18n";
+import { customEntries, type CustomCategory } from "./customCategories";
 import wordList from "./words.gen.json";
 
 /** Same bound as the online game's minimum. */
@@ -22,7 +23,7 @@ export const MAX_NAME_LENGTH = 24;
 export type AdvanceMode = "manual" | "auto";
 
 export interface LocalSettings {
-  /** A category key from ../categories, or "" for any. */
+  /** A category key from ../categories, a custom category's key, or "" for any. */
   category: string;
   hintsEnabled: boolean;
   advance: AdvanceMode;
@@ -110,9 +111,18 @@ function randomInt(n: number, rng: Rng): number {
 
 /** Draw a word, avoiding any already played. An unknown category falls back to
  * every word, as the server's pickWord does. Once a category has been played
- * through, its words come round again rather than the game failing to deal. */
-export function pickWord(category: string, used: readonly string[], rng: Rng): WordEntry {
-  const inCategory = WORDS.filter((w) => w.categoryKey === category);
+ * through, its words come round again rather than the game failing to deal.
+ *
+ * "Any category" draws only from the built-in words: a custom list is whatever one
+ * person typed, so nobody should be dealt from it unless the group picked it. */
+export function pickWord(
+  category: string,
+  used: readonly string[],
+  rng: Rng,
+  custom: readonly CustomCategory[] = [],
+): WordEntry {
+  const own = custom.find((c) => c.key === category);
+  const inCategory = own ? customEntries(own) : WORDS.filter((w) => w.categoryKey === category);
   const pool = inCategory.length > 0 ? inCategory : WORDS;
   const fresh = pool.filter((w) => !used.includes(w.word.en));
   const choices = fresh.length > 0 ? fresh : pool;
@@ -155,8 +165,9 @@ export function newGame(
   settings: LocalSettings,
   usedWords: readonly string[],
   rng: Rng = Math.random,
+  custom: readonly CustomCategory[] = [],
 ): LocalGame {
-  const entry = pickWord(settings.category, usedWords, rng);
+  const entry = pickWord(settings.category, usedWords, rng, custom);
   return {
     names: [...names],
     settings,

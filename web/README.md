@@ -59,6 +59,7 @@ src/
     ConnBanner.tsx        connecting / reconnecting / disconnected strip
   games/imposter/local/  Imposter on one phone: no server, no socket
     localGame.ts           the rules, as pure functions
+    customCategories.ts    rules for categories a group writes itself
     words.gen.json         generated from the server's word list (see below)
   App.tsx                picks the screen from the URL
   main.tsx               entry

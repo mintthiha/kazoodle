@@ -1,9 +1,12 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { useT } from "../../../i18n";
 import { Avatar } from "../../../players/Avatar";
 import { BackNav } from "../../../screens/BackNav";
 import { Segmented } from "../../../screens/Segmented";
 import { CATEGORY_OPTIONS } from "../categories";
 import { CLUE_PASS_OPTIONS } from "../rounds";
+import { CategoryEditor } from "./CategoryEditor";
+import { nextCustomKey, type CustomCategory } from "./customCategories";
 import {
   AUTO_SECONDS_OPTIONS,
   MAX_NAME_LENGTH,
@@ -29,7 +32,24 @@ interface Props {
 // shortest path to a game is one tap.
 export function SetupView({ setup, onChange, onStart, onExit }: Props) {
   const { t } = useT();
-  const { names, settings } = setup;
+  const { names, settings, customCategories } = setup;
+  // Which category is open in the editor: "new", an existing one, or none.
+  const [editing, setEditing] = useState<CustomCategory | "new" | null>(null);
+
+  // The editor opens at its top, and closing it returns to the category picker
+  // instead of leaving someone at a different place on a long form.
+  const setupScroll = useRef(0);
+  useLayoutEffect(() => {
+    window.scrollTo(0, editing ? 0 : setupScroll.current);
+  }, [editing]);
+
+  function openEditor(target: CustomCategory | "new") {
+    setupScroll.current = window.scrollY;
+    setEditing(target);
+  }
+
+  const builtInCategories = CATEGORY_OPTIONS.map((o) => ({ value: o.key, label: t(o.labelKey) }));
+  const selectedCustom = customCategories.find((c) => c.key === settings.category);
 
   const resolved = resolveNames(names, (n) => t("local.playerN", { n }));
   const clashes = duplicateSeats(resolved);
@@ -45,6 +65,38 @@ export function SetupView({ setup, onChange, onStart, onExit }: Props) {
 
   function rename(seat: number, name: string) {
     onChange({ ...setup, names: names.map((old, i) => (i === seat ? name : old)) });
+  }
+
+  if (editing) {
+    const existing = editing === "new" ? null : editing;
+    const others = customCategories.filter((c) => c.key !== existing?.key);
+
+    return (
+      <CategoryEditor
+        category={existing}
+        takenNames={[...builtInCategories.map((o) => o.label), ...others.map((c) => c.name)]}
+        onSave={(name, words) => {
+          const key = existing?.key ?? nextCustomKey(customCategories);
+          const saved = { key, name, words };
+          onChange({
+            ...setup,
+            // Saving selects it: someone who just typed a list means to play it.
+            settings: { ...settings, category: key },
+            customCategories: existing
+              ? customCategories.map((c) => (c.key === key ? saved : c))
+              : [...customCategories, saved],
+          });
+          setEditing(null);
+        }}
+        onDelete={() => {
+          // Only the selected category can be opened for editing, so the selection
+          // always has to move off it here.
+          onChange({ ...setup, settings: { ...settings, category: "" }, customCategories: others });
+          setEditing(null);
+        }}
+        onBack={() => setEditing(null)}
+      />
+    );
   }
 
   return (
@@ -108,14 +160,29 @@ export function SetupView({ setup, onChange, onStart, onExit }: Props) {
 
         <section className="setup">
           <h2>{t("lobby.setupHeading")}</h2>
-          <Segmented
-            name="category"
-            legend={t("lobby.categoryLabel")}
-            wrap
-            value={settings.category}
-            options={CATEGORY_OPTIONS.map((o) => ({ value: o.key, label: t(o.labelKey) }))}
-            onChange={(category) => pick({ category })}
-          />
+          <div>
+            <Segmented
+              name="category"
+              legend={t("lobby.categoryLabel")}
+              wrap
+              value={settings.category}
+              options={[
+                ...builtInCategories,
+                ...customCategories.map((c) => ({ value: c.key, label: c.name })),
+              ]}
+              onChange={(category) => pick({ category })}
+            />
+            <div className="category-actions">
+              <button className="secondary" onClick={() => openEditor("new")}>
+                {t("local.customNew")}
+              </button>
+              {selectedCustom && (
+                <button className="secondary" onClick={() => openEditor(selectedCustom)}>
+                  {t("local.customEdit")}
+                </button>
+              )}
+            </div>
+          </div>
           <label className="switch-row">
             <span>{t("lobby.hintsToggle")}</span>
             <input

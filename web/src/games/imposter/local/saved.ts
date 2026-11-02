@@ -9,6 +9,7 @@
 // over from an older build, so every read here tolerates anything and answers with
 // "nothing saved".
 
+import { isCustomKey, type CustomCategory } from "./customCategories";
 import {
   DEFAULT_SETTINGS,
   MIN_PLAYERS,
@@ -23,13 +24,32 @@ export interface LocalSetup {
   /** As typed, so a blank seat stays blank and keeps its "Player 3" placeholder. */
   names: string[];
   settings: LocalSettings;
+  customCategories: CustomCategory[];
 }
 
 export function defaultSetup(): LocalSetup {
-  return { names: Array.from({ length: MIN_PLAYERS }, () => ""), settings: DEFAULT_SETTINGS };
+  return {
+    names: Array.from({ length: MIN_PLAYERS }, () => ""),
+    settings: DEFAULT_SETTINGS,
+    customCategories: [],
+  };
 }
 
-/** Reads a saved setup, filling any setting a newer build has added since. */
+function isSavedCategory(value: unknown): value is CustomCategory {
+  const c = value as Partial<CustomCategory> | null;
+  return (
+    typeof c?.key === "string" &&
+    isCustomKey(c.key) &&
+    typeof c.name === "string" &&
+    Array.isArray(c.words) &&
+    c.words.length > 0 &&
+    c.words.every((w) => typeof w?.word === "string" && w.word !== "" && typeof w.hint === "string" && w.hint !== "")
+  );
+}
+
+/** Reads a saved setup, filling any setting a newer build has added since. A bad
+ * custom category is dropped on its own so it cannot cost the group the others, and
+ * a selection pointing at one that is gone goes back to any category. */
 export function parseSetup(json: string | null): LocalSetup {
   if (!json) return defaultSetup();
   try {
@@ -37,7 +57,14 @@ export function parseSetup(json: string | null): LocalSetup {
     const names = value.names;
     if (!Array.isArray(names) || names.length < MIN_PLAYERS) return defaultSetup();
     if (!names.every((n) => typeof n === "string")) return defaultSetup();
-    return { names, settings: { ...DEFAULT_SETTINGS, ...value.settings } };
+    const customCategories = Array.isArray(value.customCategories)
+      ? value.customCategories.filter(isSavedCategory)
+      : [];
+    const settings = { ...DEFAULT_SETTINGS, ...value.settings };
+    if (isCustomKey(settings.category) && !customCategories.some((c) => c.key === settings.category)) {
+      settings.category = "";
+    }
+    return { names, settings, customCategories };
   } catch {
     return defaultSetup();
   }

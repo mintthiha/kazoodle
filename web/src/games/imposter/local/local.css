@@ -75,6 +75,48 @@
   font-size: var(--fs-small);
 }
 
+/* Custom categories */
+.category-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.category-actions button {
+  flex: 1 1 auto;
+  width: auto;
+  min-height: var(--tap-small);
+  padding: 0 14px;
+  font-size: var(--fs-body);
+}
+
+.category-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 500;
+}
+
+/* Drawn to match the inputs, which are styled globally. Same size too: under 16px
+   makes iOS zoom the page when the box takes focus. */
+.category-field textarea {
+  width: 100%;
+  padding: 14px 22px;
+  font: inherit;
+  font-size: var(--fs-lead);
+  color: var(--text);
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--radius-card);
+  resize: vertical;
+}
+
+.category-field textarea:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
 /* Whose turn it is. Paper, because from across a table it is the one bright thing
    on the screen. */
 .speaker {

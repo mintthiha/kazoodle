@@ -195,6 +195,225 @@ test.describe("setup", () => {
   });
 });
 
+test.describe("custom categories", () => {
+  const HINTS: Record<string, string> = { Red: "Tomato", Green: "Grass", Blue: "Sky" };
+  const OURS = Object.keys(HINTS);
+  const OURS_TEXT = OURS.map((word) => `${word}: ${HINTS[word]}`).join("\n");
+  const THREE_SEATS = ["Player 1", "Player 2", "Player 3"];
+  const nameBox = (page: Page) => page.getByRole("textbox", { name: "Category name" });
+  const wordsBox = (page: Page) => page.getByRole("textbox", { name: "Words and hints" });
+  const chip = (page: Page, name: string) => page.getByRole("radio", { name, exact: true });
+
+  async function addCategory(page: Page, name = "Colours", words = OURS_TEXT) {
+    await button(page, "New category").click();
+    await nameBox(page).fill(name);
+    await wordsBox(page).fill(words);
+    await button(page, "Save category").click();
+    await expect(chip(page, name)).toBeChecked();
+  }
+
+  test("every game deals from the list, and it runs through the words before repeating", async ({ page }) => {
+    await openSetup(page);
+    await addCategory(page);
+    await button(page, "Deal the words").click();
+
+    const seen: string[] = [];
+    for (let game = 0; game < OURS.length; game++) {
+      const { word, imposter } = await dealAll(page, THREE_SEATS);
+      expect(OURS).toContain(word);
+      expect(seen).not.toContain(word);
+      seen.push(word);
+      await accuse(page, imposter);
+      await page.locator(".vs").click();
+      await expect(page.locator(".vs")).toContainText("Colours");
+      await playAgain(page).click();
+    }
+  });
+
+  /** Opens every slip, and reports the crew's word and what the imposter was told. */
+  async function readSlips(page: Page) {
+    let word = "";
+    let hints: string[] = [];
+    for (let seat = 0; seat < 3; seat++) {
+      const isImposter = await openSlip(page);
+      const shown = await page.getByText(/^Hint:/).allInnerTexts();
+      if (isImposter) {
+        await expect(page.getByText("Category: Colours")).toBeVisible();
+        hints = shown;
+      } else {
+        expect(shown, "the crew must never see a hint").toEqual([]);
+        word = await page.locator(".slip-word mark").innerText();
+      }
+      await button(page, seat === 2 ? "Start the game" : "Next player").click();
+    }
+    return { word, hints };
+  }
+
+  test("with hints on, the imposter gets the hint of the word that was dealt", async ({ page }) => {
+    await openSetup(page);
+    await addCategory(page);
+    await page.locator(".switch-row").click();
+    await button(page, "Deal the words").click();
+
+    // Every word in turn, so a wrong pairing cannot pass by luck.
+    for (let game = 0; game < OURS.length; game++) {
+      const { word, hints } = await readSlips(page);
+      expect(hints).toEqual([`Hint: ${HINTS[word]}. You still don’t know the word.`]);
+      await accuse(page, THREE_SEATS[0]);
+      await page.locator(".vs").click();
+      await playAgain(page).click();
+    }
+  });
+
+  test("with hints off, the imposter gets the usual message and no hint", async ({ page }) => {
+    await openSetup(page);
+    await addCategory(page);
+    await expect(page.locator(".switch-row")).toBeVisible();
+    await button(page, "Deal the words").click();
+
+    const { hints } = await readSlips(page);
+    expect(hints).toEqual([]);
+  });
+
+  test("Save explains what is missing until the category is valid", async ({ page }) => {
+    await openSetup(page);
+    await button(page, "New category").click();
+    const save = button(page, "Save category");
+
+    await expect(save).toBeDisabled();
+    await expect(page.getByText("Give the category a name.")).toBeVisible();
+
+    await nameBox(page).fill("food");
+    await expect(page.getByText("There is already a category with this name.")).toBeVisible();
+
+    await nameBox(page).fill("Colours");
+    await wordsBox(page).fill("Red: Tomato\nred: Blood\nRED: Fire\nGreen: Grass");
+    await expect(page.getByText("Words so far: 2")).toBeVisible();
+    await expect(page.getByText("Add at least 3 different words.")).toBeVisible();
+    await expect(save).toBeDisabled();
+
+    await wordsBox(page).fill(`Red: Tomato\nGreen: Grass\n${"x".repeat(21)}: Long`);
+    await expect(page.getByText(/is too long/)).toBeVisible();
+    await expect(save).toBeDisabled();
+
+    await wordsBox(page).fill(`Red: Tomato\nGreen: Grass\nBlue: ${"x".repeat(31)}`);
+    await expect(page.getByText("The hint for “Blue” is too long. The limit is 30 characters.")).toBeVisible();
+    await expect(save).toBeDisabled();
+
+    await wordsBox(page).fill("Red: Tomato\nGreen: Grass\n: Sky");
+    await expect(page.getByText("“Sky” has no word before the colon.")).toBeVisible();
+    await expect(save).toBeDisabled();
+
+    await wordsBox(page).fill("ice cream: cold\nDave's van: rusty");
+    await expect(page.getByText("Add at least 3 different words.")).toBeVisible();
+    await wordsBox(page).fill("ice cream: cold\nDave's van: rusty\nTacos: Tuesday");
+    await expect(page.getByText("Words so far: 3")).toBeVisible();
+    await expect(save).toBeEnabled();
+  });
+
+  test("every word needs a hint before it can be saved", async ({ page }) => {
+    await openSetup(page);
+    await button(page, "New category").click();
+    await nameBox(page).fill("Colours");
+    const save = button(page, "Save category");
+    const needsHint = (word: string) => page.getByText(`“${word}” needs a hint.`);
+
+    await wordsBox(page).fill("Red\nGreen\nBlue");
+    await expect(needsHint("Red")).toBeVisible();
+    await expect(save).toBeDisabled();
+
+    await wordsBox(page).fill("Red: Tomato\nGreen\nBlue");
+    await expect(needsHint("Green")).toBeVisible();
+    await expect(save).toBeDisabled();
+
+    // A colon with nothing after it is still no hint.
+    await wordsBox(page).fill("Red: Tomato\nGreen: Grass\nBlue:   ");
+    await expect(needsHint("Blue")).toBeVisible();
+    await expect(save).toBeDisabled();
+
+    await wordsBox(page).fill(OURS_TEXT);
+    await expect(save).toBeEnabled();
+  });
+
+  test("it survives a reload, and can be edited", async ({ page }) => {
+    await openSetup(page);
+    await addCategory(page);
+
+    await page.reload();
+    await expect(chip(page, "Colours")).toBeChecked();
+
+    await button(page, "Edit category").click();
+    await expect(nameBox(page)).toHaveValue("Colours");
+    await expect(wordsBox(page)).toHaveValue(OURS_TEXT);
+    await nameBox(page).fill("Shades");
+    await wordsBox(page).fill("Teal: Duck\nMauve: Lilac\nOchre: Clay");
+    await button(page, "Save category").click();
+
+    await expect(chip(page, "Colours")).toHaveCount(0);
+    await expect(chip(page, "Shades")).toBeChecked();
+    await button(page, "Deal the words").click();
+    const { word } = await dealAll(page, THREE_SEATS);
+    expect(["Teal", "Mauve", "Ochre"]).toContain(word);
+  });
+
+  test("a word in French keeps its hint, spaced the French way, in a French app", async ({ page }) => {
+    await openSetup(page);
+    await button(page, "FR").click();
+    await button(page, "Nouvelle catégorie").click();
+    await page.getByRole("textbox", { name: "Nom de la catégorie" }).fill("Couleurs");
+    await page
+      .getByRole("textbox", { name: "Mots et indices" })
+      .fill("Rouge : Tomate\nVert : Herbe\nBleu : Ciel");
+    await button(page, "Enregistrer la catégorie").click();
+    await page.locator(".switch-row").click();
+    await button(page, "Distribuer les mots").click();
+
+    const hintOf: Record<string, string> = { Rouge: "Tomate", Vert: "Herbe", Bleu: "Ciel" };
+    let word = "";
+    let hint = "";
+    for (let seat = 0; seat < 3; seat++) {
+      await page.locator(".slip-down").click();
+      await page.locator(".slip-turned").waitFor();
+      if (await page.locator(".slip-imposter").count()) {
+        hint = await page.locator(".slip-imposter .slip-note").nth(1).innerText();
+      } else {
+        word = await page.locator(".slip-word mark").innerText();
+      }
+      await page.locator(".dock .primary").click();
+    }
+    expect(hint).toContain(hintOf[word]);
+  });
+
+  test("Back keeps the old version, and deleting takes two taps", async ({ page }) => {
+    await openSetup(page);
+    await addCategory(page);
+
+    await button(page, "Edit category").click();
+    await nameBox(page).fill("Something else");
+    await button(page, "Back").click();
+    await expect(chip(page, "Colours")).toBeChecked();
+
+    await button(page, "Edit category").click();
+    await button(page, "Delete category").click();
+    await expect(wordsBox(page)).toBeVisible();
+    await button(page, "Delete it?").click();
+
+    await expect(chip(page, "Colours")).toHaveCount(0);
+    await expect(chip(page, "Any category")).toBeChecked();
+    await expect(button(page, "Edit category")).toHaveCount(0);
+  });
+
+  test("names and settings typed before opening the editor are kept", async ({ page }) => {
+    await openSetup(page);
+    await enterNames(page, NAMES);
+    await page.getByText("The app", { exact: true }).click();
+    await addCategory(page);
+
+    await expect(page.getByRole("textbox", { name: "Name of player 4", exact: true })).toHaveValue("Dov");
+    await expect(chip(page, "The app")).toBeChecked();
+  });
+});
+
 test.describe("the deal", () => {
   test("Next player waits for the word, and the next slip starts face down", async ({ page }) => {
     await openSetup(page);

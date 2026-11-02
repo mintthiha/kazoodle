@@ -54,6 +54,74 @@ describe("pickWord", () => {
     const food = WORDS.filter((w) => w.categoryKey === "food").map((w) => w.word.en);
     expect(food).toContain(pickWord("food", food, Math.random).word.en);
   });
+
+  describe("with a custom category", () => {
+    const ours = {
+      key: "custom:1",
+      name: "Ours",
+      words: [
+        { word: "Red", hint: "Tomato" },
+        { word: "Green", hint: "Grass" },
+        { word: "Blue", hint: "Sky" },
+      ],
+    };
+    const list = ours.words.map((w) => w.word);
+
+    it("draws only from the custom words", () => {
+      for (let i = 0; i < 50; i++) {
+        expect(list).toContain(pickWord(ours.key, [], Math.random, [ours]).word.en);
+      }
+    });
+
+    it("works through every word before repeating one", () => {
+      const used: string[] = [];
+      for (let i = 0; i < list.length; i++) {
+        used.push(pickWord(ours.key, used, Math.random, [ours]).word.en);
+      }
+      expect([...used].sort()).toEqual([...list].sort());
+      expect(list).toContain(pickWord(ours.key, used, Math.random, [ours]).word.en);
+    });
+
+    it("is left out of any category", () => {
+      for (let i = 0; i < 200; i++) {
+        expect(pickWord("", [], Math.random, [ours]).categoryKey).not.toBe(ours.key);
+      }
+    });
+
+    it("falls back to any once the category is gone", () => {
+      expect(pickWord(ours.key, [], lowRng, [])).toBe(WORDS[0]);
+    });
+
+    // lowRng deals the first word, Red, with seat 0 as the imposter.
+    const dealt = (hintsEnabled: boolean) =>
+      newGame(NAMES, { ...DEFAULT_SETTINGS, category: ours.key, hintsEnabled }, [], lowRng, [ours]);
+
+    it("gives the imposter the dealt word's own hint when hints are on", () => {
+      expect(roleFor(dealt(true), 0, "en")).toEqual({
+        isImposter: true,
+        word: "",
+        category: "Ours",
+        hint: "Tomato",
+      });
+    });
+
+    it("shows the hint as typed in either language", () => {
+      expect(roleFor(dealt(true), 0, "fr").hint).toBe("Tomato");
+    });
+
+    it("keeps the hint from the imposter when hints are off", () => {
+      expect(roleFor(dealt(false), 0, "en").hint).toBe("");
+    });
+
+    it("never shows the crew a hint", () => {
+      expect(roleFor(dealt(true), 1, "en")).toEqual({
+        isImposter: false,
+        word: "Red",
+        category: "Ours",
+        hint: "",
+      });
+    });
+  });
 });
 
 describe("resolveNames", () => {

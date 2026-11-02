@@ -5,10 +5,10 @@ import type { LocalGameProps } from "../../registry";
 import { AccuseView } from "./AccuseView";
 import { DealView } from "./DealView";
 import { DiscussView, SpeakView } from "./PlayView";
-import { EndGameButton } from "./EndGameButton";
 import { newGame, resolveNames, step, type LocalEvent, type LocalGame, type Stage } from "./localGame";
 import { loadGame, loadSetup, saveGame, saveSetup, type LocalSetup } from "./saved";
 import { SetupView } from "./SetupView";
+import { TwoTapButton } from "./TwoTapButton";
 import { useWakeLock } from "./useWakeLock";
 import { VerdictView } from "./VerdictView";
 import "../imposter.css";
@@ -42,7 +42,7 @@ export function LocalImposter({ onExit }: LocalGameProps) {
 
   function deal(usedWords: string[]) {
     const names = resolveNames(setup.names, (n) => t("local.playerN", { n }));
-    setGame(newGame(names, setup.settings, usedWords));
+    setGame(newGame(names, setup.settings, usedWords, Math.random, setup.customCategories));
   }
 
   if (!game) {
@@ -66,7 +66,11 @@ export function LocalImposter({ onExit }: LocalGameProps) {
     <>
       <div className="local-bar">
         <GameHeader stage={HEADER_STAGE[stage.kind]} round={0} totalRounds={0} />
-        <EndGameButton onEnd={() => setGame(null)} />
+        <TwoTapButton
+          label={t("local.endGame")}
+          confirmLabel={t("local.endGameConfirm")}
+          onConfirm={() => setGame(null)}
+        />
       </div>
       {stage.kind === "deal" && (
         // The key gives each player a new view, so their slip always starts face
