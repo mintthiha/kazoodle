@@ -20,6 +20,7 @@ export function DealView({ game, seat, onNext }: Props) {
 
   const total = game.names.length;
   const last = seat === total - 1;
+  const role = roleFor(game, seat, locale);
 
   return (
     <main className="screen">
@@ -28,7 +29,7 @@ export function DealView({ game, seat, onNext }: Props) {
         <p className="status num">{t("local.dealProgress", { n: seat + 1, total })}</p>
       </div>
 
-      <RevealSlip role={roleFor(game, seat, locale)} onReveal={() => setSeen(true)} />
+      <RevealSlip role={role} partnerName={role.partner} onReveal={() => setSeen(true)} />
 
       <div className="dock">
         <button className="primary" disabled={!seen} onClick={onNext}>

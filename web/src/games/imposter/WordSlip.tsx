@@ -22,12 +22,14 @@ interface RevealProps {
   role: Pick<RoleAssignment, "isImposter" | "word" | "category" | "hint">;
   /** Called every time the slip is turned face up. */
   onReveal: () => void;
+  /** The other imposter's name, on a two-imposter round. */
+  partnerName?: string;
 }
 
 // The secret itself, on a slip of paper that starts face down. These phones are
 // out in the open in one room, so nothing shows until its owner asks for it, and
 // tapping again hides it before the phone goes back on the table.
-export function RevealSlip({ role, onReveal }: RevealProps) {
+export function RevealSlip({ role, onReveal, partnerName }: RevealProps) {
   const { t } = useT();
   const [shown, setShown] = useState(false);
 
@@ -51,6 +53,9 @@ export function RevealSlip({ role, onReveal }: RevealProps) {
       <button className="slip slip-imposter slip-turned" onClick={toggle} aria-pressed={true}>
         <span className="slip-note">{t("imposter.categoryLabel", { category: role.category })}</span>
         <span className="slip-verdict">{t("imposter.youAreImposter")}</span>
+        {partnerName && (
+          <span className="slip-partner">{t("imposter.partnerLine", { who: partnerName })}</span>
+        )}
         <span className="slip-note">
           {role.hint
             ? t("imposter.imposterHintText", { hint: role.hint })
@@ -78,7 +83,7 @@ export function RevealSlip({ role, onReveal }: RevealProps) {
 // The same secret, kept within reach for the rest of the round. Everyone forgets
 // the word the moment it is their turn, and asking the room would rather give
 // the game away. Face down by default for the same reason as the big slip.
-export function WordPeek({ role }: { role: RoleAssignment | null }) {
+export function WordPeek({ role, partnerName }: { role: RoleAssignment | null; partnerName?: string }) {
   const { t } = useT();
   const [shown, setShown] = useState(false);
 
@@ -93,7 +98,10 @@ export function WordPeek({ role }: { role: RoleAssignment | null }) {
           ) : (
             <span className="peek-chip">{role.word}</span>
           )}
-          <span className="peek-meta">{role.category}</span>
+          <span className="peek-meta">
+            {role.category}
+            {partnerName && ` · ${t("imposter.partnerLine", { who: partnerName })}`}
+          </span>
           <span className="peek-action">{t("imposter.peekHide")}</span>
         </>
       ) : (

@@ -27,6 +27,7 @@ func mkState(ph phase, order []string, imposterID string) *state {
 		phase:      ph,
 		order:      order,
 		imposterID: imposterID,
+		stealerID:  imposterID,
 		entry:      wordList[0],
 		locales:    locales,
 		ready:      make(map[string]bool),
@@ -95,8 +96,10 @@ func TestLeaveByStrangerIsANoOp(t *testing.T) {
 	st := mkState(phaseClues, []string{"a", "b", "c"}, "a")
 	next, effects := leaveOK(t, st, "zz")
 
-	if len(effects) != 0 {
-		t.Errorf("got %d effects for a player who isn't in the round, want 0", len(effects))
+	// KeepTimer and nothing else: a bystander leaving tells nobody anything, and
+	// must not stop the clock of a round they were never in.
+	if len(effects) != 1 || !keepsTimerIn(effects) {
+		t.Errorf("effects = %v for a player who isn't in the round, want only KeepTimer", effects)
 	}
 	if len(next.order) != 3 {
 		t.Errorf("order = %v, want it unchanged", next.order)
@@ -423,8 +426,11 @@ func TestLeaveDuringStealByCrewChangesNothing(t *testing.T) {
 	st := mkState(phaseSteal, []string{"a", "b", "c", "d"}, "a")
 	next, effects := leaveOK(t, st, "d")
 
-	if len(effects) != 0 {
-		t.Errorf("got %d effects, want 0 — everyone is waiting on the imposter", len(effects))
+	// Everyone is waiting on the imposter against the same deadline, so the only
+	// thing to say is "keep the clock". Saying nothing would cancel it, and the
+	// guess would then have no deadline at all.
+	if len(effects) != 1 || !keepsTimerIn(effects) {
+		t.Errorf("effects = %v, want only KeepTimer", effects)
 	}
 	if next.phase != phaseSteal {
 		t.Errorf("phase = %s, want steal", next.phase)

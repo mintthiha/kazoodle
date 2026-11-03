@@ -83,9 +83,31 @@ go test ./internal/games/imposter -run TestWebWordsMatch -update
 
 `go test ./...` fails if the copy is out of date.
 
+### Offline
+
+A production build installs a service worker that keeps the app's own files, so
+one-phone mode opens with no signal and the app can be added to a home screen. It
+does not exist in `npm run dev`, on purpose: a cache in front of a dev server would
+serve stale code. `pwa/offlineShell.ts` builds it and `e2e/offline.spec.ts` tests it.
+
+### The simulation
+
+`npm run sim` plays a whole party live on your screen: one browser window per player,
+tiled side by side, with a narrator along the bottom. It plays a seven-player online
+match with phones dropping out, then a one-phone game with no network, and every step
+asserts its result. `SIM_PACE` adds to the pause between steps in milliseconds,
+`SIM_HOLD` sets how long the windows stay open at the end in seconds, and
+`SIM_HEADLESS=1` hides the windows. A replay is also left at `sim/output/replay.html`.
+
+### Reconnecting
+
+A dropped socket does not cost a player their seat. `RoomJoined` carries a session
+token, kept in `sessionStorage`, and `ResumeRoom` reclaims the seat from a new socket
+or after a reload. The server holds the seat for 30 seconds in a lobby and 2 minutes
+in a game (`server/internal/room/presence.go`), and replays the player's game events
+so the screen rebuilds. `e2e/online-imposter.spec.ts` tests it against the real server.
+
 ### Known gaps (intentional, pre-alpha)
 
-- On reconnect the client re-sends its join, so the server issues a **new**
-  player. True session restore (same identity) is an open design question.
 - The single `Connection` is created once and never torn down on unmount — fine
   for a one-page app, revisit if routing is added.

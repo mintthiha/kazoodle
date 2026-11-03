@@ -76,6 +76,7 @@ func (Game) Init(players []game.Player, options []byte) (game.State, []game.Effe
 		clueSeconds:  clueSecondsFromOption(opts.GetClueSeconds()),
 		hintsEnabled: opts.GetHintsEnabled(),
 		wordCategory: opts.GetCategory(),
+		imposters:    int(opts.GetImposters()),
 		order:        roster, // beginRound copies and shuffles this
 	}
 	st := seed.beginRound()
@@ -156,7 +157,7 @@ func advanceClue(st *state, playerID, text string) (game.State, []game.Effect, e
 
 // advanceVote handles one player's vote, abstain, or changed mind. Once
 // everyone has voted (or abstained), it tallies the result. If the vote
-// caught the imposter, they get one steal guess before the round resolves;
+// caught an imposter, they get one steal guess before the round resolves;
 // otherwise the Outcome is final immediately.
 func advanceVote(st *state, voterID, suspectID string, abstain bool) (game.State, []game.Effect, error) {
 	if st.phase != phaseVote {
@@ -185,14 +186,16 @@ func advanceVote(st *state, voterID, suspectID string, abstain bool) (game.State
 
 // resolveVote closes a vote in which everyone present has now voted. It sets
 // the phase on the state it is handed, so callers pass a clone they already
-// own. A vote that caught the imposter moves the round to the steal phase;
-// otherwise the Outcome is final immediately.
+// own. A vote that caught an imposter moves the round to the steal phase, with
+// that imposter as the one who may guess; otherwise the Outcome is final
+// immediately.
 func resolveVote(next *state) []game.Effect {
 	votedOutID, caught := tally(next)
 	effects := []game.Effect{game.Send{Msg: voteTally(next, votedOutID)}}
 
 	if caught {
 		next.phase = phaseSteal
+		next.stealerID = votedOutID
 		return append(effects, stealPhaseEffects(next)...)
 	}
 
@@ -208,14 +211,14 @@ func resolveVote(next *state) []game.Effect {
 }
 
 // advanceSteal handles the caught imposter's one blind guess at the secret
-// word. A correct guess steals the win back for the imposter; anything else
+// word. A correct guess steals the win back for the imposters; anything else
 // leaves the crew's win standing. Either way the round is now final.
 func advanceSteal(st *state, playerID, guess string) (game.State, []game.Effect, error) {
 	if st.phase != phaseSteal {
 		return st, nil, fmt.Errorf("imposter: there is no steal guess to make right now")
 	}
-	if playerID != st.imposterID {
-		return st, nil, fmt.Errorf("imposter: only the imposter gets a steal guess")
+	if playerID != st.stealerID {
+		return st, nil, fmt.Errorf("imposter: only the caught imposter gets a steal guess")
 	}
 	guess = strings.TrimSpace(guess)
 	if guess == "" {
@@ -262,7 +265,7 @@ func advancePlayAgain(st *state) (game.State, []game.Effect, error) {
 	return next, roundStart(next), nil
 }
 
-// tally returns who the room voted to remove and whether that was the
+// tally returns who the room voted to remove and whether that was an
 // imposter (caught, not yet whether the crew ultimately wins — a catch still
 // gives the imposter a steal guess). A tie for the most votes means no one is
 // removed and the imposter escapes. Abstains (the "" sentinel) never count
@@ -288,7 +291,7 @@ func tally(st *state) (votedOutID string, caught bool) {
 	if tie || top == "" {
 		return "", false
 	}
-	return top, top == st.imposterID
+	return top, st.isImposter(top)
 }
 
 func contains(ids []string, id string) bool {
@@ -314,7 +317,8 @@ func indexOf(ids []string, id string) int {
 func roleFor(st *state, playerID string) *pb.ImposterServerMessage {
 	locale := st.locales[playerID]
 	role := &pb.RoleAssignment{
-		IsImposter:  playerID == st.imposterID,
+		IsImposter:  st.isImposter(playerID),
+		PartnerId:   st.partnerOf(playerID),
 		Category:    st.entry.category.forLocale(locale),
 		Round:       int32(st.round),
 		TotalRounds: int32(st.totalRounds),
@@ -405,9 +409,17 @@ func voteTally(st *state, votedOutID string) *pb.ImposterServerMessage {
 			out = append(out, &pb.VoteCount{PlayerId: id, Votes: c})
 		}
 	}
+	// In turn order, for the same reason as the counts: a map's iteration order
+	// changes from run to run, and this is shown to people side by side.
+	ballots := make([]*pb.Ballot, 0, len(st.votes))
+	for _, id := range st.order {
+		if suspect, ok := st.votes[id]; ok {
+			ballots = append(ballots, &pb.Ballot{VoterId: id, SuspectId: suspect})
+		}
+	}
 	return &pb.ImposterServerMessage{
 		Body: &pb.ImposterServerMessage_VoteTally{
-			VoteTally: &pb.VoteTally{Counts: out, VotedOutId: votedOutID, AbstainCount: abstains},
+			VoteTally: &pb.VoteTally{Counts: out, VotedOutId: votedOutID, AbstainCount: abstains, Ballots: ballots},
 		},
 	}
 }
@@ -445,6 +457,7 @@ func outcomeFor(st *state, playerID string, res result) *pb.ImposterServerMessag
 		Body: &pb.ImposterServerMessage_Outcome{
 			Outcome: &pb.Outcome{
 				ImposterId:     st.imposterID,
+				PartnerId:      st.partnerID,
 				Word:           st.entry.word.forLocale(locale),
 				Category:       st.entry.category.forLocale(locale),
 				CrewWon:        res.crewWon,
@@ -479,7 +492,7 @@ func scoreEntries(st *state) []*pb.ScoreEntry {
 func stealPrompt(st *state) *pb.ImposterServerMessage {
 	return &pb.ImposterServerMessage{
 		Body: &pb.ImposterServerMessage_StealPrompt{
-			StealPrompt: &pb.StealPrompt{ImposterId: st.imposterID, StealSeconds: stealSeconds},
+			StealPrompt: &pb.StealPrompt{ImposterId: st.stealerID, StealSeconds: stealSeconds},
 		},
 	}
 }

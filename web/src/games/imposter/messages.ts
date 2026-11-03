@@ -23,6 +23,9 @@ export interface MatchOptions {
   cluePasses: number;
   /** Seconds allowed per clue turn, or 0 for no clock. See ./rounds. */
   clueSeconds: number;
+  /** How many imposters at 7+ players: 1 or 2, or 0 for the server's default of
+   * two. Below that there is always one. */
+  imposters: number;
 }
 
 /** What a match is if the host touches nothing. */
@@ -32,6 +35,7 @@ export const DEFAULT_MATCH_OPTIONS: MatchOptions = {
   rounds: DEFAULT_ROUNDS,
   cluePasses: DEFAULT_CLUE_PASSES,
   clueSeconds: DEFAULT_CLUE_SECONDS,
+  imposters: 0,
 };
 
 /** Decode one game-event payload string into a typed Imposter server message. */
@@ -66,6 +70,7 @@ export function decodeStartOptions(json: string): MatchOptions {
       // No `||` fallback here: zero is a real choice (no clock), not an
       // unset field standing in for a default.
       clueSeconds: opts.clueSeconds,
+      imposters: opts.imposters,
     };
   } catch {
     return DEFAULT_MATCH_OPTIONS;

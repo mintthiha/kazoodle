@@ -105,6 +105,8 @@ func (c *conn) handle(ctx context.Context, msg *protocol.ClientMessage) {
 		c.doCreate(ctx, p.CreateRoom.GetDisplayName(), p.CreateRoom.GetLocale())
 	case *protocol.ClientMessage_JoinRoom:
 		c.doJoin(ctx, p.JoinRoom.GetRoomCode(), p.JoinRoom.GetDisplayName(), p.JoinRoom.GetLocale())
+	case *protocol.ClientMessage_ResumeRoom:
+		c.doResume(ctx, p.ResumeRoom.GetRoomCode(), p.ResumeRoom.GetSessionToken())
 	case *protocol.ClientMessage_LeaveRoom:
 		c.doLeave(ctx)
 	case *protocol.ClientMessage_Echo:
@@ -150,6 +152,26 @@ func (c *conn) doJoin(ctx context.Context, code, displayName, locale string) {
 	}
 	c.roomCode, c.playerID = res.RoomCode, res.Self.ID
 	c.Send(roomJoinedMsg(res))
+}
+
+// doResume reclaims a held seat. On success the room has already sent RoomJoined
+// to this connection itself; see Room.applyResume for why that order matters.
+func (c *conn) doResume(ctx context.Context, code, token string) {
+	if c.roomCode != "" {
+		c.Send(errMsg("already_in_room", "leave your current room first"))
+		return
+	}
+	playerID, err := c.mgr.Resume(ctx, code, token, c)
+	switch {
+	case errors.Is(err, room.ErrRoomNotFound):
+		c.Send(errMsg("room_not_found", "no room with that code"))
+	case errors.Is(err, room.ErrSessionExpired):
+		c.Send(errMsg("session_expired", "that seat is no longer being held"))
+	case err != nil:
+		c.Send(errMsg("join_failed", err.Error()))
+	default:
+		c.roomCode, c.playerID = code, playerID
+	}
 }
 
 func (c *conn) doLeave(ctx context.Context) {
@@ -285,10 +307,12 @@ func roomJoinedMsg(res room.JoinResult) *protocol.ServerMessage {
 	return &protocol.ServerMessage{
 		Payload: &protocol.ServerMessage_RoomJoined{
 			RoomJoined: &protocol.RoomJoined{
-				RoomCode:     res.RoomCode,
-				SelfPlayerId: res.Self.ID,
-				Players:      players,
-				HostId:       res.HostID,
+				RoomCode:         res.RoomCode,
+				SelfPlayerId:     res.Self.ID,
+				Players:          players,
+				HostId:           res.HostID,
+				SessionToken:     res.SessionToken,
+				OfflinePlayerIds: res.Offline,
 			},
 		},
 	}

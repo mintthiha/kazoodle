@@ -56,6 +56,13 @@ type JoinResult struct {
 	Self     Player
 	Players  []Player // full roster, in join order, including Self
 	HostID   string
+
+	// SessionToken reclaims this seat later; see Manager.Resume. It must only
+	// ever be sent to the player it belongs to.
+	SessionToken string
+
+	// Offline lists the players on the roster whose seat is being held.
+	Offline []string
 }
 
 // Create makes a new room with a freshly generated code, adds the caller as its
@@ -165,11 +172,19 @@ func (m *Manager) addPlayer(ctx context.Context, r *Room, displayName, locale st
 	// instead, since it is the only thing that knows which names are already
 	// taken. See applyJoin.
 	p := Player{ID: newPlayerID(), DisplayName: cleanName(displayName), Locale: locale}
-	rep, err := r.join(ctx, p, s)
+	token := newSessionToken()
+	rep, err := r.join(ctx, p, token, s)
 	if err != nil {
 		return JoinResult{}, err
 	}
-	return JoinResult{RoomCode: r.code, Self: rep.self, Players: rep.roster, HostID: rep.hostID}, nil
+	return JoinResult{
+		RoomCode:     r.code,
+		Self:         rep.self,
+		Players:      rep.roster,
+		HostID:       rep.hostID,
+		SessionToken: token,
+		Offline:      rep.offline,
+	}, nil
 }
 
 // remove drops a room from the map. It is called by that room's own goroutine

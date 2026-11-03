@@ -201,10 +201,17 @@ func TestAnExpiredTimerReachesTheGameAsAnEvent(t *testing.T) {
 
 func TestTheExpiryRearmsAndTheNewTimerAlsoFires(t *testing.T) {
 	g := newTimedGame()
-	_, clk, _, _ := startTimedGame(t, g)
+	m, clk, created, _ := startTimedGame(t, g)
 
 	clk.nth(t, 0).fire()
-	_ = g.nextEvent(t) // the room has now processed the expiry and re-armed
+	_ = g.nextEvent(t)
+
+	// The game announces an event as it receives it, which is before the room has
+	// acted on what the game returned. An echo is answered only after the room has
+	// finished whatever came before it, so this waits for the re-arm without sleeping.
+	if err := m.Echo(context.Background(), created.RoomCode, created.Self.ID, "sync"); err != nil {
+		t.Fatalf("Echo: %v", err)
+	}
 
 	if clk.armed() != 2 {
 		t.Fatalf("armed %d timers, want 2 — the expiry should have re-armed", clk.armed())

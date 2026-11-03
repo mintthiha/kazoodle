@@ -1,12 +1,15 @@
 import { useState, type CSSProperties } from "react";
 import { useT } from "../../../i18n";
 import { Avatar } from "../../../players/Avatar";
-import { crewWon, type LocalGame } from "./localGame";
+import { crewWon, isImposter, type LocalGame, type StealState } from "./localGame";
 import { makeSeatHue } from "./seatHue";
 
 interface Props {
   game: LocalGame;
   accused: number;
+  /** Set when the accused really was an imposter. See the steal below. */
+  steal?: StealState;
+  onSteal: (correct: boolean) => void;
   onPlayAgain: () => void;
   onChangePlayers: () => void;
 }
@@ -23,18 +26,39 @@ interface Props {
 // back until their moment. So there is one way to reach the end. Taking `vs-live`
 // away (a tap to skip) or never applying the animations (reduced motion) both land
 // on exactly what the sequence lands on.
-export function VerdictView({ game, accused, onPlayAgain, onChangePlayers }: Props) {
+//
+// A caught imposter still has one way out: a guess at the word, said out loud. Only
+// the table can rule on something spoken, so the result holds at "Caught!" with two
+// buttons and without the word on screen, which would give the guess away. A ruling
+// also takes `vs-live` away, so that a stolen win changes the colour outright instead
+// of replaying the whole sequence for the other side.
+export function VerdictView({ game, accused, steal, onSteal, onPlayAgain, onChangePlayers }: Props) {
   const { locale, t } = useT();
   const [skipped, setSkipped] = useState(false);
 
-  const won = crewWon(game, accused);
+  const won = crewWon(game, accused, steal);
+  const pending = steal === "pending";
+  const decided = steal === "hit" || steal === "miss";
   const accusedName = game.names[accused];
-  const imposterName = game.names[game.imposter];
   const hue = makeSeatHue(game.names.length);
+  const imposters = game.partner === null ? [game.imposter] : [game.imposter, game.partner];
+
+  function line(): string {
+    if (steal === "hit") return t("local.stolenLine", { who: accusedName });
+    if (steal === "miss") return t("local.missedLine", { who: accusedName });
+    if (pending) return t("local.stealPrompt", { who: accusedName });
+    return t("local.innocentLine", { who: accusedName });
+  }
+
+  function headline(): string {
+    if (pending) return t("imposter.stealHeading");
+    if (won) return t("imposter.crewWon");
+    return t(game.partner === null ? "imposter.imposterWon" : "imposter.imposterWonPair");
+  }
 
   return (
     <div
-      className={skipped ? "vs" : "vs vs-live"}
+      className={skipped || decided ? "vs" : "vs vs-live"}
       data-side={won ? "crew" : "imposter"}
       onClick={() => setSkipped(true)}
     >
@@ -50,7 +74,7 @@ export function VerdictView({ game, accused, onPlayAgain, onChangePlayers }: Pro
             </div>
             <div className="vs-face vs-back">
               <span className="vs-back-word">
-                {won ? t("local.flipImposter") : t("local.flipInnocent")}
+                {isImposter(game, accused) ? t("local.flipImposter") : t("local.flipInnocent")}
               </span>
             </div>
           </div>
@@ -61,40 +85,54 @@ export function VerdictView({ game, accused, onPlayAgain, onChangePlayers }: Pro
       <FlyingSlips count={won ? 40 : 18} />
 
       <main className="screen vs-result">
-        <h1 className="vs-headline">{won ? t("imposter.crewWon") : t("imposter.imposterWon")}</h1>
-        <p className="vs-line">
-          {won
-            ? t("local.caughtLine", { who: accusedName })
-            : t("local.innocentLine", { who: accusedName })}
-        </p>
+        <h1 className="vs-headline">{headline()}</h1>
+        <p className="vs-line">{line()}</p>
 
-        <dl className="verdict-facts vs-facts">
-          {!won && (
-            <div>
-              <dt>{t("imposter.theImposter")}</dt>
-              <dd className="verdict-who">
-                <Avatar name={imposterName} hue={hue(game.imposter)} />
-                {imposterName}
-              </dd>
-            </div>
-          )}
-          <div>
-            <dt>{t("imposter.theWord")}</dt>
-            <dd className="verdict-word">
-              <span className="verdict-slip">{game.entry.word[locale]}</span>
-              <span className="verdict-category">{game.entry.category[locale]}</span>
-            </dd>
+        {pending ? (
+          <div className="vs-actions">
+            <p className="vs-question-steal">{t("local.stealQuestion")}</p>
+            <button className="vs-again" onClick={() => onSteal(true)}>
+              {t("local.stealHit")}
+            </button>
+            <button className="vs-change" onClick={() => onSteal(false)}>
+              {t("local.stealMiss")}
+            </button>
           </div>
-        </dl>
+        ) : (
+          <>
+            <dl className="verdict-facts vs-facts">
+              {/* Everyone already knows a lone imposter who was caught. Otherwise this
+                  is the reveal: who it really was, or who the other one was. */}
+              {(!isImposter(game, accused) || imposters.length > 1) && (
+                <div>
+                  <dt>{t(imposters.length > 1 ? "imposter.theImposters" : "imposter.theImposter")}</dt>
+                  {imposters.map((seat) => (
+                    <dd key={seat} className="verdict-who">
+                      <Avatar name={game.names[seat]} hue={hue(seat)} />
+                      {game.names[seat]}
+                    </dd>
+                  ))}
+                </div>
+              )}
+              <div>
+                <dt>{t("imposter.theWord")}</dt>
+                <dd className="verdict-word">
+                  <span className="verdict-slip">{game.entry.word[locale]}</span>
+                  <span className="verdict-category">{game.entry.category[locale]}</span>
+                </dd>
+              </div>
+            </dl>
 
-        <div className="vs-actions">
-          <button className="vs-again" onClick={onPlayAgain}>
-            {t("local.playAgain")}
-          </button>
-          <button className="vs-change" onClick={onChangePlayers}>
-            {t("local.changePlayers")}
-          </button>
-        </div>
+            <div className="vs-actions">
+              <button className="vs-again" onClick={onPlayAgain}>
+                {t("local.playAgain")}
+              </button>
+              <button className="vs-change" onClick={onChangePlayers}>
+                {t("local.changePlayers")}
+              </button>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

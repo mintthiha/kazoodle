@@ -6,6 +6,10 @@ import "errors"
 // never existed or it has already emptied out and been torn down.
 var ErrRoomNotFound = errors.New("room not found")
 
+// ErrSessionExpired is returned when a resume token matches no seat in the room:
+// the seat was given up after its grace period, or the player left on purpose.
+var ErrSessionExpired = errors.New("session expired")
+
 // ErrNoRoomCode is returned when the manager could not allocate an unused room
 // code after several tries. In practice this only happens if a huge number of
 // rooms are live at once.

@@ -61,15 +61,21 @@ func TestGuestNameShape(t *testing.T) {
 }
 
 func TestGuestNamesDoNotRepeat(t *testing.T) {
-	// Not a strict guarantee — the tag is random — but over this many draws a
-	// repeat would mean the randomness is broken rather than unlucky.
+	// Not a strict guarantee, because the tag is random: with about 33 million tags,
+	// 500 draws repeat one about once in every 270 runs. Several repeats in one run
+	// would mean the randomness is broken rather than unlucky.
+	const allowed = 3
 	seen := make(map[string]bool)
+	repeats := 0
 	for i := 0; i < 500; i++ {
 		name := guestName("en", nil)
 		if seen[name] {
-			t.Fatalf("drew %q twice in %d draws", name, i+1)
+			repeats++
 		}
 		seen[name] = true
+	}
+	if repeats > allowed {
+		t.Errorf("%d repeats in 500 draws, want at most %d", repeats, allowed)
 	}
 }
 

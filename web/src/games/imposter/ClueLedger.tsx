@@ -11,6 +11,8 @@ interface Props {
   hue: (id: string) => number;
   /** Whose clue the table is waiting on. */
   activeId?: string;
+  /** Rows to label as the imposter, once the round is over and it is no secret. */
+  imposterIds?: string[];
   /** Who can be picked, when this ledger is being used as a ballot. */
   candidates?: string[];
   selectedId?: string | null;
@@ -30,6 +32,7 @@ export function ClueLedger({
   name,
   hue,
   activeId,
+  imposterIds,
   candidates,
   selectedId,
   disabled,
@@ -48,6 +51,9 @@ export function ClueLedger({
               <span className="ledger-name">
                 {name(row.id)}
                 {row.id === selfId && <span className="you"> ({t("lobby.you")})</span>}
+                {imposterIds?.includes(row.id) && (
+                  <span className="pill ledger-imposter">{t("imposter.recapImposter")}</span>
+                )}
               </span>
               <span className="ledger-clues">
                 {row.texts.map((text, i) =>
@@ -87,7 +93,11 @@ export function ClueLedger({
                 {body}
               </button>
             ) : (
-              <div className="ledger-row" data-active={active}>
+              <div
+                className="ledger-row"
+                data-active={active}
+                data-imposter={imposterIds?.includes(row.id) ?? false}
+              >
                 {body}
               </div>
             )}

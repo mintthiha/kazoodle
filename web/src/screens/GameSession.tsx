@@ -7,6 +7,7 @@ import { BackNav } from "./BackNav";
 import { ConnBanner } from "./ConnBanner";
 import { JoinScreen } from "./JoinScreen";
 import { LobbyScreen } from "./LobbyScreen";
+import { OfflineNotice } from "./OfflineNotice";
 import { RoomNotice } from "./RoomNotice";
 
 interface Props {
@@ -85,6 +86,7 @@ export function GameSession({ gameId, onExit }: Props) {
       {snapshot.room && (
         <RoomNotice departure={snapshot.lastDeparture} gameEnd={snapshot.lastGameEnd} />
       )}
+      {snapshot.room && <OfflineNotice room={snapshot.room} />}
       {/* Back to the shelf, offered only before joining a room: once players
           are in a room, Leave is the way out, and two exits side by side is
           one too many. */}

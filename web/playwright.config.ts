@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { WEB_URL, webServers } from "./e2e/support/stack";
 
 // Browser tests, driven as a phone. These run on demand (`npm run test:e2e`) and
 // are not part of `npm test`, which stays fast and needs no browser.
@@ -14,7 +15,7 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     ...devices["Pixel 7"],
-    baseURL: "http://localhost:5173",
+    baseURL: WEB_URL,
     channel: process.env.PW_CHANNEL ?? "msedge",
     locale: "en-US",
     // Every test leaves a video and a final screenshot, passing or not. They are
@@ -24,9 +25,5 @@ export default defineConfig({
     trace: "retain-on-failure",
     launchOptions: { slowMo: Number(process.env.PW_SLOWMO ?? 0) },
   },
-  webServer: {
-    command: "npm run dev",
-    url: "http://localhost:5173",
-    reuseExistingServer: true,
-  },
+  webServer: webServers,
 });

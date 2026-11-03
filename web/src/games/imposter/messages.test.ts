@@ -66,6 +66,7 @@ describe("imposter messages: encode", () => {
           rounds: 0,
           cluePasses: 0,
           clueSeconds: 0,
+          imposters: 0,
         }),
       ),
     ).toEqual({});
@@ -74,7 +75,14 @@ describe("imposter messages: encode", () => {
 
 describe("imposter messages: start options round-trip", () => {
   it("reads back what was encoded", () => {
-    const opts = { hintsEnabled: true, category: "food", rounds: 5, cluePasses: 3, clueSeconds: 20 };
+    const opts = {
+      hintsEnabled: true,
+      category: "food",
+      rounds: 5,
+      cluePasses: 3,
+      clueSeconds: 20,
+      imposters: 1,
+    };
     expect(decodeStartOptions(encodeStartOptions(opts))).toEqual(opts);
   });
 
@@ -87,6 +95,8 @@ describe("imposter messages: start options round-trip", () => {
       // Not substituted for a default: zero means no clock, and that is what
       // an unset field should play as.
       clueSeconds: 0,
+      // Zero here is passed through for the server, which reads it as its default.
+      imposters: 0,
     });
   });
 

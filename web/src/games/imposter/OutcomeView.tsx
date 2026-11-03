@@ -2,13 +2,17 @@ import type { CSSProperties } from "react";
 import { useT } from "../../i18n";
 import { Avatar } from "../../players/Avatar";
 import { makeHueFor } from "../../players/hues";
-import type { Outcome, VoteTally } from "./gen/imposter_pb";
+import type { Outcome, VotePhase, VoteTally } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
+import { ClueLedger } from "./ClueLedger";
+import { buildLedger } from "./ledger";
 import { makeNameFor } from "./nameFor";
 
 interface Props extends GameViewProps {
   tally: VoteTally | null;
   outcome: Outcome | null;
+  /** Where the clues and the turn order come from: the last ballot of the round. */
+  votePhase: VotePhase | null;
   isHost: boolean;
   onPlayAgain: () => void;
 }
@@ -20,7 +24,16 @@ interface Props extends GameViewProps {
 // The host's button moves the match on — "next round", or "finish" on the last
 // one. Everyone else waits for them. Which of the two it is comes from the
 // server's matchOver flag, never from the client counting rounds itself.
-export function OutcomeView({ tally, outcome, players, departed, isHost, onPlayAgain }: Props) {
+export function OutcomeView({
+  tally,
+  outcome,
+  votePhase,
+  selfId,
+  players,
+  departed,
+  isHost,
+  onPlayAgain,
+}: Props) {
   const { t } = useT();
 
   const name = makeNameFor(players, departed, t);
@@ -36,9 +49,21 @@ export function OutcomeView({ tally, outcome, players, departed, isHost, onPlayA
 
   const over = outcome.matchOver;
   const winners = outcome.winnerIds;
-  const verdict = outcome.crewWon ? t("imposter.crewWon") : t("imposter.imposterWon");
+  const imposterIds = outcome.partnerId
+    ? [outcome.imposterId, outcome.partnerId]
+    : [outcome.imposterId];
+  const verdict = outcome.crewWon
+    ? t("imposter.crewWon")
+    : t(outcome.partnerId ? "imposter.imposterWonPair" : "imposter.imposterWon");
   const votesCast =
     (tally?.counts.reduce((sum, c) => sum + c.votes, 0) ?? 0) + (tally?.abstainCount ?? 0);
+
+  // The names behind one line of the vote, or nothing if there was no ballot list.
+  const votersFor = (suspectId: string): string =>
+    (tally?.ballots ?? [])
+      .filter((b) => b.suspectId === suspectId)
+      .map((b) => name(b.voterId))
+      .join(", ");
 
   return (
     <main className="screen">
@@ -60,11 +85,13 @@ export function OutcomeView({ tally, outcome, players, departed, isHost, onPlayA
 
         <dl className="verdict-facts">
           <div>
-            <dt>{t("imposter.theImposter")}</dt>
-            <dd className="verdict-who">
-              <Avatar name={name(outcome.imposterId)} hue={hue(outcome.imposterId)} />
-              {name(outcome.imposterId)}
-            </dd>
+            <dt>{t(outcome.partnerId ? "imposter.theImposters" : "imposter.theImposter")}</dt>
+            {imposterIds.map((id) => (
+              <dd key={id} className="verdict-who">
+                <Avatar name={name(id)} hue={hue(id)} />
+                {name(id)}
+              </dd>
+            ))}
           </div>
           <div>
             <dt>{t("imposter.theWord")}</dt>
@@ -85,13 +112,29 @@ export function OutcomeView({ tally, outcome, players, departed, isHost, onPlayA
         {outcome.stealAttempted && (
           <p>
             {t(outcome.stealCorrect ? "imposter.stealSucceeded" : "imposter.stealFailed", {
-              who: name(outcome.imposterId),
+              who: name(outcome.votedOutId),
               guess: outcome.stealGuess,
             })}
           </p>
         )}
         {outcome.hint && <p>{t("imposter.revealHint", { hint: outcome.hint })}</p>}
       </div>
+
+      {/* The evidence, now that it can be read knowing the answer. This is where the
+          table gets to enjoy the clue that gave somebody away. */}
+      {votePhase && votePhase.clues.length > 0 && (
+        <section className="recap">
+          <h2>{t("imposter.recapHeading")}</h2>
+          <ClueLedger
+            rows={buildLedger(votePhase.candidateIds, votePhase.clues)}
+            passes={0}
+            selfId={selfId}
+            name={name}
+            hue={hue}
+            imposterIds={imposterIds}
+          />
+        </section>
+      )}
 
       {/* Standings come down already sorted, best first, with every player
           listed — including anyone who left, who keeps the points they
@@ -135,10 +178,16 @@ export function OutcomeView({ tally, outcome, players, departed, isHost, onPlayA
                 votes={c.votes}
                 total={votesCast}
                 out={c.playerId === tally.votedOutId}
+                voters={votersFor(c.playerId)}
               />
             ))}
             {tally.abstainCount > 0 && (
-              <VoteRow label={t("imposter.abstain")} votes={tally.abstainCount} total={votesCast} />
+              <VoteRow
+                label={t("imposter.abstain")}
+                votes={tally.abstainCount}
+                total={votesCast}
+                voters={votersFor("")}
+              />
             )}
           </ul>
         </section>
@@ -168,12 +217,16 @@ function VoteRow({
   votes,
   total,
   out = false,
+  voters,
 }: {
   label: string;
   votes: number;
   total: number;
   out?: boolean;
+  /** Who cast these votes, as one line of names. Empty if the server sent none. */
+  voters: string;
 }) {
+  const { t } = useT();
   const share = total > 0 ? votes / total : 0;
   return (
     <li className="vote-row" data-out={out}>
@@ -182,6 +235,7 @@ function VoteRow({
       <span className="vote-bar" aria-hidden="true">
         <span className="vote-fill" style={{ "--share": share } as CSSProperties} />
       </span>
+      {voters && <span className="vote-voters">{t("imposter.votedBy", { who: voters })}</span>}
     </li>
   );
 }

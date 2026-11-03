@@ -1,10 +1,12 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useT } from "../../../i18n";
 import { Avatar } from "../../../players/Avatar";
+import type { MessageKey } from "../../../i18n";
 import { BackNav } from "../../../screens/BackNav";
 import { Segmented } from "../../../screens/Segmented";
 import { CATEGORY_OPTIONS } from "../categories";
-import { CLUE_PASS_OPTIONS } from "../rounds";
+import { RulesCard } from "../RulesCard";
+import { CLUE_PASS_OPTIONS, TWO_IMPOSTER_MIN_PLAYERS } from "../rounds";
 import { CategoryEditor } from "./CategoryEditor";
 import { nextCustomKey, type CustomCategory } from "./customCategories";
 import {
@@ -27,6 +29,16 @@ interface Props {
   onStart: () => void;
   onExit: () => void;
 }
+
+/** This mode's rules differ from the online game's: clues are spoken, the table
+ * picks one person together, and nobody keeps score. */
+const LOCAL_RULES: MessageKey[] = [
+  "imposter.rule.word",
+  "local.rule.speak",
+  "local.rule.accuse",
+  "local.rule.steal",
+  "local.rule.two",
+];
 
 // Who is playing and how. A blank name is fine and becomes "Player 3", so the
 // shortest path to a game is one tap.
@@ -194,6 +206,19 @@ export function SetupView({ setup, onChange, onStart, onExit }: Props) {
             />
             <span className="switch" aria-hidden="true" />
           </label>
+          {names.length >= TWO_IMPOSTER_MIN_PLAYERS && (
+            <label className="switch-row">
+              <span>{t("local.twoImpostersToggle")}</span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="visually-hidden"
+                checked={settings.twoImposters}
+                onChange={(e) => pick({ twoImposters: e.target.checked })}
+              />
+              <span className="switch" aria-hidden="true" />
+            </label>
+          )}
           <div>
             <Segmented<AdvanceMode>
               name="advance"
@@ -233,9 +258,22 @@ export function SetupView({ setup, onChange, onStart, onExit }: Props) {
                 }))}
                 onChange={(clueSeconds) => pick({ clueSeconds })}
               />
+              <label className="switch-row">
+                <span>{t("local.soundToggle")}</span>
+                <input
+                  type="checkbox"
+                  role="switch"
+                  className="visually-hidden"
+                  checked={settings.sound}
+                  onChange={(e) => pick({ sound: e.target.checked })}
+                />
+                <span className="switch" aria-hidden="true" />
+              </label>
             </>
           )}
         </section>
+
+        <RulesCard rules={LOCAL_RULES} />
 
         <div className="dock">
           {clashes.size > 0 && <p className="hint">{t("local.duplicateName")}</p>}

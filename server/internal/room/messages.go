@@ -13,6 +13,46 @@ func msgPlayerJoined(p Player) *protocol.ServerMessage {
 	}
 }
 
+func msgPlayerPresence(playerID string, connected bool) *protocol.ServerMessage {
+	return &protocol.ServerMessage{
+		Payload: &protocol.ServerMessage_PlayerPresence{
+			PlayerPresence: &protocol.PlayerPresence{PlayerId: playerID, Connected: connected},
+		},
+	}
+}
+
+// msgResumed is the RoomJoined that answers a ResumeRoom. gameID and events are
+// empty unless the player has a seat in a running game.
+func msgResumed(code string, m *member, roster []Player, hostID, gameID string, events, offline []string) *protocol.ServerMessage {
+	players := make([]*protocol.Player, 0, len(roster))
+	for _, p := range roster {
+		players = append(players, p.wire())
+	}
+	return &protocol.ServerMessage{
+		Payload: &protocol.ServerMessage_RoomJoined{
+			RoomJoined: &protocol.RoomJoined{
+				RoomCode:         code,
+				SelfPlayerId:     m.player.ID,
+				Players:          players,
+				HostId:           hostID,
+				SessionToken:     m.token,
+				Resumed:          true,
+				ActiveGameId:     gameID,
+				GameEvents:       events,
+				OfflinePlayerIds: offline,
+			},
+		},
+	}
+}
+
+func msgError(code, detail string) *protocol.ServerMessage {
+	return &protocol.ServerMessage{
+		Payload: &protocol.ServerMessage_Error{
+			Error: &protocol.ErrorInfo{Code: code, Message: detail},
+		},
+	}
+}
+
 func msgPlayerLeft(playerID string) *protocol.ServerMessage {
 	return &protocol.ServerMessage{
 		Payload: &protocol.ServerMessage_PlayerLeft{

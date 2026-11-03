@@ -21,9 +21,10 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// A connected player in a room. `id` is assigned by the server and is unique
-// within a room for the lifetime of that connection. A player's locale is not
-// exposed to other clients; only the server uses it.
+// A player in a room. `id` is assigned by the server and is unique within a
+// room. It belongs to the seat rather than the socket: a phone that reconnects
+// with ResumeRoom keeps its id, its score and its place in a running game. A
+// player's locale is not exposed to other clients; only the server uses it.
 type Player struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -88,6 +89,7 @@ type ClientMessage struct {
 	//	*ClientMessage_StartGame
 	//	*ClientMessage_GameAction
 	//	*ClientMessage_SetGameOptions
+	//	*ClientMessage_ResumeRoom
 	Payload       isClientMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -193,6 +195,15 @@ func (x *ClientMessage) GetSetGameOptions() *SetGameOptions {
 	return nil
 }
 
+func (x *ClientMessage) GetResumeRoom() *ResumeRoom {
+	if x != nil {
+		if x, ok := x.Payload.(*ClientMessage_ResumeRoom); ok {
+			return x.ResumeRoom
+		}
+	}
+	return nil
+}
+
 type isClientMessage_Payload interface {
 	isClientMessage_Payload()
 }
@@ -225,6 +236,10 @@ type ClientMessage_SetGameOptions struct {
 	SetGameOptions *SetGameOptions `protobuf:"bytes,7,opt,name=set_game_options,json=setGameOptions,proto3,oneof"`
 }
 
+type ClientMessage_ResumeRoom struct {
+	ResumeRoom *ResumeRoom `protobuf:"bytes,8,opt,name=resume_room,json=resumeRoom,proto3,oneof"`
+}
+
 func (*ClientMessage_CreateRoom) isClientMessage_Payload() {}
 
 func (*ClientMessage_JoinRoom) isClientMessage_Payload() {}
@@ -238,6 +253,8 @@ func (*ClientMessage_StartGame) isClientMessage_Payload() {}
 func (*ClientMessage_GameAction) isClientMessage_Payload() {}
 
 func (*ClientMessage_SetGameOptions) isClientMessage_Payload() {}
+
+func (*ClientMessage_ResumeRoom) isClientMessage_Payload() {}
 
 // Ask the server to mint a new room. The server picks the room code and
 // replies with RoomJoined. The creator becomes the room's host.
@@ -395,6 +412,62 @@ func (*LeaveRoom) Descriptor() ([]byte, []int) {
 	return file_protocol_proto_rawDescGZIP(), []int{4}
 }
 
+// Reclaim a seat after the connection dropped. `session_token` is the secret
+// from RoomJoined. Replies with RoomJoined (resumed = true), or ErrorInfo
+// "session_expired" if the seat was given up (the client should then join again
+// as a new player) or "room_not_found" if the room has gone.
+type ResumeRoom struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RoomCode      string                 `protobuf:"bytes,1,opt,name=room_code,json=roomCode,proto3" json:"room_code,omitempty"`
+	SessionToken  string                 `protobuf:"bytes,2,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeRoom) Reset() {
+	*x = ResumeRoom{}
+	mi := &file_protocol_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeRoom) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeRoom) ProtoMessage() {}
+
+func (x *ResumeRoom) ProtoReflect() protoreflect.Message {
+	mi := &file_protocol_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeRoom.ProtoReflect.Descriptor instead.
+func (*ResumeRoom) Descriptor() ([]byte, []int) {
+	return file_protocol_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ResumeRoom) GetRoomCode() string {
+	if x != nil {
+		return x.RoomCode
+	}
+	return ""
+}
+
+func (x *ResumeRoom) GetSessionToken() string {
+	if x != nil {
+		return x.SessionToken
+	}
+	return ""
+}
+
 // Round-trip probe. The server echoes `text` back to the whole room as
 // EchoResult. Exists purely to prove the pipe works end to end.
 type Echo struct {
@@ -406,7 +479,7 @@ type Echo struct {
 
 func (x *Echo) Reset() {
 	*x = Echo{}
-	mi := &file_protocol_proto_msgTypes[5]
+	mi := &file_protocol_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -418,7 +491,7 @@ func (x *Echo) String() string {
 func (*Echo) ProtoMessage() {}
 
 func (x *Echo) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[5]
+	mi := &file_protocol_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -431,7 +504,7 @@ func (x *Echo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Echo.ProtoReflect.Descriptor instead.
 func (*Echo) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{5}
+	return file_protocol_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Echo) GetText() string {
@@ -455,7 +528,7 @@ type StartGame struct {
 
 func (x *StartGame) Reset() {
 	*x = StartGame{}
-	mi := &file_protocol_proto_msgTypes[6]
+	mi := &file_protocol_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -467,7 +540,7 @@ func (x *StartGame) String() string {
 func (*StartGame) ProtoMessage() {}
 
 func (x *StartGame) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[6]
+	mi := &file_protocol_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -480,7 +553,7 @@ func (x *StartGame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartGame.ProtoReflect.Descriptor instead.
 func (*StartGame) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{6}
+	return file_protocol_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *StartGame) GetGameId() string {
@@ -510,7 +583,7 @@ type GameAction struct {
 
 func (x *GameAction) Reset() {
 	*x = GameAction{}
-	mi := &file_protocol_proto_msgTypes[7]
+	mi := &file_protocol_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -522,7 +595,7 @@ func (x *GameAction) String() string {
 func (*GameAction) ProtoMessage() {}
 
 func (x *GameAction) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[7]
+	mi := &file_protocol_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -535,7 +608,7 @@ func (x *GameAction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameAction.ProtoReflect.Descriptor instead.
 func (*GameAction) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{7}
+	return file_protocol_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GameAction) GetGameId() string {
@@ -569,7 +642,7 @@ type SetGameOptions struct {
 
 func (x *SetGameOptions) Reset() {
 	*x = SetGameOptions{}
-	mi := &file_protocol_proto_msgTypes[8]
+	mi := &file_protocol_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -581,7 +654,7 @@ func (x *SetGameOptions) String() string {
 func (*SetGameOptions) ProtoMessage() {}
 
 func (x *SetGameOptions) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[8]
+	mi := &file_protocol_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -594,7 +667,7 @@ func (x *SetGameOptions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetGameOptions.ProtoReflect.Descriptor instead.
 func (*SetGameOptions) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{8}
+	return file_protocol_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SetGameOptions) GetGameId() string {
@@ -626,6 +699,7 @@ type ServerMessage struct {
 	//	*ServerMessage_GameEvent
 	//	*ServerMessage_GameEnded
 	//	*ServerMessage_GameOptionsChanged
+	//	*ServerMessage_PlayerPresence
 	Payload       isServerMessage_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -633,7 +707,7 @@ type ServerMessage struct {
 
 func (x *ServerMessage) Reset() {
 	*x = ServerMessage{}
-	mi := &file_protocol_proto_msgTypes[9]
+	mi := &file_protocol_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -645,7 +719,7 @@ func (x *ServerMessage) String() string {
 func (*ServerMessage) ProtoMessage() {}
 
 func (x *ServerMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[9]
+	mi := &file_protocol_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -658,7 +732,7 @@ func (x *ServerMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServerMessage.ProtoReflect.Descriptor instead.
 func (*ServerMessage) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{9}
+	return file_protocol_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ServerMessage) GetPayload() isServerMessage_Payload {
@@ -758,6 +832,15 @@ func (x *ServerMessage) GetGameOptionsChanged() *GameOptionsChanged {
 	return nil
 }
 
+func (x *ServerMessage) GetPlayerPresence() *PlayerPresence {
+	if x != nil {
+		if x, ok := x.Payload.(*ServerMessage_PlayerPresence); ok {
+			return x.PlayerPresence
+		}
+	}
+	return nil
+}
+
 type isServerMessage_Payload interface {
 	isServerMessage_Payload()
 }
@@ -802,6 +885,10 @@ type ServerMessage_GameOptionsChanged struct {
 	GameOptionsChanged *GameOptionsChanged `protobuf:"bytes,10,opt,name=game_options_changed,json=gameOptionsChanged,proto3,oneof"`
 }
 
+type ServerMessage_PlayerPresence struct {
+	PlayerPresence *PlayerPresence `protobuf:"bytes,11,opt,name=player_presence,json=playerPresence,proto3,oneof"`
+}
+
 func (*ServerMessage_RoomJoined) isServerMessage_Payload() {}
 
 func (*ServerMessage_PlayerJoined) isServerMessage_Payload() {}
@@ -822,21 +909,40 @@ func (*ServerMessage_GameEnded) isServerMessage_Payload() {}
 
 func (*ServerMessage_GameOptionsChanged) isServerMessage_Payload() {}
 
-// Sent only to the player who just joined (via CreateRoom or JoinRoom):
-// their own identity, the current host, and the full current roster.
+func (*ServerMessage_PlayerPresence) isServerMessage_Payload() {}
+
+// Sent only to the player who just joined (via CreateRoom, JoinRoom or
+// ResumeRoom): their own identity, the current host, and the full current
+// roster.
 type RoomJoined struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RoomCode      string                 `protobuf:"bytes,1,opt,name=room_code,json=roomCode,proto3" json:"room_code,omitempty"`
-	SelfPlayerId  string                 `protobuf:"bytes,2,opt,name=self_player_id,json=selfPlayerId,proto3" json:"self_player_id,omitempty"`
-	Players       []*Player              `protobuf:"bytes,3,rep,name=players,proto3" json:"players,omitempty"`
-	HostId        string                 `protobuf:"bytes,4,opt,name=host_id,json=hostId,proto3" json:"host_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	RoomCode     string                 `protobuf:"bytes,1,opt,name=room_code,json=roomCode,proto3" json:"room_code,omitempty"`
+	SelfPlayerId string                 `protobuf:"bytes,2,opt,name=self_player_id,json=selfPlayerId,proto3" json:"self_player_id,omitempty"`
+	Players      []*Player              `protobuf:"bytes,3,rep,name=players,proto3" json:"players,omitempty"`
+	HostId       string                 `protobuf:"bytes,4,opt,name=host_id,json=hostId,proto3" json:"host_id,omitempty"`
+	// The secret that reclaims this seat with ResumeRoom. Only ever sent to the
+	// player it belongs to.
+	SessionToken string `protobuf:"bytes,5,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
+	// True when this answers a ResumeRoom: the same seat, not a new player.
+	Resumed bool `protobuf:"varint,6,opt,name=resumed,proto3" json:"resumed,omitempty"`
+	// Set on a resume when this player has a seat in a running game. The client
+	// goes straight back to that game instead of the lobby.
+	ActiveGameId string `protobuf:"bytes,7,opt,name=active_game_id,json=activeGameId,proto3" json:"active_game_id,omitempty"`
+	// Every GameEvent payload this player has been sent in the running game, in
+	// order, including those missed while disconnected. Replaying them rebuilds
+	// the screen, so a game needs no reconnect logic of its own. They travel in
+	// this one message rather than as separate frames so that a long replay cannot
+	// overflow the connection's small send queue.
+	GameEvents []string `protobuf:"bytes,8,rep,name=game_events,json=gameEvents,proto3" json:"game_events,omitempty"`
+	// Players on the roster whose connection has dropped. See PlayerPresence.
+	OfflinePlayerIds []string `protobuf:"bytes,9,rep,name=offline_player_ids,json=offlinePlayerIds,proto3" json:"offline_player_ids,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *RoomJoined) Reset() {
 	*x = RoomJoined{}
-	mi := &file_protocol_proto_msgTypes[10]
+	mi := &file_protocol_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -848,7 +954,7 @@ func (x *RoomJoined) String() string {
 func (*RoomJoined) ProtoMessage() {}
 
 func (x *RoomJoined) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[10]
+	mi := &file_protocol_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -861,7 +967,7 @@ func (x *RoomJoined) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoomJoined.ProtoReflect.Descriptor instead.
 func (*RoomJoined) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{10}
+	return file_protocol_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RoomJoined) GetRoomCode() string {
@@ -892,6 +998,96 @@ func (x *RoomJoined) GetHostId() string {
 	return ""
 }
 
+func (x *RoomJoined) GetSessionToken() string {
+	if x != nil {
+		return x.SessionToken
+	}
+	return ""
+}
+
+func (x *RoomJoined) GetResumed() bool {
+	if x != nil {
+		return x.Resumed
+	}
+	return false
+}
+
+func (x *RoomJoined) GetActiveGameId() string {
+	if x != nil {
+		return x.ActiveGameId
+	}
+	return ""
+}
+
+func (x *RoomJoined) GetGameEvents() []string {
+	if x != nil {
+		return x.GameEvents
+	}
+	return nil
+}
+
+func (x *RoomJoined) GetOfflinePlayerIds() []string {
+	if x != nil {
+		return x.OfflinePlayerIds
+	}
+	return nil
+}
+
+// Broadcast when a player's connection drops or comes back. They stay on the
+// roster while the server holds their seat; PlayerLeft follows if they do not
+// return in time.
+type PlayerPresence struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PlayerId      string                 `protobuf:"bytes,1,opt,name=player_id,json=playerId,proto3" json:"player_id,omitempty"`
+	Connected     bool                   `protobuf:"varint,2,opt,name=connected,proto3" json:"connected,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PlayerPresence) Reset() {
+	*x = PlayerPresence{}
+	mi := &file_protocol_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlayerPresence) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlayerPresence) ProtoMessage() {}
+
+func (x *PlayerPresence) ProtoReflect() protoreflect.Message {
+	mi := &file_protocol_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlayerPresence.ProtoReflect.Descriptor instead.
+func (*PlayerPresence) Descriptor() ([]byte, []int) {
+	return file_protocol_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *PlayerPresence) GetPlayerId() string {
+	if x != nil {
+		return x.PlayerId
+	}
+	return ""
+}
+
+func (x *PlayerPresence) GetConnected() bool {
+	if x != nil {
+		return x.Connected
+	}
+	return false
+}
+
 // Broadcast to the players already in a room when someone new joins.
 type PlayerJoined struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -902,7 +1098,7 @@ type PlayerJoined struct {
 
 func (x *PlayerJoined) Reset() {
 	*x = PlayerJoined{}
-	mi := &file_protocol_proto_msgTypes[11]
+	mi := &file_protocol_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -914,7 +1110,7 @@ func (x *PlayerJoined) String() string {
 func (*PlayerJoined) ProtoMessage() {}
 
 func (x *PlayerJoined) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[11]
+	mi := &file_protocol_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -927,7 +1123,7 @@ func (x *PlayerJoined) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerJoined.ProtoReflect.Descriptor instead.
 func (*PlayerJoined) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{11}
+	return file_protocol_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PlayerJoined) GetPlayer() *Player {
@@ -947,7 +1143,7 @@ type PlayerLeft struct {
 
 func (x *PlayerLeft) Reset() {
 	*x = PlayerLeft{}
-	mi := &file_protocol_proto_msgTypes[12]
+	mi := &file_protocol_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -959,7 +1155,7 @@ func (x *PlayerLeft) String() string {
 func (*PlayerLeft) ProtoMessage() {}
 
 func (x *PlayerLeft) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[12]
+	mi := &file_protocol_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -972,7 +1168,7 @@ func (x *PlayerLeft) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerLeft.ProtoReflect.Descriptor instead.
 func (*PlayerLeft) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{12}
+	return file_protocol_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PlayerLeft) GetPlayerId() string {
@@ -993,7 +1189,7 @@ type EchoResult struct {
 
 func (x *EchoResult) Reset() {
 	*x = EchoResult{}
-	mi := &file_protocol_proto_msgTypes[13]
+	mi := &file_protocol_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1005,7 +1201,7 @@ func (x *EchoResult) String() string {
 func (*EchoResult) ProtoMessage() {}
 
 func (x *EchoResult) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[13]
+	mi := &file_protocol_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1018,7 +1214,7 @@ func (x *EchoResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EchoResult.ProtoReflect.Descriptor instead.
 func (*EchoResult) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{13}
+	return file_protocol_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *EchoResult) GetText() string {
@@ -1038,7 +1234,9 @@ func (x *EchoResult) GetFromPlayerId() string {
 // A problem with the client's last message. Not fatal to the connection.
 type ErrorInfo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Stable, machine-readable: "room_not_found", "not_in_room", "bad_message".
+	// Stable, machine-readable: "room_not_found", "not_in_room", "bad_message",
+	// "session_expired", or "session_replaced" (another tab or device reclaimed
+	// this seat, so this connection no longer speaks for it).
 	Code string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
 	// Human-readable detail for logs and debugging. Not localized.
 	Message       string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
@@ -1048,7 +1246,7 @@ type ErrorInfo struct {
 
 func (x *ErrorInfo) Reset() {
 	*x = ErrorInfo{}
-	mi := &file_protocol_proto_msgTypes[14]
+	mi := &file_protocol_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1060,7 +1258,7 @@ func (x *ErrorInfo) String() string {
 func (*ErrorInfo) ProtoMessage() {}
 
 func (x *ErrorInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[14]
+	mi := &file_protocol_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1073,7 +1271,7 @@ func (x *ErrorInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorInfo.ProtoReflect.Descriptor instead.
 func (*ErrorInfo) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{14}
+	return file_protocol_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ErrorInfo) GetCode() string {
@@ -1101,7 +1299,7 @@ type HostChanged struct {
 
 func (x *HostChanged) Reset() {
 	*x = HostChanged{}
-	mi := &file_protocol_proto_msgTypes[15]
+	mi := &file_protocol_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1113,7 +1311,7 @@ func (x *HostChanged) String() string {
 func (*HostChanged) ProtoMessage() {}
 
 func (x *HostChanged) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[15]
+	mi := &file_protocol_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1126,7 +1324,7 @@ func (x *HostChanged) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HostChanged.ProtoReflect.Descriptor instead.
 func (*HostChanged) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{15}
+	return file_protocol_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *HostChanged) GetHostId() string {
@@ -1146,7 +1344,7 @@ type GameStarted struct {
 
 func (x *GameStarted) Reset() {
 	*x = GameStarted{}
-	mi := &file_protocol_proto_msgTypes[16]
+	mi := &file_protocol_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1158,7 +1356,7 @@ func (x *GameStarted) String() string {
 func (*GameStarted) ProtoMessage() {}
 
 func (x *GameStarted) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[16]
+	mi := &file_protocol_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1171,7 +1369,7 @@ func (x *GameStarted) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameStarted.ProtoReflect.Descriptor instead.
 func (*GameStarted) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{16}
+	return file_protocol_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *GameStarted) GetGameId() string {
@@ -1194,7 +1392,7 @@ type GameEvent struct {
 
 func (x *GameEvent) Reset() {
 	*x = GameEvent{}
-	mi := &file_protocol_proto_msgTypes[17]
+	mi := &file_protocol_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1206,7 +1404,7 @@ func (x *GameEvent) String() string {
 func (*GameEvent) ProtoMessage() {}
 
 func (x *GameEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[17]
+	mi := &file_protocol_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1219,7 +1417,7 @@ func (x *GameEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameEvent.ProtoReflect.Descriptor instead.
 func (*GameEvent) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{17}
+	return file_protocol_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GameEvent) GetGameId() string {
@@ -1250,7 +1448,7 @@ type GameEnded struct {
 
 func (x *GameEnded) Reset() {
 	*x = GameEnded{}
-	mi := &file_protocol_proto_msgTypes[18]
+	mi := &file_protocol_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1262,7 +1460,7 @@ func (x *GameEnded) String() string {
 func (*GameEnded) ProtoMessage() {}
 
 func (x *GameEnded) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[18]
+	mi := &file_protocol_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1275,7 +1473,7 @@ func (x *GameEnded) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameEnded.ProtoReflect.Descriptor instead.
 func (*GameEnded) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{18}
+	return file_protocol_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GameEnded) GetGameId() string {
@@ -1305,7 +1503,7 @@ type GameOptionsChanged struct {
 
 func (x *GameOptionsChanged) Reset() {
 	*x = GameOptionsChanged{}
-	mi := &file_protocol_proto_msgTypes[19]
+	mi := &file_protocol_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1317,7 +1515,7 @@ func (x *GameOptionsChanged) String() string {
 func (*GameOptionsChanged) ProtoMessage() {}
 
 func (x *GameOptionsChanged) ProtoReflect() protoreflect.Message {
-	mi := &file_protocol_proto_msgTypes[19]
+	mi := &file_protocol_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1330,7 +1528,7 @@ func (x *GameOptionsChanged) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GameOptionsChanged.ProtoReflect.Descriptor instead.
 func (*GameOptionsChanged) Descriptor() ([]byte, []int) {
-	return file_protocol_proto_rawDescGZIP(), []int{19}
+	return file_protocol_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *GameOptionsChanged) GetGameId() string {
@@ -1354,7 +1552,7 @@ const file_protocol_proto_rawDesc = "" +
 	"\x0eprotocol.proto\x12\rpartygames.v1\";\n" +
 	"\x06Player\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
-	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\"\xba\x03\n" +
+	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\"\xf8\x03\n" +
 	"\rClientMessage\x12<\n" +
 	"\vcreate_room\x18\x01 \x01(\v2\x19.partygames.v1.CreateRoomH\x00R\n" +
 	"createRoom\x126\n" +
@@ -1366,7 +1564,9 @@ const file_protocol_proto_rawDesc = "" +
 	"start_game\x18\x05 \x01(\v2\x18.partygames.v1.StartGameH\x00R\tstartGame\x12<\n" +
 	"\vgame_action\x18\x06 \x01(\v2\x19.partygames.v1.GameActionH\x00R\n" +
 	"gameAction\x12I\n" +
-	"\x10set_game_options\x18\a \x01(\v2\x1d.partygames.v1.SetGameOptionsH\x00R\x0esetGameOptionsB\t\n" +
+	"\x10set_game_options\x18\a \x01(\v2\x1d.partygames.v1.SetGameOptionsH\x00R\x0esetGameOptions\x12<\n" +
+	"\vresume_room\x18\b \x01(\v2\x19.partygames.v1.ResumeRoomH\x00R\n" +
+	"resumeRoomB\t\n" +
 	"\apayload\"G\n" +
 	"\n" +
 	"CreateRoom\x12!\n" +
@@ -1376,7 +1576,11 @@ const file_protocol_proto_rawDesc = "" +
 	"\troom_code\x18\x01 \x01(\tR\broomCode\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x16\n" +
 	"\x06locale\x18\x03 \x01(\tR\x06locale\"\v\n" +
-	"\tLeaveRoom\"\x1a\n" +
+	"\tLeaveRoom\"N\n" +
+	"\n" +
+	"ResumeRoom\x12\x1b\n" +
+	"\troom_code\x18\x01 \x01(\tR\broomCode\x12#\n" +
+	"\rsession_token\x18\x02 \x01(\tR\fsessionToken\"\x1a\n" +
 	"\x04Echo\x12\x12\n" +
 	"\x04text\x18\x01 \x01(\tR\x04text\">\n" +
 	"\tStartGame\x12\x17\n" +
@@ -1388,7 +1592,7 @@ const file_protocol_proto_rawDesc = "" +
 	"\apayload\x18\x02 \x01(\tR\apayload\"C\n" +
 	"\x0eSetGameOptions\x12\x17\n" +
 	"\agame_id\x18\x01 \x01(\tR\x06gameId\x12\x18\n" +
-	"\aoptions\x18\x02 \x01(\tR\aoptions\"\x99\x05\n" +
+	"\aoptions\x18\x02 \x01(\tR\aoptions\"\xe3\x05\n" +
 	"\rServerMessage\x12<\n" +
 	"\vroom_joined\x18\x01 \x01(\v2\x19.partygames.v1.RoomJoinedH\x00R\n" +
 	"roomJoined\x12B\n" +
@@ -1405,14 +1609,24 @@ const file_protocol_proto_rawDesc = "" +
 	"\n" +
 	"game_ended\x18\t \x01(\v2\x18.partygames.v1.GameEndedH\x00R\tgameEnded\x12U\n" +
 	"\x14game_options_changed\x18\n" +
-	" \x01(\v2!.partygames.v1.GameOptionsChangedH\x00R\x12gameOptionsChangedB\t\n" +
-	"\apayload\"\x99\x01\n" +
+	" \x01(\v2!.partygames.v1.GameOptionsChangedH\x00R\x12gameOptionsChanged\x12H\n" +
+	"\x0fplayer_presence\x18\v \x01(\v2\x1d.partygames.v1.PlayerPresenceH\x00R\x0eplayerPresenceB\t\n" +
+	"\apayload\"\xcd\x02\n" +
 	"\n" +
 	"RoomJoined\x12\x1b\n" +
 	"\troom_code\x18\x01 \x01(\tR\broomCode\x12$\n" +
 	"\x0eself_player_id\x18\x02 \x01(\tR\fselfPlayerId\x12/\n" +
 	"\aplayers\x18\x03 \x03(\v2\x15.partygames.v1.PlayerR\aplayers\x12\x17\n" +
-	"\ahost_id\x18\x04 \x01(\tR\x06hostId\"=\n" +
+	"\ahost_id\x18\x04 \x01(\tR\x06hostId\x12#\n" +
+	"\rsession_token\x18\x05 \x01(\tR\fsessionToken\x12\x18\n" +
+	"\aresumed\x18\x06 \x01(\bR\aresumed\x12$\n" +
+	"\x0eactive_game_id\x18\a \x01(\tR\factiveGameId\x12\x1f\n" +
+	"\vgame_events\x18\b \x03(\tR\n" +
+	"gameEvents\x12,\n" +
+	"\x12offline_player_ids\x18\t \x03(\tR\x10offlinePlayerIds\"K\n" +
+	"\x0ePlayerPresence\x12\x1b\n" +
+	"\tplayer_id\x18\x01 \x01(\tR\bplayerId\x12\x1c\n" +
+	"\tconnected\x18\x02 \x01(\bR\tconnected\"=\n" +
 	"\fPlayerJoined\x12-\n" +
 	"\x06player\x18\x01 \x01(\v2\x15.partygames.v1.PlayerR\x06player\")\n" +
 	"\n" +
@@ -1451,54 +1665,58 @@ func file_protocol_proto_rawDescGZIP() []byte {
 	return file_protocol_proto_rawDescData
 }
 
-var file_protocol_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_protocol_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_protocol_proto_goTypes = []any{
 	(*Player)(nil),             // 0: partygames.v1.Player
 	(*ClientMessage)(nil),      // 1: partygames.v1.ClientMessage
 	(*CreateRoom)(nil),         // 2: partygames.v1.CreateRoom
 	(*JoinRoom)(nil),           // 3: partygames.v1.JoinRoom
 	(*LeaveRoom)(nil),          // 4: partygames.v1.LeaveRoom
-	(*Echo)(nil),               // 5: partygames.v1.Echo
-	(*StartGame)(nil),          // 6: partygames.v1.StartGame
-	(*GameAction)(nil),         // 7: partygames.v1.GameAction
-	(*SetGameOptions)(nil),     // 8: partygames.v1.SetGameOptions
-	(*ServerMessage)(nil),      // 9: partygames.v1.ServerMessage
-	(*RoomJoined)(nil),         // 10: partygames.v1.RoomJoined
-	(*PlayerJoined)(nil),       // 11: partygames.v1.PlayerJoined
-	(*PlayerLeft)(nil),         // 12: partygames.v1.PlayerLeft
-	(*EchoResult)(nil),         // 13: partygames.v1.EchoResult
-	(*ErrorInfo)(nil),          // 14: partygames.v1.ErrorInfo
-	(*HostChanged)(nil),        // 15: partygames.v1.HostChanged
-	(*GameStarted)(nil),        // 16: partygames.v1.GameStarted
-	(*GameEvent)(nil),          // 17: partygames.v1.GameEvent
-	(*GameEnded)(nil),          // 18: partygames.v1.GameEnded
-	(*GameOptionsChanged)(nil), // 19: partygames.v1.GameOptionsChanged
+	(*ResumeRoom)(nil),         // 5: partygames.v1.ResumeRoom
+	(*Echo)(nil),               // 6: partygames.v1.Echo
+	(*StartGame)(nil),          // 7: partygames.v1.StartGame
+	(*GameAction)(nil),         // 8: partygames.v1.GameAction
+	(*SetGameOptions)(nil),     // 9: partygames.v1.SetGameOptions
+	(*ServerMessage)(nil),      // 10: partygames.v1.ServerMessage
+	(*RoomJoined)(nil),         // 11: partygames.v1.RoomJoined
+	(*PlayerPresence)(nil),     // 12: partygames.v1.PlayerPresence
+	(*PlayerJoined)(nil),       // 13: partygames.v1.PlayerJoined
+	(*PlayerLeft)(nil),         // 14: partygames.v1.PlayerLeft
+	(*EchoResult)(nil),         // 15: partygames.v1.EchoResult
+	(*ErrorInfo)(nil),          // 16: partygames.v1.ErrorInfo
+	(*HostChanged)(nil),        // 17: partygames.v1.HostChanged
+	(*GameStarted)(nil),        // 18: partygames.v1.GameStarted
+	(*GameEvent)(nil),          // 19: partygames.v1.GameEvent
+	(*GameEnded)(nil),          // 20: partygames.v1.GameEnded
+	(*GameOptionsChanged)(nil), // 21: partygames.v1.GameOptionsChanged
 }
 var file_protocol_proto_depIdxs = []int32{
 	2,  // 0: partygames.v1.ClientMessage.create_room:type_name -> partygames.v1.CreateRoom
 	3,  // 1: partygames.v1.ClientMessage.join_room:type_name -> partygames.v1.JoinRoom
 	4,  // 2: partygames.v1.ClientMessage.leave_room:type_name -> partygames.v1.LeaveRoom
-	5,  // 3: partygames.v1.ClientMessage.echo:type_name -> partygames.v1.Echo
-	6,  // 4: partygames.v1.ClientMessage.start_game:type_name -> partygames.v1.StartGame
-	7,  // 5: partygames.v1.ClientMessage.game_action:type_name -> partygames.v1.GameAction
-	8,  // 6: partygames.v1.ClientMessage.set_game_options:type_name -> partygames.v1.SetGameOptions
-	10, // 7: partygames.v1.ServerMessage.room_joined:type_name -> partygames.v1.RoomJoined
-	11, // 8: partygames.v1.ServerMessage.player_joined:type_name -> partygames.v1.PlayerJoined
-	12, // 9: partygames.v1.ServerMessage.player_left:type_name -> partygames.v1.PlayerLeft
-	13, // 10: partygames.v1.ServerMessage.echo_result:type_name -> partygames.v1.EchoResult
-	14, // 11: partygames.v1.ServerMessage.error:type_name -> partygames.v1.ErrorInfo
-	15, // 12: partygames.v1.ServerMessage.host_changed:type_name -> partygames.v1.HostChanged
-	16, // 13: partygames.v1.ServerMessage.game_started:type_name -> partygames.v1.GameStarted
-	17, // 14: partygames.v1.ServerMessage.game_event:type_name -> partygames.v1.GameEvent
-	18, // 15: partygames.v1.ServerMessage.game_ended:type_name -> partygames.v1.GameEnded
-	19, // 16: partygames.v1.ServerMessage.game_options_changed:type_name -> partygames.v1.GameOptionsChanged
-	0,  // 17: partygames.v1.RoomJoined.players:type_name -> partygames.v1.Player
-	0,  // 18: partygames.v1.PlayerJoined.player:type_name -> partygames.v1.Player
-	19, // [19:19] is the sub-list for method output_type
-	19, // [19:19] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	6,  // 3: partygames.v1.ClientMessage.echo:type_name -> partygames.v1.Echo
+	7,  // 4: partygames.v1.ClientMessage.start_game:type_name -> partygames.v1.StartGame
+	8,  // 5: partygames.v1.ClientMessage.game_action:type_name -> partygames.v1.GameAction
+	9,  // 6: partygames.v1.ClientMessage.set_game_options:type_name -> partygames.v1.SetGameOptions
+	5,  // 7: partygames.v1.ClientMessage.resume_room:type_name -> partygames.v1.ResumeRoom
+	11, // 8: partygames.v1.ServerMessage.room_joined:type_name -> partygames.v1.RoomJoined
+	13, // 9: partygames.v1.ServerMessage.player_joined:type_name -> partygames.v1.PlayerJoined
+	14, // 10: partygames.v1.ServerMessage.player_left:type_name -> partygames.v1.PlayerLeft
+	15, // 11: partygames.v1.ServerMessage.echo_result:type_name -> partygames.v1.EchoResult
+	16, // 12: partygames.v1.ServerMessage.error:type_name -> partygames.v1.ErrorInfo
+	17, // 13: partygames.v1.ServerMessage.host_changed:type_name -> partygames.v1.HostChanged
+	18, // 14: partygames.v1.ServerMessage.game_started:type_name -> partygames.v1.GameStarted
+	19, // 15: partygames.v1.ServerMessage.game_event:type_name -> partygames.v1.GameEvent
+	20, // 16: partygames.v1.ServerMessage.game_ended:type_name -> partygames.v1.GameEnded
+	21, // 17: partygames.v1.ServerMessage.game_options_changed:type_name -> partygames.v1.GameOptionsChanged
+	12, // 18: partygames.v1.ServerMessage.player_presence:type_name -> partygames.v1.PlayerPresence
+	0,  // 19: partygames.v1.RoomJoined.players:type_name -> partygames.v1.Player
+	0,  // 20: partygames.v1.PlayerJoined.player:type_name -> partygames.v1.Player
+	21, // [21:21] is the sub-list for method output_type
+	21, // [21:21] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_protocol_proto_init() }
@@ -1514,8 +1732,9 @@ func file_protocol_proto_init() {
 		(*ClientMessage_StartGame)(nil),
 		(*ClientMessage_GameAction)(nil),
 		(*ClientMessage_SetGameOptions)(nil),
+		(*ClientMessage_ResumeRoom)(nil),
 	}
-	file_protocol_proto_msgTypes[9].OneofWrappers = []any{
+	file_protocol_proto_msgTypes[10].OneofWrappers = []any{
 		(*ServerMessage_RoomJoined)(nil),
 		(*ServerMessage_PlayerJoined)(nil),
 		(*ServerMessage_PlayerLeft)(nil),
@@ -1526,6 +1745,7 @@ func file_protocol_proto_init() {
 		(*ServerMessage_GameEvent)(nil),
 		(*ServerMessage_GameEnded)(nil),
 		(*ServerMessage_GameOptionsChanged)(nil),
+		(*ServerMessage_PlayerPresence)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1533,7 +1753,7 @@ func file_protocol_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_protocol_proto_rawDesc), len(file_protocol_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

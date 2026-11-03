@@ -19,14 +19,15 @@ func (p Player) wire() *protocol.Player {
 }
 
 // LeaveReason records why a player left: it lets logging and (later) the UI
-// tell a deliberate quit apart from a dropped connection. It does not change
-// how the room updates its roster.
+// tell a deliberate quit apart from a seat given up after a dropped connection.
+// It does not change how the room updates its roster.
 type LeaveReason int
 
 const (
 	// LeaveExplicit means the player asked to leave.
 	LeaveExplicit LeaveReason = iota
-	// LeaveDisconnect means the connection dropped or failed its heartbeat.
+	// LeaveDisconnect means the connection dropped and the player did not come
+	// back before their seat's grace period ran out.
 	LeaveDisconnect
 )
 

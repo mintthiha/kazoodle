@@ -8,6 +8,7 @@
 // device. It also means the mode works with no server and no signal.
 
 import type { Locale } from "../../../i18n";
+import { TWO_IMPOSTER_MIN_PLAYERS } from "../rounds";
 import { customEntries, type CustomCategory } from "./customCategories";
 import wordList from "./words.gen.json";
 
@@ -31,6 +32,10 @@ export interface LocalSettings {
   cluePasses: number;
   /** Seconds per turn. Auto mode only. */
   clueSeconds: number;
+  /** Whether a table of 7+ gets a second imposter. Below that there is always one. */
+  twoImposters: boolean;
+  /** Whether a sound marks the end of a turn. Auto mode only. */
+  sound: boolean;
 }
 
 /** Whole seconds per turn in auto mode. Shorter than the online timer's choices
@@ -43,6 +48,8 @@ export const DEFAULT_SETTINGS: LocalSettings = {
   advance: "manual",
   cluePasses: 2,
   clueSeconds: 15,
+  twoImposters: true,
+  sound: true,
 };
 
 export interface Localized {
@@ -73,6 +80,9 @@ interface DiscussStage {
   kind: "discuss";
 }
 
+/** A caught imposter's spoken guess: waiting for the table's ruling, or decided. */
+export type StealState = "pending" | "hit" | "miss";
+
 export type Stage =
   /** Handing the phone round. `seat` is whose word is on screen. */
   | { kind: "deal"; seat: number }
@@ -80,15 +90,20 @@ export type Stage =
   | DiscussStage
   /** Picking the accused. `from` is where Back returns to. */
   | { kind: "accuse"; from: SpeakStage | DiscussStage }
-  | { kind: "verdict"; accused: number };
+  /** `steal` is set only when the accused really was an imposter. */
+  | { kind: "verdict"; accused: number; steal?: StealState };
 
 export interface LocalGame {
   /** Final display names. A player's index in this array is their seat. */
   names: string[];
   settings: LocalSettings;
   imposter: number;
+  /** The second imposter on a big table, or null. They are told about each other. */
+  partner: number | null;
   entry: WordEntry;
-  /** The seat that speaks first. Turns then go round the table from there. */
+  /** The seat that speaks first, never an imposter: with nothing heard yet, going
+   * first as an imposter loses most games on the spot. Turns then go round the table
+   * from there. */
   firstSeat: number;
   stage: Stage;
   /** Words already played this sitting, so Play again deals a new one. */
@@ -100,7 +115,8 @@ export type LocalEvent =
   | { type: "turnDone" }
   | { type: "openAccuse" }
   | { type: "backFromAccuse" }
-  | { type: "accuse"; seat: number };
+  | { type: "accuse"; seat: number }
+  | { type: "stealResult"; correct: boolean };
 
 /** The randomness source, so tests can decide the outcome. Returns [0, 1). */
 export type Rng = () => number;
@@ -159,6 +175,25 @@ export function resizeNames(names: readonly string[], count: number): string[] {
   return Array.from({ length: bounded }, (_, i) => names[i] ?? "");
 }
 
+/** Who the imposters are and who speaks first, for this many seats. */
+function drawSeats(
+  seats: number,
+  twoImposters: boolean,
+  rng: Rng,
+): Pick<LocalGame, "imposter" | "partner" | "firstSeat"> {
+  const imposter = randomInt(seats, rng);
+  let partner: number | null = null;
+  if (twoImposters && seats >= TWO_IMPOSTER_MIN_PLAYERS) {
+    // Draw from one seat fewer, then step over the seat already taken.
+    const other = randomInt(seats - 1, rng);
+    partner = other >= imposter ? other + 1 : other;
+  }
+  const crew = Array.from({ length: seats }, (_, seat) => seat).filter(
+    (seat) => seat !== imposter && seat !== partner,
+  );
+  return { imposter, partner, firstSeat: crew[randomInt(crew.length, rng)] };
+}
+
 /** Deal a new game. `usedWords` carries over between games in one sitting. */
 export function newGame(
   names: readonly string[],
@@ -171,9 +206,8 @@ export function newGame(
   return {
     names: [...names],
     settings,
-    imposter: randomInt(names.length, rng),
+    ...drawSeats(names.length, settings.twoImposters, rng),
     entry,
-    firstSeat: randomInt(names.length, rng),
     stage: { kind: "deal", seat: 0 },
     usedWords: [...usedWords, entry.word.en],
   };
@@ -229,13 +263,27 @@ export function step(game: LocalGame, event: LocalEvent): LocalGame {
     case "accuse":
       if (stage.kind !== "accuse") return game;
       if (event.seat < 0 || event.seat >= game.names.length) return game;
-      return { ...game, stage: { kind: "verdict", accused: event.seat } };
+      return {
+        ...game,
+        stage: isImposter(game, event.seat)
+          ? { kind: "verdict", accused: event.seat, steal: "pending" }
+          : { kind: "verdict", accused: event.seat },
+      };
+    case "stealResult":
+      if (stage.kind !== "verdict" || stage.steal !== "pending") return game;
+      return { ...game, stage: { ...stage, steal: event.correct ? "hit" : "miss" } };
   }
 }
 
-/** The good guys win only by naming the actual imposter. */
-export function crewWon(game: LocalGame, accused: number): boolean {
-  return accused === game.imposter;
+export function isImposter(game: LocalGame, seat: number): boolean {
+  return seat === game.imposter || seat === game.partner;
+}
+
+/** The good guys win only by naming an actual imposter, who then has to miss their
+ * guess at the word. A guess not yet ruled on counts as a miss, which is what the
+ * screen should look like while the table waits to hear it. */
+export function crewWon(game: LocalGame, accused: number, steal?: StealState): boolean {
+  return isImposter(game, accused) && steal !== "hit";
 }
 
 /** What one player sees on their slip. A locale-free LocalGame means the words
@@ -247,14 +295,18 @@ export interface SeatRole {
   word: string;
   category: string;
   hint: string;
+  /** The other imposter's name, for an imposter on a two-imposter game. */
+  partner: string;
 }
 
 export function roleFor(game: LocalGame, seat: number, locale: Locale): SeatRole {
-  const isImposter = seat === game.imposter;
+  const imposter = isImposter(game, seat);
+  const other = seat === game.imposter ? game.partner : game.imposter;
   return {
-    isImposter,
-    word: isImposter ? "" : game.entry.word[locale],
+    isImposter: imposter,
+    word: imposter ? "" : game.entry.word[locale],
     category: game.entry.category[locale],
-    hint: isImposter && game.settings.hintsEnabled ? game.entry.hint[locale] : "",
+    hint: imposter && game.settings.hintsEnabled ? game.entry.hint[locale] : "",
+    partner: imposter && game.partner !== null && other !== null ? game.names[other] : "",
   };
 }

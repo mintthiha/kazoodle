@@ -71,7 +71,7 @@ func TestAward(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := award(tt.order, "b", tt.caught, tt.stealCorrect)
+			got := award(tt.order, []string{"b"}, tt.caught, tt.stealCorrect)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("award() = %v, want %v", got, tt.want)
 			}

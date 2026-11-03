@@ -4,5 +4,6 @@ go 1.27
 
 require (
 	github.com/coder/websocket v1.8.15
+	golang.org/x/text v0.43.0
 	google.golang.org/protobuf v1.36.6
 )

@@ -521,6 +521,30 @@ button.ledger-row:disabled {
   background: var(--accent);
 }
 
+.vote-voters {
+  grid-column: 1 / -1;
+  font-size: var(--fs-small);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* The results recap: the same ledger as the clue phase, with the answer marked. */
+.ledger-row[data-imposter="true"] {
+  box-shadow: inset 0 0 0 2px var(--negative);
+}
+
+.ledger-imposter {
+  margin-left: 8px;
+  background: var(--negative);
+  color: var(--on-colour);
+}
+
+.slip-partner {
+  font-size: 1.125rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .scoring-note {
   font-size: var(--fs-small);
 }

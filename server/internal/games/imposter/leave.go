@@ -11,8 +11,9 @@ import (
 // died — see game.Leaver's doc comment for why it's a separate interface.
 //
 // The round carries on wherever that still makes sense. It's abandoned in two
-// cases: the imposter left (there's nobody left to catch), or too few players
-// remain to play on. Abandoning ends the whole match, scores included: there
+// cases: the last imposter left (there's nobody left to catch), or too few
+// players remain to play on. When one of two imposters leaves, the other carries
+// on alone. Abandoning ends the whole match, scores included: there
 // is no way to replay a round whose imposter walked out, and carrying half a
 // scoreboard into a game the room has to restart anyway would be worse than
 // starting clean.
@@ -33,7 +34,10 @@ func (Game) Leave(current game.State, playerID string) (game.State, []game.Effec
 	}
 	idx := indexOf(st.order, playerID)
 	if idx < 0 {
-		return st, nil, nil // not in this round; nothing to do
+		// Not in this round, so nothing has changed for anyone in it. KeepTimer,
+		// because a room cancels the running clock on any effects that do not
+		// ask otherwise, and a bystander leaving must not stop the round's clock.
+		return st, []game.Effect{game.KeepTimer{}}, nil
 	}
 
 	next := st.clone()
@@ -53,8 +57,14 @@ func (Game) Leave(current game.State, playerID string) (game.State, []game.Effec
 	if st.phase == phaseOutcome {
 		return next, nil, nil
 	}
-	if playerID == st.imposterID {
-		return next, []game.Effect{game.EndGame{Reason: "imposter_left"}}, nil
+	if st.isImposter(playerID) {
+		if st.partnerID == "" {
+			return next, []game.Effect{game.EndGame{Reason: "imposter_left"}}, nil
+		}
+		// imposterID must always name someone still here, so a remaining partner
+		// moves up into it.
+		next.imposterID = st.partnerOf(playerID)
+		next.partnerID = ""
 	}
 	if len(next.order) < minPlayers {
 		return next, []game.Effect{game.EndGame{Reason: "player_left"}}, nil
@@ -66,7 +76,9 @@ func (Game) Leave(current game.State, playerID string) (game.State, []game.Effec
 		// left, in which case the reveal is complete now.
 		if next.allReady() {
 			next.phase = phaseClues
-			return next, []game.Effect{game.Send{Msg: clueTurn(next)}}, nil
+			// Through clueTurnEffects like every other way into a clue turn, or a
+			// timed match's first turn would have no clock behind it.
+			return next, clueTurnEffects(next), nil
 		}
 		return next, []game.Effect{game.Send{Msg: revealProgress(next)}}, nil
 
@@ -107,15 +119,21 @@ func (Game) Leave(current game.State, playerID string) (game.State, []game.Effec
 		// replaceable right up until it's tallied, so those players can leave
 		// theirs as it was — which is why a VoteProgress rides along, to keep
 		// the "n / m voted" count honest on the new ballot.
-		return next, []game.Effect{
-			game.Send{Msg: votePhase(next)},
-			game.Send{Msg: voteProgress(next)},
-		}, nil
+		//
+		// votePhaseEffects arms a fresh deadline to match the countdown the
+		// clients just restarted. Without it the room cancels the old one and
+		// nothing ever closes the ballot.
+		return next, append(votePhaseEffects(next), game.Send{Msg: voteProgress(next)}), nil
 
 	case phaseSteal:
-		// Everyone is waiting on the imposter, who is still here — a departing
-		// imposter was handled above. Nothing to announce.
-		return next, nil, nil
+		// The guess they were holding up will never come, and an unmade guess is
+		// a wrong one. Only reachable on a two-imposter round: a lone imposter
+		// leaving was handled above.
+		if playerID == st.stealerID {
+			return stealTimedOut(next)
+		}
+		// Everyone is still waiting on the same guess, against the same deadline.
+		return next, []game.Effect{game.KeepTimer{}}, nil
 
 	default:
 		return next, nil, fmt.Errorf("imposter: leave in unexpected phase %s", st.phase)

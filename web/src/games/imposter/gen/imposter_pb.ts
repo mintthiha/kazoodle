@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file imposter.proto.
  */
 export const file_imposter: GenFile = /*@__PURE__*/
-  fileDesc("Cg5pbXBvc3Rlci5wcm90bxILaW1wb3N0ZXIudjEicgoMU3RhcnRPcHRpb25zEhUKDWhpbnRzX2VuYWJsZWQYASABKAgSEwoLY2x1ZV9wYXNzZXMYBCABKAUSDgoGcm91bmRzGAMgASgFEhQKDGNsdWVfc2Vjb25kcxgFIAEoBRIQCghjYXRlZ29yeRgCIAEoCSKmAwoVSW1wb3N0ZXJTZXJ2ZXJNZXNzYWdlEjYKD3JvbGVfYXNzaWdubWVudBgBIAEoCzIbLmltcG9zdGVyLnYxLlJvbGVBc3NpZ25tZW50SAASNgoPcmV2ZWFsX3Byb2dyZXNzGAIgASgLMhsuaW1wb3N0ZXIudjEuUmV2ZWFsUHJvZ3Jlc3NIABIqCgljbHVlX3R1cm4YAyABKAsyFS5pbXBvc3Rlci52MS5DbHVlVHVybkgAEiwKCnZvdGVfcGhhc2UYBCABKAsyFi5pbXBvc3Rlci52MS5Wb3RlUGhhc2VIABIyCg12b3RlX3Byb2dyZXNzGAUgASgLMhkuaW1wb3N0ZXIudjEuVm90ZVByb2dyZXNzSAASLAoKdm90ZV90YWxseRgGIAEoCzIWLmltcG9zdGVyLnYxLlZvdGVUYWxseUgAEicKB291dGNvbWUYByABKAsyFC5pbXBvc3Rlci52MS5PdXRjb21lSAASMAoMc3RlYWxfcHJvbXB0GAggASgLMhguaW1wb3N0ZXIudjEuU3RlYWxQcm9tcHRIAEIGCgRib2R5IngKDlJvbGVBc3NpZ25tZW50EhMKC2lzX2ltcG9zdGVyGAEgASgIEgwKBHdvcmQYAiABKAkSEAoIY2F0ZWdvcnkYAyABKAkSDAoEaGludBgEIAEoCRINCgVyb3VuZBgFIAEoBRIUCgx0b3RhbF9yb3VuZHMYBiABKAUiPQoKU2NvcmVFbnRyeRIRCglwbGF5ZXJfaWQYASABKAkSDQoFc2NvcmUYAiABKAUSDQoFZGVsdGEYAyABKAUiOQoOUmV2ZWFsUHJvZ3Jlc3MSGAoQcmVhZHlfcGxheWVyX2lkcxgBIAMoCRINCgV0b3RhbBgCIAEoBSIsCglDbHVlRW50cnkSEQoJcGxheWVyX2lkGAEgASgJEgwKBHRleHQYAiABKAkisgEKCENsdWVUdXJuEhEKCXBsYXllcl9pZBgBIAEoCRISCgp0dXJuX2luZGV4GAIgASgFEg0KBXRvdGFsGAMgASgFEiwKDGNsdWVzX3NvX2ZhchgEIAMoCzIWLmltcG9zdGVyLnYxLkNsdWVFbnRyeRIRCgljbHVlX3Bhc3MYBSABKAUSGQoRdG90YWxfY2x1ZV9wYXNzZXMYBiABKAUSFAoMY2x1ZV9zZWNvbmRzGAcgASgFIl8KCVZvdGVQaGFzZRIlCgVjbHVlcxgBIAMoCzIWLmltcG9zdGVyLnYxLkNsdWVFbnRyeRIVCg1jYW5kaWRhdGVfaWRzGAIgAygJEhQKDHZvdGVfc2Vjb25kcxgDIAEoBSI3CgxWb3RlUHJvZ3Jlc3MSGAoQdm90ZWRfcGxheWVyX2lkcxgBIAMoCRINCgV0b3RhbBgCIAEoBSItCglWb3RlQ291bnQSEQoJcGxheWVyX2lkGAEgASgJEg0KBXZvdGVzGAIgASgFImAKCVZvdGVUYWxseRImCgZjb3VudHMYASADKAsyFi5pbXBvc3Rlci52MS5Wb3RlQ291bnQSFAoMdm90ZWRfb3V0X2lkGAIgASgJEhUKDWFic3RhaW5fY291bnQYAyABKAUiOQoLU3RlYWxQcm9tcHQSEwoLaW1wb3N0ZXJfaWQYASABKAkSFQoNc3RlYWxfc2Vjb25kcxgCIAEoBSKvAgoHT3V0Y29tZRITCgtpbXBvc3Rlcl9pZBgBIAEoCRIMCgR3b3JkGAIgASgJEhAKCGNhdGVnb3J5GAMgASgJEhAKCGNyZXdfd29uGAQgASgIEhQKDHZvdGVkX291dF9pZBgFIAEoCRIXCg9zdGVhbF9hdHRlbXB0ZWQYBiABKAgSEwoLc3RlYWxfZ3Vlc3MYByABKAkSFQoNc3RlYWxfY29ycmVjdBgIIAEoCBIMCgRoaW50GAkgASgJEg0KBXJvdW5kGAogASgFEhQKDHRvdGFsX3JvdW5kcxgLIAEoBRInCgZzY29yZXMYDCADKAsyFy5pbXBvc3Rlci52MS5TY29yZUVudHJ5EhIKCm1hdGNoX292ZXIYDSABKAgSEgoKd2lubmVyX2lkcxgOIAMoCSKFAgoVSW1wb3N0ZXJDbGllbnRNZXNzYWdlEiwKCm1hcmtfcmVhZHkYASABKAsyFi5pbXBvc3Rlci52MS5NYXJrUmVhZHlIABIuCgtzdWJtaXRfY2x1ZRgCIAEoCzIXLmltcG9zdGVyLnYxLlN1Ym1pdENsdWVIABIqCgljYXN0X3ZvdGUYAyABKAsyFS5pbXBvc3Rlci52MS5DYXN0Vm90ZUgAEiwKCmd1ZXNzX3dvcmQYBCABKAsyFi5pbXBvc3Rlci52MS5HdWVzc1dvcmRIABIsCgpwbGF5X2FnYWluGAUgASgLMhYuaW1wb3N0ZXIudjEuUGxheUFnYWluSABCBgoEYm9keSILCglNYXJrUmVhZHkiGgoKU3VibWl0Q2x1ZRIMCgR0ZXh0GAEgASgJIi8KCENhc3RWb3RlEhIKCnN1c3BlY3RfaWQYASABKAkSDwoHYWJzdGFpbhgCIAEoCCIZCglHdWVzc1dvcmQSDAoEdGV4dBgBIAEoCSILCglQbGF5QWdhaW5CR1pFZ2l0aHViLmNvbS9taW50dGhpaGEvcGFydHktZ2FtZXMvc2VydmVyL2ludGVybmFsL2dhbWVzL2ltcG9zdGVyL3BiO3BiYgZwcm90bzM");
+  fileDesc("Cg5pbXBvc3Rlci5wcm90bxILaW1wb3N0ZXIudjEihQEKDFN0YXJ0T3B0aW9ucxIVCg1oaW50c19lbmFibGVkGAEgASgIEhMKC2NsdWVfcGFzc2VzGAQgASgFEg4KBnJvdW5kcxgDIAEoBRIUCgxjbHVlX3NlY29uZHMYBSABKAUSEAoIY2F0ZWdvcnkYAiABKAkSEQoJaW1wb3N0ZXJzGAYgASgFIqYDChVJbXBvc3RlclNlcnZlck1lc3NhZ2USNgoPcm9sZV9hc3NpZ25tZW50GAEgASgLMhsuaW1wb3N0ZXIudjEuUm9sZUFzc2lnbm1lbnRIABI2Cg9yZXZlYWxfcHJvZ3Jlc3MYAiABKAsyGy5pbXBvc3Rlci52MS5SZXZlYWxQcm9ncmVzc0gAEioKCWNsdWVfdHVybhgDIAEoCzIVLmltcG9zdGVyLnYxLkNsdWVUdXJuSAASLAoKdm90ZV9waGFzZRgEIAEoCzIWLmltcG9zdGVyLnYxLlZvdGVQaGFzZUgAEjIKDXZvdGVfcHJvZ3Jlc3MYBSABKAsyGS5pbXBvc3Rlci52MS5Wb3RlUHJvZ3Jlc3NIABIsCgp2b3RlX3RhbGx5GAYgASgLMhYuaW1wb3N0ZXIudjEuVm90ZVRhbGx5SAASJwoHb3V0Y29tZRgHIAEoCzIULmltcG9zdGVyLnYxLk91dGNvbWVIABIwCgxzdGVhbF9wcm9tcHQYCCABKAsyGC5pbXBvc3Rlci52MS5TdGVhbFByb21wdEgAQgYKBGJvZHkijAEKDlJvbGVBc3NpZ25tZW50EhMKC2lzX2ltcG9zdGVyGAEgASgIEgwKBHdvcmQYAiABKAkSEAoIY2F0ZWdvcnkYAyABKAkSDAoEaGludBgEIAEoCRINCgVyb3VuZBgFIAEoBRIUCgx0b3RhbF9yb3VuZHMYBiABKAUSEgoKcGFydG5lcl9pZBgHIAEoCSI9CgpTY29yZUVudHJ5EhEKCXBsYXllcl9pZBgBIAEoCRINCgVzY29yZRgCIAEoBRINCgVkZWx0YRgDIAEoBSI5Cg5SZXZlYWxQcm9ncmVzcxIYChByZWFkeV9wbGF5ZXJfaWRzGAEgAygJEg0KBXRvdGFsGAIgASgFIiwKCUNsdWVFbnRyeRIRCglwbGF5ZXJfaWQYASABKAkSDAoEdGV4dBgCIAEoCSKyAQoIQ2x1ZVR1cm4SEQoJcGxheWVyX2lkGAEgASgJEhIKCnR1cm5faW5kZXgYAiABKAUSDQoFdG90YWwYAyABKAUSLAoMY2x1ZXNfc29fZmFyGAQgAygLMhYuaW1wb3N0ZXIudjEuQ2x1ZUVudHJ5EhEKCWNsdWVfcGFzcxgFIAEoBRIZChF0b3RhbF9jbHVlX3Bhc3NlcxgGIAEoBRIUCgxjbHVlX3NlY29uZHMYByABKAUiXwoJVm90ZVBoYXNlEiUKBWNsdWVzGAEgAygLMhYuaW1wb3N0ZXIudjEuQ2x1ZUVudHJ5EhUKDWNhbmRpZGF0ZV9pZHMYAiADKAkSFAoMdm90ZV9zZWNvbmRzGAMgASgFIjcKDFZvdGVQcm9ncmVzcxIYChB2b3RlZF9wbGF5ZXJfaWRzGAEgAygJEg0KBXRvdGFsGAIgASgFIi0KCVZvdGVDb3VudBIRCglwbGF5ZXJfaWQYASABKAkSDQoFdm90ZXMYAiABKAUihgEKCVZvdGVUYWxseRImCgZjb3VudHMYASADKAsyFi5pbXBvc3Rlci52MS5Wb3RlQ291bnQSFAoMdm90ZWRfb3V0X2lkGAIgASgJEhUKDWFic3RhaW5fY291bnQYAyABKAUSJAoHYmFsbG90cxgEIAMoCzITLmltcG9zdGVyLnYxLkJhbGxvdCIuCgZCYWxsb3QSEAoIdm90ZXJfaWQYASABKAkSEgoKc3VzcGVjdF9pZBgCIAEoCSI5CgtTdGVhbFByb21wdBITCgtpbXBvc3Rlcl9pZBgBIAEoCRIVCg1zdGVhbF9zZWNvbmRzGAIgASgFIsMCCgdPdXRjb21lEhMKC2ltcG9zdGVyX2lkGAEgASgJEgwKBHdvcmQYAiABKAkSEAoIY2F0ZWdvcnkYAyABKAkSEAoIY3Jld193b24YBCABKAgSFAoMdm90ZWRfb3V0X2lkGAUgASgJEhcKD3N0ZWFsX2F0dGVtcHRlZBgGIAEoCBITCgtzdGVhbF9ndWVzcxgHIAEoCRIVCg1zdGVhbF9jb3JyZWN0GAggASgIEgwKBGhpbnQYCSABKAkSDQoFcm91bmQYCiABKAUSFAoMdG90YWxfcm91bmRzGAsgASgFEicKBnNjb3JlcxgMIAMoCzIXLmltcG9zdGVyLnYxLlNjb3JlRW50cnkSEgoKbWF0Y2hfb3ZlchgNIAEoCBISCgp3aW5uZXJfaWRzGA4gAygJEhIKCnBhcnRuZXJfaWQYDyABKAkihQIKFUltcG9zdGVyQ2xpZW50TWVzc2FnZRIsCgptYXJrX3JlYWR5GAEgASgLMhYuaW1wb3N0ZXIudjEuTWFya1JlYWR5SAASLgoLc3VibWl0X2NsdWUYAiABKAsyFy5pbXBvc3Rlci52MS5TdWJtaXRDbHVlSAASKgoJY2FzdF92b3RlGAMgASgLMhUuaW1wb3N0ZXIudjEuQ2FzdFZvdGVIABIsCgpndWVzc193b3JkGAQgASgLMhYuaW1wb3N0ZXIudjEuR3Vlc3NXb3JkSAASLAoKcGxheV9hZ2FpbhgFIAEoCzIWLmltcG9zdGVyLnYxLlBsYXlBZ2FpbkgAQgYKBGJvZHkiCwoJTWFya1JlYWR5IhoKClN1Ym1pdENsdWUSDAoEdGV4dBgBIAEoCSIvCghDYXN0Vm90ZRISCgpzdXNwZWN0X2lkGAEgASgJEg8KB2Fic3RhaW4YAiABKAgiGQoJR3Vlc3NXb3JkEgwKBHRleHQYASABKAkiCwoJUGxheUFnYWluQkdaRWdpdGh1Yi5jb20vbWludHRoaWhhL3BhcnR5LWdhbWVzL3NlcnZlci9pbnRlcm5hbC9nYW1lcy9pbXBvc3Rlci9wYjtwYmIGcHJvdG8z");
 
 /**
  * Sent as StartGame.options (proto3-JSON) when the host starts an Imposter
@@ -68,6 +68,15 @@ export type StartOptions = Message<"imposter.v1.StartOptions"> & {
    * @generated from field: string category = 2;
    */
   category: string;
+
+  /**
+   * How many imposters a round has at seven or more players: 1 or 2. 0 (the
+   * default) means 2. Below seven players there is always one, whatever this
+   * says, so a table that shrinks mid-match falls back by itself.
+   *
+   * @generated from field: int32 imposters = 6;
+   */
+  imposters: number;
 };
 
 /**
@@ -185,6 +194,14 @@ export type RoleAssignment = Message<"imposter.v1.RoleAssignment"> & {
    * @generated from field: int32 total_rounds = 6;
    */
   totalRounds: number;
+
+  /**
+   * The other imposter, on a two-imposter round. Set only on an imposter's own
+   * RoleAssignment, so the crew cannot learn it.
+   *
+   * @generated from field: string partner_id = 7;
+   */
+  partnerId: string;
 };
 
 /**
@@ -330,9 +347,6 @@ export type ClueTurn = Message<"imposter.v1.ClueTurn"> & {
    * showing the player what is about to happen, not causing it, so a phone
    * that sleeps or drifts loses nothing but the display.
    *
-   * (VotePhase.vote_seconds is the older, weaker pattern: that countdown runs
-   * only on the client, which auto-submits when it ends.)
-   *
    * @generated from field: int32 clue_seconds = 7;
    */
   clueSeconds: number;
@@ -451,6 +465,14 @@ export type VoteTally = Message<"imposter.v1.VoteTally"> & {
    * @generated from field: int32 abstain_count = 3;
    */
   abstainCount: number;
+
+  /**
+   * Who voted for whom, now that the ballot has closed. Secret until this
+   * message: nothing about an individual vote is sent while voting is open.
+   *
+   * @generated from field: repeated imposter.v1.Ballot ballots = 4;
+   */
+  ballots: Ballot[];
 };
 
 /**
@@ -461,13 +483,40 @@ export const VoteTallySchema: GenMessage<VoteTally> = /*@__PURE__*/
   messageDesc(file_imposter, 10);
 
 /**
- * Broadcast once, instead of Outcome, when the vote catches the imposter.
- * Everyone waits while the imposter gets one blind guess at the word.
+ * One player's vote. suspect_id is empty for an abstention, including a vote
+ * that was never cast before the deadline.
+ *
+ * @generated from message imposter.v1.Ballot
+ */
+export type Ballot = Message<"imposter.v1.Ballot"> & {
+  /**
+   * @generated from field: string voter_id = 1;
+   */
+  voterId: string;
+
+  /**
+   * @generated from field: string suspect_id = 2;
+   */
+  suspectId: string;
+};
+
+/**
+ * Describes the message imposter.v1.Ballot.
+ * Use `create(BallotSchema)` to create a new message.
+ */
+export const BallotSchema: GenMessage<Ballot> = /*@__PURE__*/
+  messageDesc(file_imposter, 11);
+
+/**
+ * Broadcast once, instead of Outcome, when the vote catches an imposter.
+ * Everyone waits while they get one blind guess at the word.
  *
  * @generated from message imposter.v1.StealPrompt
  */
 export type StealPrompt = Message<"imposter.v1.StealPrompt"> & {
   /**
+   * The imposter who was caught, and so the only player who may guess.
+   *
    * @generated from field: string imposter_id = 1;
    */
   imposterId: string;
@@ -487,7 +536,7 @@ export type StealPrompt = Message<"imposter.v1.StealPrompt"> & {
  * Use `create(StealPromptSchema)` to create a new message.
  */
 export const StealPromptSchema: GenMessage<StealPrompt> = /*@__PURE__*/
-  messageDesc(file_imposter, 11);
+  messageDesc(file_imposter, 12);
 
 /**
  * Sent privately to each player once the round is fully decided — right after
@@ -593,6 +642,13 @@ export type Outcome = Message<"imposter.v1.Outcome"> & {
    * @generated from field: repeated string winner_ids = 14;
    */
   winnerIds: string[];
+
+  /**
+   * The second imposter, on a two-imposter round. Empty otherwise.
+   *
+   * @generated from field: string partner_id = 15;
+   */
+  partnerId: string;
 };
 
 /**
@@ -600,7 +656,7 @@ export type Outcome = Message<"imposter.v1.Outcome"> & {
  * Use `create(OutcomeSchema)` to create a new message.
  */
 export const OutcomeSchema: GenMessage<Outcome> = /*@__PURE__*/
-  messageDesc(file_imposter, 12);
+  messageDesc(file_imposter, 13);
 
 /**
  * @generated from message imposter.v1.ImposterClientMessage
@@ -647,7 +703,7 @@ export type ImposterClientMessage = Message<"imposter.v1.ImposterClientMessage">
  * Use `create(ImposterClientMessageSchema)` to create a new message.
  */
 export const ImposterClientMessageSchema: GenMessage<ImposterClientMessage> = /*@__PURE__*/
-  messageDesc(file_imposter, 13);
+  messageDesc(file_imposter, 14);
 
 /**
  * "I have seen my role." When everyone has sent this, the round advances.
@@ -662,7 +718,7 @@ export type MarkReady = Message<"imposter.v1.MarkReady"> & {
  * Use `create(MarkReadySchema)` to create a new message.
  */
 export const MarkReadySchema: GenMessage<MarkReady> = /*@__PURE__*/
-  messageDesc(file_imposter, 14);
+  messageDesc(file_imposter, 15);
 
 /**
  * One player's clue. Only accepted from whoever's turn it currently is.
@@ -681,7 +737,7 @@ export type SubmitClue = Message<"imposter.v1.SubmitClue"> & {
  * Use `create(SubmitClueSchema)` to create a new message.
  */
 export const SubmitClueSchema: GenMessage<SubmitClue> = /*@__PURE__*/
-  messageDesc(file_imposter, 15);
+  messageDesc(file_imposter, 16);
 
 /**
  * One player's vote. Accepted (and replaceable) from anyone until everyone
@@ -707,11 +763,12 @@ export type CastVote = Message<"imposter.v1.CastVote"> & {
  * Use `create(CastVoteSchema)` to create a new message.
  */
 export const CastVoteSchema: GenMessage<CastVote> = /*@__PURE__*/
-  messageDesc(file_imposter, 16);
+  messageDesc(file_imposter, 17);
 
 /**
  * The caught imposter's one blind guess at the secret word. Only accepted
- * from the imposter, and only while the steal phase is open.
+ * from that imposter, and only while the steal phase is open. Case, surrounding
+ * spaces and accents do not matter, so "aeroport" is "Aéroport".
  *
  * @generated from message imposter.v1.GuessWord
  */
@@ -727,7 +784,7 @@ export type GuessWord = Message<"imposter.v1.GuessWord"> & {
  * Use `create(GuessWordSchema)` to create a new message.
  */
 export const GuessWordSchema: GenMessage<GuessWord> = /*@__PURE__*/
-  messageDesc(file_imposter, 17);
+  messageDesc(file_imposter, 18);
 
 /**
  * "On to the next round." Only accepted once the current round has reached its
@@ -744,5 +801,5 @@ export type PlayAgain = Message<"imposter.v1.PlayAgain"> & {
  * Use `create(PlayAgainSchema)` to create a new message.
  */
 export const PlayAgainSchema: GenMessage<PlayAgain> = /*@__PURE__*/
-  messageDesc(file_imposter, 18);
+  messageDesc(file_imposter, 19);
 

@@ -1,7 +1,7 @@
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n";
 
-/** How the game is played, for the lobby. Six lines, in the order a round
+/** How the game is played, for the lobby. A few lines, in the order a round
  * happens, so someone handed a phone mid-party can read it in the time it
  * takes the host to press Start.
  *
@@ -14,16 +14,19 @@ const RULES: MessageKey[] = [
   "imposter.rule.steal",
   "imposter.rule.scoring",
   "imposter.rule.fairPlay",
+  "imposter.rule.two",
 ];
 
-export function RulesCard() {
+/** One-phone mode plays by spoken clues and has no score, so `rules` lets it say so
+ * in the same card. */
+export function RulesCard({ rules = RULES }: { rules?: MessageKey[] }) {
   const { t } = useT();
 
   return (
     <section className="rules-card">
       <h2>{t("imposter.rulesHeading")}</h2>
       <ol className="rules-list">
-        {RULES.map((key) => (
+        {rules.map((key) => (
           <li key={key}>{t(key)}</li>
         ))}
       </ol>

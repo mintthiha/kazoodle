@@ -9,10 +9,11 @@
 //   - expose an immutable snapshot that React can subscribe to
 //   - fan out game events to whichever screen is showing the running game
 //
-// True session restore (same identity, same score) is a deliberately open
-// design question. On reconnect the server issues a fresh player; this layer
-// just gets the roster back in sync. A game running at reconnect time is
-// aborted server-side, so the client returns to the lobby.
+// A dropped socket does not cost a player their seat. The server holds it for a
+// while, and the session token it gave us reclaims it from a new socket: same
+// player id, same score, same place in the game. The token is kept in
+// sessionStorage, so a reload gets back in too. Only when the server says the seat
+// has gone does this fall back to joining again as a new player.
 
 import { Backoff, type BackoffOptions } from "./backoff";
 import {
@@ -22,6 +23,7 @@ import {
   encodeGameAction,
   encodeJoinRoom,
   encodeLeaveRoom,
+  encodeResumeRoom,
   encodeSetGameOptions,
   encodeStartGame,
 } from "./messages";
@@ -65,6 +67,9 @@ export interface RoomState {
    * them. Capped at DEPARTED_LIMIT; past that, the oldest is forgotten and
    * their name falls back to "someone who left". */
   departed: Player[];
+  /** Players still on the roster whose connection has dropped. The server is
+   * holding their seat, so they may yet come back. */
+  offline: string[];
   pendingOptions: PendingOptions | null;
 }
 
@@ -100,18 +105,26 @@ export interface Snapshot {
   lastGameEnd: GameEnd | null;
 }
 
+/** The part of the browser's Storage this module uses, so tests can pass a fake. */
+export type SessionStore = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
 export interface ConnectionOptions {
   socketFactory?: SocketFactory;
   backoff?: BackoffOptions;
+  /** Where the seat's token is kept across a reload. Nothing is kept without one. */
+  store?: SessionStore | null;
 }
 
-/** What the user has asked to be in. code === null means "create a new room";
- * a string means "join / rejoin this one". */
+/** What the user has asked to be in. code === null means "create a new room"; a
+ * string means "join this one", or reclaim a seat in it if token is set. */
 interface Desired {
   code: string | null;
   displayName: string;
   locale: string;
+  token?: string;
 }
+
+const SESSION_KEY = "pg.session.v1";
 
 // Cap on buffered game events per game, so onGameEvent can replay what a
 // just-mounted screen missed without growing without bound.
@@ -126,12 +139,16 @@ export class Connection {
   readonly #url: string;
   readonly #newSocket: SocketFactory;
   readonly #backoff: Backoff;
+  readonly #store: SessionStore | null;
 
   #ws: SocketLike | null = null;
   #stopped = false;
   #reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   #desired: Desired | null = null;
+  /** The seat was given up while we were away, so the next RoomJoined is a new
+   * player rather than the one the user was, and they should be told. */
+  #seatLost = false;
 
   #snapshot: Snapshot = {
     state: "connecting",
@@ -153,6 +170,7 @@ export class Connection {
     this.#url = url;
     this.#newSocket = opts.socketFactory ?? ((u) => new WebSocket(u) as unknown as SocketLike);
     this.#backoff = new Backoff(opts.backoff);
+    this.#store = opts.store ?? null;
   }
 
   // ─── React store interface (stable references) ────────────────────────────
@@ -177,6 +195,7 @@ export class Connection {
   /** Open the socket and keep it open (reconnecting on drops) until stop(). */
   start(): void {
     this.#stopped = false;
+    this.#desired = this.#loadSession();
     this.#connect();
   }
 
@@ -190,6 +209,34 @@ export class Connection {
     this.#ws?.close();
     this.#ws = null;
     this.#patch({ state: "closed" });
+  }
+
+  /** The page is being put away (see useConnection). Closes the socket now rather
+   * than leaving it open behind a page nobody can see: the browser's back/forward
+   * cache can keep a socket alive and answering the server's heartbeat, which
+   * would leave a phantom on the roster. The seat is held as for any other drop. */
+  suspend(): void {
+    if (this.#reconnectTimer !== null) {
+      clearTimeout(this.#reconnectTimer);
+      this.#reconnectTimer = null;
+    }
+    const ws = this.#ws;
+    this.#ws = null;
+    ws?.close();
+    if (!this.#stopped) this.#patch({ state: "reconnecting" });
+  }
+
+  /** The page is back, or the network is, so reconnect now rather than waiting out
+   * a backoff timer that a sleeping phone may have stretched to minutes. A socket
+   * already open or opening is left alone. */
+  wake(): void {
+    if (this.#stopped || this.#ws !== null) return;
+    if (this.#reconnectTimer !== null) {
+      clearTimeout(this.#reconnectTimer);
+      this.#reconnectTimer = null;
+    }
+    this.#backoff.reset();
+    this.#connect();
   }
 
   #connect(): void {
@@ -221,7 +268,10 @@ export class Connection {
       }
       this.#patch({ state: "reconnecting" });
       const delay = this.#backoff.next();
-      this.#reconnectTimer = setTimeout(() => this.#connect(), delay);
+      this.#reconnectTimer = setTimeout(() => {
+        this.#reconnectTimer = null;
+        this.#connect();
+      }, delay);
     };
 
     ws.onerror = () => {
@@ -246,6 +296,7 @@ export class Connection {
     leaveRoom: (): void => {
       if (this.#isOpen()) this.#ws!.send(encodeLeaveRoom());
       this.#desired = null;
+      this.#saveSession();
       this.#gameEventLog = [];
       this.#patch({ room: null, game: null, lastEcho: null });
     },
@@ -284,11 +335,46 @@ export class Connection {
   #assertDesired(): void {
     if (!this.#isOpen() || this.#desired === null) return;
     const d = this.#desired;
+    if (d.code !== null && d.token) {
+      this.#ws!.send(encodeResumeRoom(d.code, d.token));
+      return;
+    }
     this.#ws!.send(
       d.code === null
         ? encodeCreateRoom(d.displayName, d.locale)
         : encodeJoinRoom(d.code, d.displayName, d.locale),
     );
+  }
+
+  /** Keep the current seat where a reload can find it, or forget it. */
+  #saveSession(): void {
+    try {
+      const d = this.#desired;
+      if (d?.code && d.token) this.#store?.setItem(SESSION_KEY, JSON.stringify(d));
+      else this.#store?.removeItem(SESSION_KEY);
+    } catch {
+      // Blocked storage only costs the seat on a reload. A dropped socket still
+      // gets back in, because the token is also held in memory.
+    }
+  }
+
+  /** The seat saved by an earlier page load, if there is one. A value that does not
+   * look right is treated as nothing saved: the server decides whether it is valid. */
+  #loadSession(): Desired | null {
+    try {
+      const raw = this.#store?.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const d = JSON.parse(raw) as Partial<Desired> | null;
+      if (typeof d?.code !== "string" || typeof d.token !== "string") return null;
+      return {
+        code: d.code,
+        token: d.token,
+        displayName: typeof d.displayName === "string" ? d.displayName : "",
+        locale: typeof d.locale === "string" ? d.locale : "en",
+      };
+    } catch {
+      return null;
+    }
   }
 
   #handleFrame(raw: string): void {
@@ -302,25 +388,58 @@ export class Connection {
 
     switch (msg.payload.case) {
       case "roomJoined": {
-        const { roomCode, selfPlayerId, hostId, players } = msg.payload.value;
-        if (this.#desired) this.#desired = { ...this.#desired, code: roomCode };
-        this.#gameEventLog = [];
+        const { roomCode, selfPlayerId, hostId, players, sessionToken, resumed } = msg.payload.value;
+        const { activeGameId, gameEvents, offlinePlayerIds } = msg.payload.value;
+        if (this.#desired) {
+          this.#desired = { ...this.#desired, code: roomCode, token: sessionToken || undefined };
+          this.#saveSession();
+        }
+
+        // Back in the same room: anyone who left is still worth naming, because a
+        // clue of theirs may still be on screen. Otherwise it is a new room.
+        const before = this.#snapshot.room;
+        const departed = resumed && before?.code === roomCode ? before.departed : [];
+        const pendingOptions = resumed && before?.code === roomCode ? before.pendingOptions : null;
+
+        // The server's replay is the whole story of this player's game so far, so
+        // it replaces what we had rather than adding to it.
+        this.#gameEventLog = [...gameEvents];
+        const lastError = this.#seatLost ? "session_expired" : null;
+        this.#seatLost = false;
         this.#patch({
           room: {
             code: roomCode,
             selfId: selfPlayerId,
             hostId,
             players: players.map((p) => ({ id: p.id, displayName: p.displayName })),
-            departed: [],
-            pendingOptions: null,
+            departed,
+            offline: [...offlinePlayerIds],
+            pendingOptions,
           },
-          game: null,
-          lastError: null,
+          game: activeGameId ? { id: activeGameId } : null,
+          lastError,
           // A fresh room, or a rejoin after a reconnect: nothing from the old
           // one should still be on screen as a notice.
           lastDeparture: null,
           lastGameEnd: null,
         });
+
+        // A game screen still mounted from before the drop has to catch up too. It
+        // folds from the start of the match, and each round's first event resets
+        // the round's state, so going through them all again lands on the right
+        // screen. A screen mounting after this gets them from onGameEvent instead.
+        for (const payload of gameEvents) {
+          for (const fn of this.#gameListeners) fn(payload);
+        }
+        break;
+      }
+
+      case "playerPresence": {
+        const room = this.#snapshot.room;
+        if (!room) break;
+        const { playerId, connected } = msg.payload.value;
+        const others = room.offline.filter((id) => id !== playerId);
+        this.#patch({ room: { ...room, offline: connected ? others : [...others, playerId] } });
         break;
       }
 
@@ -356,6 +475,7 @@ export class Connection {
             ...room,
             players: room.players.filter((x) => x.id !== id),
             departed: [gone, ...room.departed].slice(0, DEPARTED_LIMIT),
+            offline: room.offline.filter((x) => x !== id),
           },
           lastDeparture: { ...gone },
         });
@@ -402,9 +522,37 @@ export class Connection {
 
       case "error": {
         const { code } = msg.payload.value;
+
+        // The seat has gone but the room may not have, so try again as a new
+        // player. Nothing is shown yet: a RoomJoined or room_not_found decides that.
+        if (code === "session_expired") {
+          if (this.#desired) this.#desired = { ...this.#desired, token: undefined };
+          this.#saveSession();
+          this.#seatLost = true;
+          this.#gameEventLog = [];
+          this.#patch({ game: null });
+          this.#assertDesired();
+          break;
+        }
+
+        // Another tab or device took this seat. Stand down rather than reconnect
+        // and take it back, or the two would fight over it forever. The socket is
+        // closed because the server still has it down as being in that room, and it
+        // would refuse to let this tab join another one on it.
+        if (code === "session_replaced") {
+          this.#desired = null;
+          this.#saveSession();
+          this.#gameEventLog = [];
+          this.#patch({ room: null, game: null, lastError: code, lastDeparture: null, lastGameEnd: null });
+          this.#ws?.close();
+          break;
+        }
+
         this.#patch({ lastError: code });
         if (code === "room_not_found") {
           this.#desired = null;
+          this.#saveSession();
+          this.#seatLost = false;
           // Out of the room entirely: notices about who left it, or why its
           // last round stopped, are no longer this player's business.
           this.#patch({ room: null, game: null, lastDeparture: null, lastGameEnd: null });

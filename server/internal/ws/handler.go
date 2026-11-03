@@ -60,11 +60,15 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cancel()  // ensure the write pump and heartbeat stop
 	wg.Wait() // and have actually stopped before we close the socket
 
-	// If the client was still in a room, remove them so the rest of the room
-	// sees them leave. connCtx is already cancelled, so use a fresh context.
+	// If the client was still in a room, the room starts holding their seat: a
+	// dropped socket on a phone usually means a locked screen, not a player who
+	// has gone. An explicit LeaveRoom has already cleared the membership by now.
+	// connCtx is already cancelled, so use a fresh context.
 	if code, playerID := c.membership(); code != "" {
 		ctx, done := context.WithTimeout(context.Background(), 5*time.Second)
-		_ = c.mgr.Leave(ctx, code, playerID, room.LeaveDisconnect)
+		// Safe to ignore: the only failure is the room being too busy to answer
+		// within the timeout, and nothing here could do anything about that.
+		_ = c.mgr.Disconnect(ctx, code, playerID, c)
 		done()
 	}
 

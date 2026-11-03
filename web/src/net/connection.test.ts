@@ -129,6 +129,268 @@ describe("Connection", () => {
     });
   });
 
+  describe("keeping a seat through a drop", () => {
+    const seated = (over: Record<string, unknown> = {}) =>
+      roomJoined({ sessionToken: "secret", ...over });
+
+    /** Joins, then drops the socket and opens the replacement. */
+    function dropAndReconnect() {
+      conn.start();
+      sockets[0].open();
+      conn.actions.joinRoom("ABCD", "Ana", "fr");
+      sockets[0].receive(seated());
+      sockets[0].drop();
+      vi.advanceTimersByTime(100);
+      sockets[1].open();
+    }
+
+    it("reclaims the seat with its token instead of joining again", () => {
+      dropAndReconnect();
+      expect(JSON.parse(sockets[1].sent[0])).toEqual({
+        resumeRoom: { roomCode: "ABCD", sessionToken: "secret" },
+      });
+    });
+
+    it("goes straight back into the running game, replaying its events", () => {
+      dropAndReconnect();
+      sockets[1].receive(seated({ resumed: true, activeGameId: "imposter", gameEvents: ["one", "two"] }));
+
+      expect(conn.getSnapshot().game).toEqual({ id: "imposter" });
+      const seen: string[] = [];
+      conn.onGameEvent((p) => seen.push(p));
+      expect(seen).toEqual(["one", "two"]);
+    });
+
+    it("catches up a game screen that stayed mounted through the drop", () => {
+      const seen: string[] = [];
+      conn.onGameEvent((p) => seen.push(p));
+      dropAndReconnect();
+      sockets[1].receive(seated({ resumed: true, activeGameId: "imposter", gameEvents: ["one"] }));
+      expect(seen).toEqual(["one"]);
+    });
+
+    it("replaces the old event log rather than adding to it", () => {
+      conn.start();
+      sockets[0].open();
+      conn.actions.joinRoom("ABCD", "Ana", "fr");
+      sockets[0].receive(seated());
+      sockets[0].receive({ gameStarted: { gameId: "imposter" } });
+      sockets[0].receive({ gameEvent: { gameId: "imposter", payload: "one" } });
+      sockets[0].drop();
+      vi.advanceTimersByTime(100);
+      sockets[1].open();
+      sockets[1].receive(seated({ resumed: true, activeGameId: "imposter", gameEvents: ["one", "two"] }));
+
+      const seen: string[] = [];
+      conn.onGameEvent((p) => seen.push(p));
+      expect(seen).toEqual(["one", "two"]);
+    });
+
+    it("keeps the names of players who left, for clues still on screen", () => {
+      conn.start();
+      sockets[0].open();
+      conn.actions.joinRoom("ABCD", "Ana", "fr");
+      sockets[0].receive(seated({ players: [{ id: "p1", displayName: "Ana" }, { id: "p2", displayName: "Ben" }] }));
+      sockets[0].receive({ playerLeft: { playerId: "p2" } });
+      sockets[0].drop();
+      vi.advanceTimersByTime(100);
+      sockets[1].open();
+      sockets[1].receive(seated({ resumed: true }));
+
+      expect(conn.getSnapshot().room?.departed.map((p) => p.displayName)).toEqual(["Ben"]);
+    });
+
+    it("joins as a new player when the seat has gone, and says so", () => {
+      dropAndReconnect();
+      sockets[1].receive({ error: { code: "session_expired", message: "gone" } });
+
+      expect(JSON.parse(sockets[1].sent[1])).toEqual({
+        joinRoom: { roomCode: "ABCD", displayName: "Ana", locale: "fr" },
+      });
+
+      sockets[1].receive(roomJoined({ selfPlayerId: "p9", sessionToken: "new" }));
+      expect(conn.getSnapshot().room?.selfId).toBe("p9");
+      expect(conn.getSnapshot().lastError).toBe("session_expired");
+    });
+
+    it("stands down when another tab takes the seat", () => {
+      conn.start();
+      sockets[0].open();
+      conn.actions.joinRoom("ABCD", "Ana", "fr");
+      sockets[0].receive(seated());
+
+      sockets[0].receive({ error: { code: "session_replaced", message: "elsewhere" } });
+
+      expect(conn.getSnapshot().room).toBeNull();
+      expect(conn.getSnapshot().lastError).toBe("session_replaced");
+      expect(sockets[0].closed).toBe(true);
+
+      // It reconnects so it can be used again, but asks for nothing.
+      sockets[0].drop();
+      vi.advanceTimersByTime(100);
+      sockets[1].open();
+      expect(sockets[1].sent).toEqual([]);
+    });
+
+    it("tracks who is offline, and forgets them once they leave", () => {
+      conn.start();
+      sockets[0].open();
+      conn.actions.joinRoom("ABCD", "Ana", "fr");
+      sockets[0].receive(seated({
+        players: [{ id: "p1", displayName: "Ana" }, { id: "p2", displayName: "Ben" }],
+        offlinePlayerIds: ["p2"],
+      }));
+      expect(conn.getSnapshot().room?.offline).toEqual(["p2"]);
+
+      sockets[0].receive({ playerPresence: { playerId: "p2", connected: true } });
+      expect(conn.getSnapshot().room?.offline).toEqual([]);
+
+      sockets[0].receive({ playerPresence: { playerId: "p2" } });
+      expect(conn.getSnapshot().room?.offline).toEqual(["p2"]);
+
+      sockets[0].receive({ playerLeft: { playerId: "p2" } });
+      expect(conn.getSnapshot().room?.offline).toEqual([]);
+    });
+
+    it("suspend closes the socket, and wake reconnects at once and reclaims the seat", () => {
+      conn.start();
+      sockets[0].open();
+      conn.actions.joinRoom("ABCD", "Ana", "fr");
+      sockets[0].receive(seated());
+
+      conn.suspend();
+      expect(sockets[0].closed).toBe(true);
+      expect(conn.getSnapshot().state).toBe("reconnecting");
+      vi.advanceTimersByTime(60_000);
+      expect(sockets).toHaveLength(1);
+
+      conn.wake();
+      expect(sockets).toHaveLength(2);
+      sockets[1].open();
+      expect(JSON.parse(sockets[1].sent[0])).toEqual({
+        resumeRoom: { roomCode: "ABCD", sessionToken: "secret" },
+      });
+    });
+
+    it("wake skips the wait for a backoff timer, and does not open a second socket", () => {
+      conn.start();
+      sockets[0].open();
+      conn.wake();
+      expect(sockets).toHaveLength(1);
+
+      sockets[0].drop();
+      conn.wake();
+      expect(sockets).toHaveLength(2);
+      vi.advanceTimersByTime(60_000);
+      expect(sockets).toHaveLength(2);
+    });
+  });
+
+  describe("across a reload", () => {
+    function fakeStore() {
+      const data = new Map<string, string>();
+      return {
+        data,
+        getItem: (k: string) => data.get(k) ?? null,
+        setItem: (k: string, v: string) => void data.set(k, v),
+        removeItem: (k: string) => void data.delete(k),
+      };
+    }
+    const withStore = (store: ReturnType<typeof fakeStore>) =>
+      new Connection("ws://test/ws", {
+        store,
+        socketFactory: () => {
+          const s = new FakeSocket();
+          sockets.push(s);
+          return s;
+        },
+        backoff: { baseMs: 100, factor: 2, jitter: 0, random: () => 0.5 },
+      });
+    const seat = roomJoined({ sessionToken: "secret" });
+
+    it("a new page load reclaims the seat the last one saved", () => {
+      const store = fakeStore();
+      const before = withStore(store);
+      before.start();
+      sockets[0].open();
+      before.actions.joinRoom("ABCD", "Ana", "fr");
+      sockets[0].receive(seat);
+
+      const after = withStore(store);
+      after.start();
+      sockets[1].open();
+      expect(JSON.parse(sockets[1].sent[0])).toEqual({
+        resumeRoom: { roomCode: "ABCD", sessionToken: "secret" },
+      });
+    });
+
+    it("falls back to the saved name when that seat has gone", () => {
+      const store = fakeStore();
+      const before = withStore(store);
+      before.start();
+      sockets[0].open();
+      before.actions.joinRoom("ABCD", "Ana", "fr");
+      sockets[0].receive(seat);
+
+      const after = withStore(store);
+      after.start();
+      sockets[1].open();
+      sockets[1].receive({ error: { code: "session_expired", message: "gone" } });
+      expect(JSON.parse(sockets[1].sent[1])).toEqual({
+        joinRoom: { roomCode: "ABCD", displayName: "Ana", locale: "fr" },
+      });
+    });
+
+    const forgets: { name: string; act: (c: Connection) => void }[] = [
+      { name: "leaving the room", act: (c) => c.actions.leaveRoom() },
+      { name: "the room being gone", act: () => sockets[0].receive({ error: { code: "room_not_found" } }) },
+      { name: "another tab taking the seat", act: () => sockets[0].receive({ error: { code: "session_replaced" } }) },
+    ];
+    for (const tt of forgets) {
+      it(`${tt.name} forgets the seat`, () => {
+        const store = fakeStore();
+        const c = withStore(store);
+        c.start();
+        sockets[0].open();
+        c.actions.joinRoom("ABCD", "Ana", "fr");
+        sockets[0].receive(seat);
+        expect(store.data.size).toBe(1);
+
+        tt.act(c);
+        expect(store.data.size).toBe(0);
+      });
+    }
+
+    const junk = ["not json", "null", '{"code":"ABCD"}', '{"code":1,"token":"x"}'];
+    for (const raw of junk) {
+      it(`ignores a saved value of ${raw}`, () => {
+        const store = fakeStore();
+        store.data.set("pg.session.v1", raw);
+        const c = withStore(store);
+        c.start();
+        sockets[0].open();
+        expect(sockets[0].sent).toEqual([]);
+      });
+    }
+
+    it("still keeps the seat through a drop when storage throws", () => {
+      const c = withStore({
+        ...fakeStore(),
+        setItem: () => {
+          throw new Error("blocked");
+        },
+      });
+      c.start();
+      sockets[0].open();
+      c.actions.joinRoom("ABCD", "Ana", "fr");
+      sockets[0].receive(seat);
+      sockets[0].drop();
+      vi.advanceTimersByTime(100);
+      sockets[1].open();
+      expect(JSON.parse(sockets[1].sent[0]).resumeRoom.sessionToken).toBe("secret");
+    });
+  });
+
   it("stop() closes for good and ignores later socket events", () => {
     conn.start();
     sockets[0].open();

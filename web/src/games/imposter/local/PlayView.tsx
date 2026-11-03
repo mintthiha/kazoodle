@@ -4,6 +4,7 @@ import { Avatar } from "../../../players/Avatar";
 import { Countdown } from "../Countdown";
 import { speakerSeat, type LocalEvent, type LocalGame, type Stage } from "./localGame";
 import { makeSeatHue } from "./seatHue";
+import { playTurnEnd } from "./sound";
 import { useTurnClock } from "./useTurnClock";
 
 type Dispatch = (event: LocalEvent) => void;
@@ -50,7 +51,10 @@ export function SpeakView({ game, stage, dispatch }: SpeakProps) {
           key={`${stage.pass}:${stage.turn}`}
           seconds={settings.clueSeconds}
           paused={paused}
-          onExpire={() => dispatch({ type: "turnDone" })}
+          onExpire={() => {
+            if (settings.sound) playTurnEnd();
+            dispatch({ type: "turnDone" });
+          }}
         />
       )}
 

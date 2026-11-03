@@ -24,6 +24,7 @@ type command interface{ isCommand() }
 type joinCmd struct {
 	player Player
 	sender Sender
+	token  string // the secret that will reclaim this seat
 	// reply is buffered (capacity 1) so the run goroutine can always hand back
 	// the result without blocking, even if the caller has since stopped
 	// waiting (its context was cancelled).
@@ -31,9 +32,10 @@ type joinCmd struct {
 }
 
 type joinReply struct {
-	self   Player
-	roster []Player
-	hostID string
+	self    Player
+	roster  []Player
+	hostID  string
+	offline []string
 }
 
 type leaveCmd struct {
@@ -162,9 +164,27 @@ func (r *Room) clockOf() clock {
 	return r.clock
 }
 
+// member is one seat in the room. Everything on it belongs to the room goroutine.
 type member struct {
 	player Player
+
+	// sender is nil while the player is disconnected and their seat is held. Go
+	// through send or online rather than calling it directly.
 	sender Sender
+
+	// token is the secret that reclaims this seat from a new connection.
+	token string
+
+	// seated is true when this player was dealt into the running game. events is
+	// every game event they have been sent in it, so they can be replayed to a
+	// new connection. Both are reset when a game starts and when it ends.
+	seated bool
+	events []string
+
+	// grace is the clock on a held seat, and graceGen identifies its current
+	// arming, the same way timerGen does for the game timer.
+	grace    stopper
+	graceGen uint64
 }
 
 // newRoom creates a room and starts its goroutine. parent is the Manager's
@@ -198,6 +218,7 @@ func (r *Room) run(ctx context.Context) {
 	// clock running for a room that no longer exists is how phantom players
 	// happen.
 	defer r.cancelTimer()
+	defer r.cancelAllGrace()
 
 	for {
 		select {
@@ -227,6 +248,22 @@ func (r *Room) run(ctx context.Context) {
 			case timerCmd:
 				r.applyTimer(cmd)
 
+			case disconnectCmd:
+				r.applyDisconnect(cmd)
+				close(cmd.ack)
+
+			case resumeCmd:
+				cmd.reply <- r.applyResume(cmd)
+
+			case graceCmd:
+				r.applyGrace(cmd)
+				// A held seat running out can be the room's last member leaving.
+				// No caller is waiting here, unlike the leaveCmd case below.
+				if len(r.members) == 0 {
+					r.onEmpty(r.code)
+					return
+				}
+
 			case leaveCmd:
 				r.applyLeave(cmd)
 				if len(r.members) == 0 {
@@ -253,7 +290,7 @@ func (r *Room) applyJoin(cmd joinCmd) {
 	} else {
 		cmd.player.DisplayName = uniqueName(cmd.player.DisplayName, taken)
 	}
-	r.members[cmd.player.ID] = &member{player: cmd.player, sender: cmd.sender}
+	r.members[cmd.player.ID] = &member{player: cmd.player, sender: cmd.sender, token: cmd.token}
 	r.order = append(r.order, cmd.player.ID)
 	if r.hostID == "" {
 		r.hostID = cmd.player.ID
@@ -261,16 +298,18 @@ func (r *Room) applyJoin(cmd joinCmd) {
 
 	// The newcomer learns the whole roster (themselves included) and the host
 	// from the reply; everyone already here is told about the newcomer.
-	cmd.reply <- joinReply{self: cmd.player, roster: r.roster(), hostID: r.hostID}
+	cmd.reply <- joinReply{self: cmd.player, roster: r.roster(), hostID: r.hostID, offline: r.offlineIDs()}
 	r.broadcastExcept(cmd.player.ID, msgPlayerJoined(cmd.player))
 }
 
 func (r *Room) applyLeave(cmd leaveCmd) {
-	if _, ok := r.members[cmd.playerID]; !ok {
+	m, ok := r.members[cmd.playerID]
+	if !ok {
 		// Already gone — e.g. an explicit leave followed by the socket closing.
 		// Nothing to do and nothing to broadcast.
 		return
 	}
+	r.cancelGrace(m)
 	delete(r.members, cmd.playerID)
 	r.order = removeString(r.order, cmd.playerID)
 	r.broadcast(msgPlayerLeft(cmd.playerID))
@@ -282,9 +321,13 @@ func (r *Room) applyLeave(cmd leaveCmd) {
 		r.applyGameLeave(cmd.playerID)
 	}
 
-	// If the host left and anyone remains, the longest-present player takes over.
+	// If the host left and anyone remains, the longest-present player takes over,
+	// preferring one who is actually connected.
 	if cmd.playerID == r.hostID && len(r.order) > 0 {
-		r.hostID = r.order[0]
+		r.hostID = r.firstOnline()
+		if r.hostID == "" {
+			r.hostID = r.order[0]
+		}
 		r.broadcast(msgHostChanged(r.hostID))
 	}
 }
@@ -338,9 +381,15 @@ func (r *Room) applyStartGame(cmd startGameCmd) error {
 		return ErrUnknownGame
 	}
 
+	// Nobody is dealt in while their connection is down: the round would sit
+	// waiting for a player who may well have closed the tab. If they come back
+	// they wait in the lobby for the next game, and the lobby's own grace clock
+	// is still running if they do not.
 	players := make([]game.Player, 0, len(r.order))
 	for _, id := range r.order {
-		players = append(players, game.Player{ID: id, Locale: r.members[id].player.Locale})
+		if m := r.members[id]; m.online() {
+			players = append(players, game.Player{ID: id, Locale: m.player.Locale})
+		}
 	}
 
 	state, effects, err := g.Init(players, cmd.options)
@@ -348,6 +397,10 @@ func (r *Room) applyStartGame(cmd startGameCmd) error {
 		return fmt.Errorf("start %q: %w", cmd.gameID, err)
 	}
 
+	for _, id := range r.order {
+		m := r.members[id]
+		m.seated, m.events = m.online(), nil
+	}
 	r.gm, r.gameID, r.gameState = g, cmd.gameID, state
 	r.broadcast(msgGameStarted(cmd.gameID))
 	r.applyEffects(effects)
@@ -417,13 +470,15 @@ func (r *Room) applyEffects(effects []game.Effect) {
 			if msg == nil {
 				continue
 			}
-			if len(ef.To) == 0 {
-				r.broadcast(msg)
-				continue
+			to := ef.To
+			if len(to) == 0 {
+				to = r.order
 			}
-			for _, id := range ef.To {
+			payload := msg.GetGameEvent().GetPayload()
+			for _, id := range to {
 				if m, ok := r.members[id]; ok {
-					m.sender.Send(msg)
+					m.logEvent(payload)
+					m.send(msg)
 				}
 			}
 
@@ -478,6 +533,9 @@ func (r *Room) wrapGameEvent(m proto.Message) *protocol.ServerMessage {
 
 func (r *Room) clearGame() {
 	r.gm, r.gameID, r.gameState = nil, "", nil
+	for _, m := range r.members {
+		m.seated, m.events = false, nil
+	}
 	// Belt and braces: applyEffects already cancelled on the way in, but a
 	// game can also be cleared from paths that never produced effects at all
 	// (a Leave that errored, a game with no Leaver).
@@ -504,20 +562,20 @@ func (r *Room) roster() []Player {
 	return out
 }
 
-// broadcast sends m to every member, in join order.
+// broadcast sends m to every connected member, in join order.
 func (r *Room) broadcast(m *protocol.ServerMessage) {
 	for _, id := range r.order {
-		r.members[id].sender.Send(m)
+		r.members[id].send(m)
 	}
 }
 
-// broadcastExcept sends m to every member except exceptID.
+// broadcastExcept sends m to every connected member except exceptID.
 func (r *Room) broadcastExcept(exceptID string, m *protocol.ServerMessage) {
 	for _, id := range r.order {
 		if id == exceptID {
 			continue
 		}
-		r.members[id].sender.Send(m)
+		r.members[id].send(m)
 	}
 }
 
@@ -527,8 +585,8 @@ func (r *Room) broadcastExcept(exceptID string, m *protocol.ServerMessage) {
 // guards against the room having shut down (closed) and against the caller's
 // context being cancelled, so none of them can block forever.
 
-func (r *Room) join(ctx context.Context, p Player, s Sender) (joinReply, error) {
-	cmd := joinCmd{player: p, sender: s, reply: make(chan joinReply, 1)}
+func (r *Room) join(ctx context.Context, p Player, token string, s Sender) (joinReply, error) {
+	cmd := joinCmd{player: p, sender: s, token: token, reply: make(chan joinReply, 1)}
 	select {
 	case r.cmds <- cmd:
 	case <-r.closed:

@@ -66,6 +66,17 @@ async function accuse(page: Page, who: string) {
   await button(page, `Accuse ${who}`).click();
 }
 
+/** Skips the animation, by tapping a corner where no button can be. */
+const skipSequence = (page: Page) => page.locator(".vs").click({ position: { x: 20, y: 20 } });
+
+/** Takes a verdict through to the screen with Play again on it, ruling that a caught
+ * imposter's spoken guess was wrong if there was one. */
+async function finishVerdict(page: Page, miss = "No, they missed") {
+  await skipSequence(page);
+  const missed = button(page, miss);
+  if (await missed.isVisible()) await missed.click();
+}
+
 async function fieldColour(page: Page): Promise<string> {
   return page.locator(".vs-field").evaluate((el) => getComputedStyle(el).backgroundColor);
 }
@@ -83,6 +94,7 @@ test.describe("getting in", () => {
 
     const { imposter } = await startManualGame(page);
     await accuse(page, imposter);
+    await finishVerdict(page);
     await expect(playAgain(page)).toBeVisible();
     expect(sockets).toEqual([]);
 
@@ -224,7 +236,7 @@ test.describe("custom categories", () => {
       expect(seen).not.toContain(word);
       seen.push(word);
       await accuse(page, imposter);
-      await page.locator(".vs").click();
+      await finishVerdict(page);
       await expect(page.locator(".vs")).toContainText("Colours");
       await playAgain(page).click();
     }
@@ -260,7 +272,7 @@ test.describe("custom categories", () => {
       const { word, hints } = await readSlips(page);
       expect(hints).toEqual([`Hint: ${HINTS[word]}. You still don’t know the word.`]);
       await accuse(page, THREE_SEATS[0]);
-      await page.locator(".vs").click();
+      await finishVerdict(page);
       await playAgain(page).click();
     }
   });
@@ -437,8 +449,9 @@ test.describe("the deal", () => {
   });
 
   test("everyone sees the same word except exactly one imposter", async ({ page }) => {
-    // dealAll holds the assertions: this is here to run them on a full table.
-    const names = [...NAMES, "Eli", "Fay", "Gus", "Hal"];
+    // dealAll holds the assertions: this is here to run them on the biggest table
+    // that has one imposter. Seven or more get two; see "two imposters" below.
+    const names = [...NAMES, "Eli", "Fay"];
     const { imposter } = await startManualGame(page, names);
     expect(names).toContain(imposter);
   });
@@ -528,6 +541,7 @@ test.describe("the app moves on by itself", () => {
 
     await accuse(page, imposter);
     await expect(page.locator(".vs")).toHaveAttribute("data-side", "crew");
+    await finishVerdict(page);
     await expect(playAgain(page)).toBeVisible();
   });
 
@@ -563,12 +577,44 @@ test.describe("the verdict", () => {
     const running = await page.evaluate(() => document.getAnimations().length);
     expect(running).toBeGreaterThan(0);
 
-    // Then the ending.
+    // Then the catch, which still leaves the imposter one way out. The word stays
+    // off the screen until the table has heard their guess.
+    await expect(page.getByRole("heading", { name: "Caught!" })).toBeVisible();
+    await expect(page.getByText(`${imposter} gets one guess at the word.`)).toBeVisible();
+    await expect(page.locator(".verdict-slip")).toHaveCount(0);
+    await expect(playAgain(page)).toBeHidden();
+    expect(await fieldColour(page)).toBe(YELLOW);
+
+    // And the ending.
+    await button(page, "No, they missed").click();
     await expect(page.getByRole("heading", { name: "The crew wins!" })).toBeVisible();
     await expect(playAgain(page)).toBeVisible();
-    await expect(page.getByText(`${imposter} was the imposter.`)).toBeVisible();
+    await expect(page.getByText(`${imposter} was the imposter and missed the word.`)).toBeVisible();
     await expect(page.locator(".verdict-slip")).toHaveText(word);
     expect(await fieldColour(page)).toBe(YELLOW);
+  });
+
+  test("a caught imposter who says the word steals the win", async ({ page }) => {
+    const { imposter, word } = await startManualGame(page);
+    await accuse(page, imposter);
+    await skipSequence(page);
+
+    await button(page, "Yes, they got it").click();
+
+    await expect(page.getByRole("heading", { name: "The imposter wins!" })).toBeVisible();
+    await expect(page.getByText(`${imposter} guessed the word and stole the win.`)).toBeVisible();
+    await expect(page.locator(".verdict-slip")).toHaveText(word);
+    await expect(page.locator(".vs")).toHaveAttribute("data-side", "imposter");
+    expect(await fieldColour(page)).toBe(RED);
+    await expect(page.locator(".vs-live")).toHaveCount(0);
+  });
+
+  test("a reload while the table is ruling keeps the question open", async ({ page }) => {
+    const { imposter } = await startManualGame(page);
+    await accuse(page, imposter);
+    await page.reload();
+    await expect(button(page, "Yes, they got it")).toBeVisible();
+    await expect(page.locator(".verdict-slip")).toHaveCount(0);
   });
 
   test("naming anyone else plays the bad ending", async ({ page }) => {
@@ -591,11 +637,11 @@ test.describe("the verdict", () => {
   test("a tap skips straight to the result", async ({ page }) => {
     const { imposter } = await startManualGame(page);
     await accuse(page, imposter);
-    await expect(playAgain(page)).toBeHidden();
+    await expect(button(page, "No, they missed")).toBeHidden();
 
-    await page.locator(".vs").click({ position: { x: 20, y: 20 } });
+    await skipSequence(page);
 
-    await expect(playAgain(page)).toBeVisible();
+    await expect(button(page, "No, they missed")).toBeVisible();
     await expect(page.locator(".vs-live")).toHaveCount(0);
   });
 
@@ -604,7 +650,7 @@ test.describe("the verdict", () => {
     const { imposter } = await startManualGame(page);
     await accuse(page, imposter);
 
-    await expect(playAgain(page)).toBeVisible();
+    await expect(button(page, "No, they missed")).toBeVisible();
     await expect(page.locator(".vs-question")).toBeHidden();
     const running = await page
       .locator(".vs")
@@ -615,6 +661,7 @@ test.describe("the verdict", () => {
   test("Play again deals a new word to the same players", async ({ page }) => {
     const { imposter, word } = await startManualGame(page);
     await accuse(page, imposter);
+    await finishVerdict(page);
     await playAgain(page).click();
 
     const second = await dealAll(page, NAMES);
@@ -624,6 +671,7 @@ test.describe("the verdict", () => {
   test("Change players returns to setup with the names kept", async ({ page }) => {
     const { imposter } = await startManualGame(page);
     await accuse(page, imposter);
+    await finishVerdict(page);
     await button(page, "Change players or settings").click();
 
     await expect(page.getByRole("textbox", { name: "Name of player 2", exact: true })).toHaveValue("Ben");
@@ -686,6 +734,7 @@ test.describe("real life", () => {
     await button(page, "Révéler l’imposteur").click();
     await page.locator(".accuse-row").first().click();
     await button(page, /^Accuser/).click();
+    await finishVerdict(page, "Non, raté");
     await expect(button(page, "Rejouer")).toBeVisible();
     await expect(page.locator(".verdict-slip")).toHaveText(word);
   });
@@ -726,7 +775,144 @@ test.describe("real life", () => {
     await dealAll(page, [long, "Ben", "Cleo"]);
     await fits();
     await accuse(page, long);
+    await fits();
+    await finishVerdict(page);
     await expect(playAgain(page)).toBeVisible();
     await fits();
+  });
+
+  test("the Deal button stays reachable at the bottom of a long setup", async ({ page }) => {
+    await openSetup(page);
+    await enterNames(page, ["Ana", "Ben", "Cleo", "Dov", "Eli", "Fay", "Gus"]);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+
+    // After everything else on the page, and on screen rather than scrolled away.
+    const deal = button(page, "Deal the words");
+    await expect(deal).toBeInViewport();
+    const rules = page.locator(".rules-card");
+    const [dealBox, rulesBox] = [await deal.boundingBox(), await rules.boundingBox()];
+    expect(dealBox!.y).toBeGreaterThan(rulesBox!.y);
+  });
+
+  test("setup explains the game before anyone has to deal", async ({ page }) => {
+    await openSetup(page);
+    await expect(page.getByRole("heading", { name: "How to play" })).toBeVisible();
+    await expect(page.getByText("gets one guess at the word, out loud", { exact: false })).toBeVisible();
+    // No score in this mode, so the online card's points must not show up here.
+    await expect(page.getByText("+3", { exact: false })).toHaveCount(0);
+  });
+});
+
+test.describe("two imposters", () => {
+  const SEVEN = ["Ana", "Ben", "Cleo", "Dov", "Eli", "Fay", "Gus"];
+
+  async function dealSeven(page: Page) {
+    await openSetup(page);
+    await enterNames(page, SEVEN);
+    await button(page, "Deal the words").click();
+
+    const imposters: { name: string; partnerLine: string }[] = [];
+    for (const [i, name] of SEVEN.entries()) {
+      await expect(page.getByRole("heading", { name: `Pass the phone to ${name}` })).toBeVisible();
+      if (await openSlip(page)) {
+        imposters.push({ name, partnerLine: await page.locator(".slip-partner").innerText() });
+      } else {
+        await expect(page.locator(".slip-partner")).toHaveCount(0);
+      }
+      await button(page, i === SEVEN.length - 1 ? "Start the game" : "Next player").click();
+    }
+    return imposters;
+  }
+
+  test("seven players get two, who are told about each other", async ({ page }) => {
+    const imposters = await dealSeven(page);
+
+    expect(imposters).toHaveLength(2);
+    expect(imposters[0].partnerLine).toBe(`Your partner: ${imposters[1].name}`);
+    expect(imposters[1].partnerLine).toBe(`Your partner: ${imposters[0].name}`);
+    await expect(speaker(page)).not.toHaveText(imposters[0].name);
+    await expect(speaker(page)).not.toHaveText(imposters[1].name);
+  });
+
+  test("catching either one counts, and the result names both", async ({ page }) => {
+    const imposters = await dealSeven(page);
+    await accuse(page, imposters[1].name);
+    await finishVerdict(page);
+
+    await expect(page.getByRole("heading", { name: "The crew wins!" })).toBeVisible();
+    await expect(page.locator(".verdict-who")).toHaveCount(2);
+    await expect(page.getByText("The imposters")).toBeVisible();
+  });
+
+  test("the switch only appears at seven, and turns it off", async ({ page }) => {
+    const toggle = page.getByRole("switch", { name: "Two imposters at 7+ players" });
+    await openSetup(page);
+    await enterNames(page, SEVEN.slice(0, 6));
+    await expect(toggle).toHaveCount(0);
+
+    await button(page, "One more player").click();
+    await expect(toggle).toBeChecked();
+    await page.locator(".switch-row", { hasText: "Two imposters" }).click();
+    await expect(toggle).not.toBeChecked();
+
+    await page.getByRole("textbox", { name: "Name of player 7", exact: true }).fill("Gus");
+    await button(page, "Deal the words").click();
+    let imposters = 0;
+    for (const [i] of SEVEN.entries()) {
+      if (await openSlip(page)) imposters++;
+      await button(page, i === SEVEN.length - 1 ? "Start the game" : "Next player").click();
+    }
+    expect(imposters).toBe(1);
+  });
+});
+
+test.describe("sound", () => {
+  /** Counts beeps by watching the browser's own audio API. */
+  async function countBeeps(page: Page) {
+    await page.addInitScript(() => {
+      const w = window as unknown as { beeps: number };
+      w.beeps = 0;
+      const real = AudioContext.prototype.createOscillator;
+      AudioContext.prototype.createOscillator = function (this: AudioContext) {
+        w.beeps++;
+        return real.call(this);
+      };
+    });
+    return () => page.evaluate(() => (window as unknown as { beeps: number }).beeps);
+  }
+
+  async function startAutoGame(page: Page) {
+    await openSetup(page);
+    await enterNames(page, THREE_FOR_SOUND);
+    await page.locator(".choice-option", { hasText: "The app" }).click();
+    await page.locator(".choice-option", { hasText: /^10s$/ }).click();
+  }
+  const THREE_FOR_SOUND = ["Ana", "Ben", "Cleo"];
+
+  test("a turn ending on the clock beeps, and a tap on Next player does not", async ({ page }) => {
+    await page.clock.install();
+    const beeps = await countBeeps(page);
+    await startAutoGame(page);
+    await button(page, "Deal the words").click();
+    await dealAll(page, THREE_FOR_SOUND);
+
+    const before = await speaker(page).innerText();
+    await page.clock.runFor(10_500);
+    await expect(speaker(page)).not.toHaveText(before);
+    await expect.poll(beeps).toBe(1);
+  });
+
+  test("the switch silences it", async ({ page }) => {
+    await page.clock.install();
+    const beeps = await countBeeps(page);
+    await startAutoGame(page);
+    await page.locator(".switch-row", { hasText: "Sound when a turn ends" }).click();
+    await button(page, "Deal the words").click();
+    await dealAll(page, THREE_FOR_SOUND);
+
+    const before = await speaker(page).innerText();
+    await page.clock.runFor(10_500);
+    await expect(speaker(page)).not.toHaveText(before);
+    expect(await beeps()).toBe(0);
   });
 });

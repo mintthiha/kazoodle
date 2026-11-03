@@ -8,6 +8,7 @@ import { DiscussView, SpeakView } from "./PlayView";
 import { newGame, resolveNames, step, type LocalEvent, type LocalGame, type Stage } from "./localGame";
 import { loadGame, loadSetup, saveGame, saveSetup, type LocalSetup } from "./saved";
 import { SetupView } from "./SetupView";
+import { unlockSound } from "./sound";
 import { TwoTapButton } from "./TwoTapButton";
 import { useWakeLock } from "./useWakeLock";
 import { VerdictView } from "./VerdictView";
@@ -40,6 +41,13 @@ export function LocalImposter({ onExit }: LocalGameProps) {
 
   useWakeLock(game?.stage.kind === "speak" || game?.stage.kind === "discuss");
 
+  // Browsers only allow sound after a tap, and the clock that makes the sound is not
+  // one. So any tap on this screen gets it ready, including after a reload mid-game.
+  useEffect(() => {
+    window.addEventListener("pointerdown", unlockSound);
+    return () => window.removeEventListener("pointerdown", unlockSound);
+  }, []);
+
   function deal(usedWords: string[]) {
     const names = resolveNames(setup.names, (n) => t("local.playerN", { n }));
     setGame(newGame(names, setup.settings, usedWords, Math.random, setup.customCategories));
@@ -56,6 +64,8 @@ export function LocalImposter({ onExit }: LocalGameProps) {
       <VerdictView
         game={game}
         accused={stage.accused}
+        steal={stage.steal}
+        onSteal={(correct) => dispatch({ type: "stealResult", correct })}
         onPlayAgain={() => deal(game.usedWords)}
         onChangePlayers={() => setGame(null)}
       />

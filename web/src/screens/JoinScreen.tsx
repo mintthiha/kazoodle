@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useT, type MessageKey } from "../i18n";
+import { useT } from "../i18n";
+import { errorKey } from "../errorKey";
 import type { Snapshot } from "../net/connection";
 
 interface Props {
@@ -37,9 +38,8 @@ export function JoinScreen({ snapshot, onCreate, onJoin }: Props) {
     onJoin(code.trim().toUpperCase(), trimmedName);
   }
 
-  const error = snapshot.lastError
-    ? t(errorKey(snapshot.lastError))
-    : null;
+  const key = errorKey(snapshot.lastError);
+  const error = key ? t(key) : null;
 
   return (
     <main className="screen join">
@@ -92,9 +92,4 @@ export function JoinScreen({ snapshot, onCreate, onJoin }: Props) {
       {(hint || error) && <p className="hint">{hint ?? error}</p>}
     </main>
   );
-}
-
-// Map a server error code to a message key, falling back to a generic one.
-function errorKey(code: string): MessageKey {
-  return code === "room_not_found" ? "error.room_not_found" : "error.generic";
 }

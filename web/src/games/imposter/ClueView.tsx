@@ -79,7 +79,7 @@ export function ClueView({
         />
       )}
 
-      <WordPeek role={role} />
+      <WordPeek role={role} partnerName={role?.partnerId ? name(role.partnerId) : undefined} />
 
       <ClueLedger
         rows={buildLedger(players.map((p) => p.id), turn.cluesSoFar)}

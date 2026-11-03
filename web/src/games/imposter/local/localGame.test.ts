@@ -7,6 +7,7 @@ import {
   canOpenAccuse,
   crewWon,
   duplicateSeats,
+  isImposter,
   newGame,
   pickWord,
   resizeNames,
@@ -23,7 +24,7 @@ const NAMES = ["Ana", "Ben", "Cleo"];
 const AUTO: LocalSettings = { ...DEFAULT_SETTINGS, advance: "auto", cluePasses: 2 };
 
 // Always rolls the lowest value, so the first word, seat 0 as the imposter, and
-// seat 0 speaking first.
+// the first seat that is not an imposter speaking first.
 const lowRng = () => 0;
 
 function apply(game: LocalGame, ...events: LocalEvent[]): LocalGame {
@@ -102,6 +103,7 @@ describe("pickWord", () => {
         word: "",
         category: "Ours",
         hint: "Tomato",
+        partner: "",
       });
     });
 
@@ -119,6 +121,7 @@ describe("pickWord", () => {
         word: "Red",
         category: "Ours",
         hint: "",
+        partner: "",
       });
     });
   });
@@ -178,6 +181,61 @@ describe("newGame", () => {
     const seen = new Set<number>();
     for (let i = 0; i < 200; i++) seen.add(newGame(NAMES, DEFAULT_SETTINGS, []).imposter);
     expect([...seen].sort()).toEqual([0, 1, 2]);
+  });
+});
+
+describe("who gets dealt what", () => {
+  const SEVEN = ["a", "b", "c", "d", "e", "f", "g"];
+
+  it("never has an imposter speak first", () => {
+    for (const names of [NAMES, SEVEN]) {
+      for (let i = 0; i < 300; i++) {
+        const g = newGame(names, DEFAULT_SETTINGS, []);
+        expect(isImposter(g, g.firstSeat)).toBe(false);
+      }
+    }
+  });
+
+  it("still lets every crew seat speak first", () => {
+    const seen = new Set<number>();
+    for (let i = 0; i < 300; i++) {
+      seen.add(newGame(NAMES, DEFAULT_SETTINGS, [], lowRng).firstSeat);
+      const g = newGame(NAMES, DEFAULT_SETTINGS, []);
+      if (g.imposter === 0) seen.add(g.firstSeat);
+    }
+    expect([...seen].sort()).toEqual([1, 2]);
+  });
+
+  const tests = [
+    { name: "a small table", names: NAMES, twoImposters: true, wantPartner: false },
+    { name: "six players", names: SEVEN.slice(0, 6), twoImposters: true, wantPartner: false },
+    { name: "seven players", names: SEVEN, twoImposters: true, wantPartner: true },
+    { name: "seven players, switched off", names: SEVEN, twoImposters: false, wantPartner: false },
+  ];
+  for (const tt of tests) {
+    it(`${tt.name} ${tt.wantPartner ? "gets" : "does not get"} a second imposter`, () => {
+      const settings = { ...DEFAULT_SETTINGS, twoImposters: tt.twoImposters };
+      for (let i = 0; i < 100; i++) {
+        const g = newGame(tt.names, settings, []);
+        expect(g.partner !== null).toBe(tt.wantPartner);
+        expect(g.partner).not.toBe(g.imposter);
+      }
+    });
+  }
+
+  it("tells two imposters about each other and nobody else", () => {
+    const g = { ...newGame(SEVEN, DEFAULT_SETTINGS, []), imposter: 1, partner: 4 };
+    expect(roleFor(g, 1, "en").partner).toBe("e");
+    expect(roleFor(g, 4, "en").partner).toBe("b");
+    expect(roleFor(g, 0, "en").partner).toBe("");
+    expect(roleFor(g, 4, "en").word).toBe("");
+  });
+
+  it("counts catching either imposter", () => {
+    const g = { ...newGame(SEVEN, DEFAULT_SETTINGS, []), imposter: 1, partner: 4 };
+    expect(crewWon(g, 1)).toBe(true);
+    expect(crewWon(g, 4)).toBe(true);
+    expect(crewWon(g, 0)).toBe(false);
   });
 });
 
@@ -251,6 +309,34 @@ describe("accusing", () => {
     expect(g.stage).toEqual({ kind: "verdict", accused: 2 });
   });
 
+  it("opens a steal only when the accused really is the imposter", () => {
+    // lowRng makes seat 0 the imposter.
+    const g = apply(dealtGame(DEFAULT_SETTINGS), { type: "openAccuse" }, { type: "accuse", seat: 0 });
+    expect(g.stage).toEqual({ kind: "verdict", accused: 0, steal: "pending" });
+  });
+
+  it("the table's ruling decides the steal, once", () => {
+    const caught = apply(dealtGame(DEFAULT_SETTINGS), { type: "openAccuse" }, { type: "accuse", seat: 0 });
+    const hit = step(caught, { type: "stealResult", correct: true });
+    expect(hit.stage).toEqual({ kind: "verdict", accused: 0, steal: "hit" });
+    expect(step(hit, { type: "stealResult", correct: false })).toBe(hit);
+
+    const miss = step(caught, { type: "stealResult", correct: false });
+    expect(miss.stage).toEqual({ kind: "verdict", accused: 0, steal: "miss" });
+  });
+
+  it("a correct steal takes the win from the crew", () => {
+    const g = { ...dealtGame(DEFAULT_SETTINGS), imposter: 1 };
+    expect(crewWon(g, 1, "pending")).toBe(true);
+    expect(crewWon(g, 1, "miss")).toBe(true);
+    expect(crewWon(g, 1, "hit")).toBe(false);
+  });
+
+  it("an innocent accused has no steal to rule on", () => {
+    const g = apply(dealtGame(DEFAULT_SETTINGS), { type: "openAccuse" }, { type: "accuse", seat: 2 });
+    expect(step(g, { type: "stealResult", correct: true })).toBe(g);
+  });
+
   it("the crew wins only by naming the imposter", () => {
     const g = { ...dealtGame(DEFAULT_SETTINGS), imposter: 1 };
     expect(crewWon(g, 1)).toBe(true);
@@ -291,6 +377,7 @@ describe("roleFor", () => {
       word: entry.word.fr,
       category: entry.category.fr,
       hint: "",
+      partner: "",
     });
   });
 

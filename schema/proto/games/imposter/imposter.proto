@@ -7,20 +7,25 @@ option go_package = "github.com/mintthiha/party-games/server/internal/games/impo
 // Wire messages for the Imposter game. Carried inside the core protocol's
 // GameEvent / GameAction envelopes as proto3 JSON.
 //
-// Ruleset (v1): exactly one imposter, who gets no word. One clue word per
-// player per pass, in a server-set order, for StartOptions.clue_passes passes
-// of the table — the same players in the same order, each speaking again after
-// hearing everyone else, which is where an imposter who survived the first
-// pass usually comes undone. Everyone then votes; a tie means no one is
-// removed and the imposter escapes. If the vote catches the imposter, they get
-// one blind guess at the secret word to steal the win before the round's
-// Outcome is revealed.
+// Ruleset: one imposter, or two at seven or more players (see
+// StartOptions.imposters). An imposter gets no word, and never speaks first. One
+// clue word per player per pass, in a server-set order, for
+// StartOptions.clue_passes passes of the table — the same players in the same
+// order, each speaking again after hearing everyone else, which is where an
+// imposter who survived the first pass usually comes undone. Everyone then
+// votes; a tie means no one is removed and the imposters escape. If the vote
+// catches an imposter, that one imposter gets one blind guess at the secret word
+// to steal the win before the round's Outcome is revealed.
+//
+// Two imposters are a team: they are told about each other, catching either one
+// counts as a catch, and they score together.
 //
 // A game is a *match* of StartOptions.rounds rounds. Points carry across
-// rounds and the match has a winner: a caught imposter scores +1 for every
-// crew member still in the round, an escaped imposter +2 for themselves, and a
-// caught imposter whose steal guess lands +3 instead. Running totals ride
-// along on every Outcome.
+// rounds and the match has a winner: a catch scores +1 for each crew member
+// still in the round, an escape +2 for each imposter, and a caught imposter
+// whose steal guess lands +3 for each imposter instead. Running totals ride
+// along on every Outcome. A word is not dealt twice in a match until its pool
+// has been played through.
 //
 // A finished round stays on everyone's screen until a player sends PlayAgain.
 // That starts the next round — fresh word, fresh imposter, reshuffled
@@ -36,9 +41,9 @@ option go_package = "github.com/mintthiha/party-games/server/internal/games/impo
 // since a client builds its ballot from the VotePhase it was handed. Votes
 // cast for the departing player are void; the rest stand.
 //
-// The round is abandoned, with GameEnded, only if the imposter is the one
+// The round is abandoned, with GameEnded, only if the last imposter is the one
 // who left (reason "imposter_left") or too few players remain (reason
-// "player_left").
+// "player_left"). When one of two imposters leaves, the other plays on alone.
 //
 // Every word carries two separate pieces of text: its category (e.g.
 // "Animals") and a hint (e.g. "Hops and carries young in a pouch" for
@@ -80,6 +85,11 @@ message StartOptions {
   // rather than rejected, so an older client's category choice degrades to
   // "any" instead of failing the round.
   string category = 2;
+
+  // How many imposters a round has at seven or more players: 1 or 2. 0 (the
+  // default) means 2. Below seven players there is always one, whatever this
+  // says, so a table that shrinks mid-match falls back by itself.
+  int32 imposters = 6;
 }
 
 // ── Server → Client ───────────────────────────────────────────────────────
@@ -113,6 +123,10 @@ message RoleAssignment {
   // round has begun, so it clears whatever the last round left on screen.
   int32 round = 5;
   int32 total_rounds = 6;
+
+  // The other imposter, on a two-imposter round. Set only on an imposter's own
+  // RoleAssignment, so the crew cannot learn it.
+  string partner_id = 7;
 }
 
 // One player's standing in the match. score is their running total after the
@@ -158,9 +172,6 @@ message ClueTurn {
   // missed and moves on by itself. A client counting down from this number is
   // showing the player what is about to happen, not causing it, so a phone
   // that sleeps or drifts loses nothing but the display.
-  //
-  // (VotePhase.vote_seconds is the older, weaker pattern: that countdown runs
-  // only on the client, which auto-submits when it ends.)
   int32 clue_seconds = 7;
 }
 
@@ -192,11 +203,23 @@ message VoteTally {
   // Empty if the top vote count was tied — nobody is removed in that case.
   string voted_out_id = 2;
   int32 abstain_count = 3;
+
+  // Who voted for whom, now that the ballot has closed. Secret until this
+  // message: nothing about an individual vote is sent while voting is open.
+  repeated Ballot ballots = 4;
 }
 
-// Broadcast once, instead of Outcome, when the vote catches the imposter.
-// Everyone waits while the imposter gets one blind guess at the word.
+// One player's vote. suspect_id is empty for an abstention, including a vote
+// that was never cast before the deadline.
+message Ballot {
+  string voter_id = 1;
+  string suspect_id = 2;
+}
+
+// Broadcast once, instead of Outcome, when the vote catches an imposter.
+// Everyone waits while they get one blind guess at the word.
 message StealPrompt {
+  // The imposter who was caught, and so the only player who may guess.
   string imposter_id = 1;
 
   // How long the imposter has to guess, on the same terms as
@@ -246,6 +269,9 @@ message Outcome {
   // Limited to players still in the room — someone who left does not win a
   // match they are not in — so it can be empty even when scores are not.
   repeated string winner_ids = 14;
+
+  // The second imposter, on a two-imposter round. Empty otherwise.
+  string partner_id = 15;
 }
 
 // ── Client → Server ───────────────────────────────────────────────────────
@@ -277,7 +303,8 @@ message CastVote {
 }
 
 // The caught imposter's one blind guess at the secret word. Only accepted
-// from the imposter, and only while the steal phase is open.
+// from that imposter, and only while the steal phase is open. Case, surrounding
+// spaces and accents do not matter, so "aeroport" is "Aéroport".
 message GuessWord {
   string text = 1;
 }

@@ -17,7 +17,7 @@ import {
   type LocalSettings,
 } from "./localGame";
 
-const GAME_KEY = "pg.imposter.local.game.v1";
+const GAME_KEY = "pg.imposter.local.game.v2";
 const SETUP_KEY = "pg.imposter.local.setup.v1";
 
 export interface LocalSetup {

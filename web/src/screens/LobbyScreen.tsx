@@ -10,7 +10,12 @@ import { RulesCard } from "../games/imposter/RulesCard";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
 import { CATEGORY_OPTIONS } from "../games/imposter/categories";
-import { CLUE_PASS_OPTIONS, CLUE_SECONDS_OPTIONS, ROUND_OPTIONS } from "../games/imposter/rounds";
+import {
+  CLUE_PASS_OPTIONS,
+  CLUE_SECONDS_OPTIONS,
+  ROUND_OPTIONS,
+  TWO_IMPOSTER_MIN_PLAYERS,
+} from "../games/imposter/rounds";
 import {
   DEFAULT_MATCH_OPTIONS,
   decodeStartOptions,
@@ -60,7 +65,11 @@ export function LobbyScreen({
   // pressing twice restarts the confirmation timer even when the outcome is
   // the same both times (React skips a re-render if the value is unchanged).
   const [copy, setCopy] = useState<{ state: CopyState; n: number }>({ state: "idle", n: 0 });
-  const canStart = room.players.length >= IMPOSTER_MIN_PLAYERS;
+  // Only connected players get dealt in, so a held seat does not count towards
+  // starting. Otherwise the button could promise a game the server will refuse.
+  const onlineCount = room.players.length - room.offline.length;
+  const canStart = onlineCount >= IMPOSTER_MIN_PLAYERS;
+  const bigTable = onlineCount >= TWO_IMPOSTER_MIN_PLAYERS;
   const hueFor = makeHueFor(room.players, room.departed);
   const openSeats = Math.max(0, IMPOSTER_MIN_PLAYERS - room.players.length);
 
@@ -148,6 +157,9 @@ export function LobbyScreen({
                       {name}
                       {p.id === room.selfId && <span className="you"> ({t("lobby.you")})</span>}
                     </span>
+                    {room.offline.includes(p.id) && (
+                      <span className="pill pill-offline">{t("lobby.offline")}</span>
+                    )}
                     {p.id === room.hostId && <span className="pill">{t("lobby.host")}</span>}
                   </li>
                 );
@@ -212,6 +224,19 @@ export function LobbyScreen({
                   }))}
                   onChange={(clueSeconds) => pick({ clueSeconds })}
                 />
+                {bigTable && (
+                  <Segmented
+                    name="imposters"
+                    legend={t("lobby.impostersLabel")}
+                    // Zero is "the server's default", which is two.
+                    value={opts.imposters || 2}
+                    options={[
+                      { value: 1, label: "1" },
+                      { value: 2, label: "2" },
+                    ]}
+                    onChange={(imposters) => pick({ imposters })}
+                  />
+                )}
                 <label className="switch-row">
                   <span>{t("lobby.hintsToggle")}</span>
                   <input
@@ -257,6 +282,12 @@ export function LobbyScreen({
                     )}
                   </dd>
                 </div>
+                {bigTable && (
+                  <div>
+                    <dt>{t("lobby.impostersLabel")}</dt>
+                    <dd>{t(pending.imposters === 1 ? "lobby.impostersOne" : "lobby.impostersTwo")}</dd>
+                  </div>
+                )}
               </dl>
             )}
           </section>

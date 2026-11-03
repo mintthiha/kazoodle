@@ -121,7 +121,7 @@ export function VoteView({
         />
       )}
 
-      <WordPeek role={role} />
+      <WordPeek role={role} partnerName={role?.partnerId ? name(role.partnerId) : undefined} />
 
       <ClueLedger
         rows={rows}
@@ -146,6 +146,11 @@ export function VoteView({
 
       <div className="dock">
         {myVote && <p className="status">{t("imposter.voteLockedIn", { who: describe(myVote) })}</p>}
+        {/* After a reload this phone no longer knows what it picked, only that the
+            server has a vote from it. Votes are secret, so nobody will say which. */}
+        {!myVote && progress?.votedPlayerIds.includes(selfId) && (
+          <p className="status">{t("imposter.voteAlreadyIn")}</p>
+        )}
         <button
           className="primary"
           disabled={timedOut || !selected || sameChoice(selected, myVote)}

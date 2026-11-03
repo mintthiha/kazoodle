@@ -38,7 +38,11 @@ export function RoleView({ role, progress, ready, selfId, players, departed, onC
     <main className="screen">
       <h1>{t("imposter.heading")}</h1>
 
-      <RevealSlip role={role} onReveal={() => setSeen(true)} />
+      <RevealSlip
+        role={role}
+        onReveal={() => setSeen(true)}
+        partnerName={role.partnerId ? name(role.partnerId) : undefined}
+      />
 
       <section>
         <h2 className="num">{t("imposter.readyCount", { ready: readyIds.size, total })}</h2>

@@ -13,9 +13,10 @@ option go_package = "github.com/mintthiha/party-games/server/internal/protocol;p
 
 // ── Shared ────────────────────────────────────────────────────────────────
 
-// A connected player in a room. `id` is assigned by the server and is unique
-// within a room for the lifetime of that connection. A player's locale is not
-// exposed to other clients; only the server uses it.
+// A player in a room. `id` is assigned by the server and is unique within a
+// room. It belongs to the seat rather than the socket: a phone that reconnects
+// with ResumeRoom keeps its id, its score and its place in a running game. A
+// player's locale is not exposed to other clients; only the server uses it.
 message Player {
   string id = 1;
   string display_name = 2;
@@ -33,6 +34,7 @@ message ClientMessage {
     StartGame start_game = 5;
     GameAction game_action = 6;
     SetGameOptions set_game_options = 7;
+    ResumeRoom resume_room = 8;
   }
 }
 
@@ -56,6 +58,15 @@ message JoinRoom {
 // Leave the current room. The connection stays open; the client may create or
 // join another room afterwards.
 message LeaveRoom {}
+
+// Reclaim a seat after the connection dropped. `session_token` is the secret
+// from RoomJoined. Replies with RoomJoined (resumed = true), or ErrorInfo
+// "session_expired" if the seat was given up (the client should then join again
+// as a new player) or "room_not_found" if the room has gone.
+message ResumeRoom {
+  string room_code = 1;
+  string session_token = 2;
+}
 
 // Round-trip probe. The server echoes `text` back to the whole room as
 // EchoResult. Exists purely to prove the pipe works end to end.
@@ -107,16 +118,47 @@ message ServerMessage {
     GameEvent game_event = 8;
     GameEnded game_ended = 9;
     GameOptionsChanged game_options_changed = 10;
+    PlayerPresence player_presence = 11;
   }
 }
 
-// Sent only to the player who just joined (via CreateRoom or JoinRoom):
-// their own identity, the current host, and the full current roster.
+// Sent only to the player who just joined (via CreateRoom, JoinRoom or
+// ResumeRoom): their own identity, the current host, and the full current
+// roster.
 message RoomJoined {
   string room_code = 1;
   string self_player_id = 2;
   repeated Player players = 3;
   string host_id = 4;
+
+  // The secret that reclaims this seat with ResumeRoom. Only ever sent to the
+  // player it belongs to.
+  string session_token = 5;
+
+  // True when this answers a ResumeRoom: the same seat, not a new player.
+  bool resumed = 6;
+
+  // Set on a resume when this player has a seat in a running game. The client
+  // goes straight back to that game instead of the lobby.
+  string active_game_id = 7;
+
+  // Every GameEvent payload this player has been sent in the running game, in
+  // order, including those missed while disconnected. Replaying them rebuilds
+  // the screen, so a game needs no reconnect logic of its own. They travel in
+  // this one message rather than as separate frames so that a long replay cannot
+  // overflow the connection's small send queue.
+  repeated string game_events = 8;
+
+  // Players on the roster whose connection has dropped. See PlayerPresence.
+  repeated string offline_player_ids = 9;
+}
+
+// Broadcast when a player's connection drops or comes back. They stay on the
+// roster while the server holds their seat; PlayerLeft follows if they do not
+// return in time.
+message PlayerPresence {
+  string player_id = 1;
+  bool connected = 2;
 }
 
 // Broadcast to the players already in a room when someone new joins.
@@ -137,7 +179,9 @@ message EchoResult {
 
 // A problem with the client's last message. Not fatal to the connection.
 message ErrorInfo {
-  // Stable, machine-readable: "room_not_found", "not_in_room", "bad_message".
+  // Stable, machine-readable: "room_not_found", "not_in_room", "bad_message",
+  // "session_expired", or "session_replaced" (another tab or device reclaimed
+  // this seat, so this connection no longer speaks for it).
   string code = 1;
   // Human-readable detail for logs and debugging. Not localized.
   string message = 2;

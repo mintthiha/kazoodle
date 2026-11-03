@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The source of the two PNG icons. A secret word on its slip of paper, on the
+       app's black, with the slip inside the middle 80% that an adaptive icon keeps. -->
+  <rect width="512" height="512" fill="#000000"/>
+  <rect x="96" y="156" width="320" height="200" rx="28" fill="#FFD60A"/>
+  <path d="M136 256s38-62 120-62 120 62 120 62-38 62-120 62-120-62-120-62Z" fill="none" stroke="#000000" stroke-width="20"/>
+  <circle cx="256" cy="256" r="34" fill="#000000"/>
+</svg>

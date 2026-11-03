@@ -228,7 +228,9 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
             isHost={isHost}
             role={role}
             progress={revealProgress}
-            ready={readyConfirmed}
+            // The server's list as well as our own flag: after a reload this phone
+            // has forgotten the tap, but the replayed progress still says it happened.
+            ready={readyConfirmed || (revealProgress?.readyPlayerIds.includes(selfId) ?? false)}
             onConfirm={confirmReady}
           />
         );
@@ -286,6 +288,7 @@ export function ImposterGame({ selfId, players, departed, isHost }: GameViewProp
             isHost={isHost}
             tally={voteTally}
             outcome={outcome}
+            votePhase={votePhase}
             onPlayAgain={playAgain}
           />
         );

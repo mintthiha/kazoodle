@@ -29,6 +29,16 @@ export function encodeJoinRoom(roomCode: string, displayName: string, locale: st
   );
 }
 
+/** Reclaim a held seat after the connection dropped. */
+export function encodeResumeRoom(roomCode: string, sessionToken: string): string {
+  return toJsonString(
+    ClientMessageSchema,
+    create(ClientMessageSchema, {
+      payload: { case: "resumeRoom", value: { roomCode, sessionToken } },
+    }),
+  );
+}
+
 export function encodeLeaveRoom(): string {
   return toJsonString(
     ClientMessageSchema,

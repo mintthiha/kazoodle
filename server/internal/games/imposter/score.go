@@ -7,9 +7,9 @@ import "sort"
 // against the room, so escaping pays double and stealing a lost round pays
 // triple.
 const (
-	pointsCatch  = 1 // to each crew member still in the round, when the imposter is caught and fails the steal
-	pointsEscape = 2 // to the imposter, when the vote fails to catch them
-	pointsSteal  = 3 // to the imposter instead, when caught but their steal guess is right
+	pointsCatch  = 1 // to each crew member still in the round, when an imposter is caught and fails the steal
+	pointsEscape = 2 // to each imposter, when the vote fails to catch one
+	pointsSteal  = 3 // to each imposter instead, when one is caught but their steal guess is right
 )
 
 // defaultRounds and maxRounds bound StartOptions.rounds. Three is long enough
@@ -33,6 +33,23 @@ const (
 // anyone would set; it exists so a client cannot ask for a clock measured in
 // years, which would amount to no clock while looking like one.
 const maxClueSeconds = 120
+
+// twoImposterMinPlayers is the smallest table that gets a second imposter. Below
+// it, two imposters would be too large a share of the clues for the crew to have
+// anything to compare against.
+const twoImposterMinPlayers = 7
+
+// imposterCount is how many imposters a round has, from the host's
+// StartOptions.imposters and how many are still at the table. It is worked out
+// again each round, so a table that drops below the minimum falls back to one.
+// Zero means the default, which is two at a table big enough for it; anything
+// else that is not 1 reads the same way.
+func imposterCount(requested, players int) int {
+	if players < twoImposterMinPlayers || requested == 1 {
+		return 1
+	}
+	return 2
+}
 
 // roundsFromOption turns the host's requested round count into one this game
 // will actually play. Out-of-range values are corrected rather than rejected,
@@ -89,17 +106,21 @@ func clueSecondsFromOption(requested int32) int {
 //
 // order is who was still in the round when it resolved, so a player who left
 // before the vote closed earns nothing from it — they weren't there for the
-// catch.
-func award(order []string, imposterID string, caught, stealCorrect bool) map[string]int32 {
+// catch. Two imposters are a team, so each earns the full escape or steal.
+func award(order, imposters []string, caught, stealCorrect bool) map[string]int32 {
 	out := make(map[string]int32, len(order))
 	switch {
 	case !caught:
-		out[imposterID] = pointsEscape
+		for _, id := range imposters {
+			out[id] = pointsEscape
+		}
 	case stealCorrect:
-		out[imposterID] = pointsSteal
+		for _, id := range imposters {
+			out[id] = pointsSteal
+		}
 	default:
 		for _, id := range order {
-			if id != imposterID {
+			if !contains(imposters, id) {
 				out[id] = pointsCatch
 			}
 		}
@@ -111,7 +132,7 @@ func award(order []string, imposterID string, caught, stealCorrect bool) map[str
 // the caller owns. It fills deltas (this round) and adds them into scores (the
 // match so far).
 func applyAward(next *state, caught, stealCorrect bool) {
-	next.deltas = award(next.order, next.imposterID, caught, stealCorrect)
+	next.deltas = award(next.order, next.imposterIDs(), caught, stealCorrect)
 	for id, pts := range next.deltas {
 		next.scores[id] += pts
 	}

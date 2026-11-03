@@ -22,15 +22,17 @@
   display: contents;
 }
 
-.setup {
+/* Only inside the lobby's grid. One-phone setup uses these sections too, and an order
+   there would put them after its Deal button, leaving it to scroll off the screen. */
+.lobby-grid .setup {
   order: 1;
 }
 
-.rules-card {
+.lobby-grid .rules-card {
   order: 2;
 }
 
-.chat-panel {
+.lobby-grid .chat-panel {
   order: 3;
 }
 

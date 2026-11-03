@@ -2,6 +2,11 @@ package imposter
 
 import (
 	"strings"
+	"unicode"
+
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/mintthiha/party-games/server/internal/game"
 )
@@ -41,7 +46,7 @@ func validateClue(st *state, playerID, text string) error {
 	// rejection itself would tell them they'd found it — they could type
 	// candidate words until one bounced and win every round. Crew already know
 	// the word, so refusing it leaks nothing to them.
-	if playerID != st.imposterID {
+	if !st.isImposter(playerID) {
 		// Both language forms, not just this player's. Crew already know the
 		// word, so refusing either form tells them nothing new, and a French
 		// player typing "Beach" leaks it to everyone reading in English.
@@ -60,15 +65,27 @@ func validateClue(st *state, playerID, text string) error {
 	return nil
 }
 
+// ligatures are the letters Unicode does not treat as an accented form of
+// anything, so stripping accents would leave them alone. "œuf" is the one that
+// matters: nearly everyone types it as "oeuf".
+var ligatures = strings.NewReplacer("œ", "oe", "æ", "ae")
+
 // normalizeWord puts two player-typed words into a form that can be compared:
-// case and surrounding whitespace stop mattering, nothing else does. It backs
-// both the clue rules above and the steal guess, so "Beach", "beach" and
-// " beach " are one word everywhere in the game.
-//
-// It does not fold accents, so a French player typing "aeroport" is not yet
-// treated as having typed "Aéroport". Fixing that needs a Unicode
-// normalization pass (golang.org/x/text) and should be done for the clue rule
-// and the steal guess together.
+// case, surrounding whitespace and accents stop mattering, nothing else does. It
+// backs both the clue rules above and the steal guess, so "Aéroport", "aeroport"
+// and " AEROPORT " are one word everywhere in the game.
 func normalizeWord(s string) string {
-	return strings.ToLower(strings.TrimSpace(s))
+	s = ligatures.Replace(strings.ToLower(strings.TrimSpace(s)))
+
+	// An accented letter can be stored as one character or as a letter plus a
+	// separate accent mark. NFD splits every one into the second form, which
+	// leaves the accents as characters that can simply be dropped.
+	strip := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)))
+	out, _, err := transform.String(strip, s)
+	if err != nil {
+		// Only bad UTF-8 can get here. Compare the text as it came rather than
+		// refuse the player: the worst outcome is an accent that still counts.
+		return s
+	}
+	return out
 }

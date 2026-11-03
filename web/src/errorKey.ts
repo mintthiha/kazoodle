@@ -14,6 +14,8 @@ const ERRORS: Record<string, MessageKey> = {
   start_failed: "error.start_failed",
   already_in_room: "error.already_in_room",
   not_in_room: "error.not_in_room",
+  session_expired: "error.session_expired",
+  session_replaced: "error.session_replaced",
 };
 
 /** The message key for a server error code, or null when there is no error.

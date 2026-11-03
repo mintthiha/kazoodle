@@ -7,6 +7,10 @@ import type { MessageKey } from "../../i18n/messages";
 
 export const DEFAULT_ROUNDS = 3;
 
+/** The smallest table that can have two imposters. Mirrors the server's
+ * twoImposterMinPlayers, in score.go; one-phone mode uses it too. */
+export const TWO_IMPOSTER_MIN_PLAYERS = 7;
+
 /** The match lengths the host can pick between. Every player is the imposter
  * roughly once per group-size rounds, so these are "a quick one", "everyone
  * gets a turn", and "a proper session". */

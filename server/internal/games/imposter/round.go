@@ -10,7 +10,8 @@ import (
 // beginRound returns the state for the next round of the match s belongs to:
 // every match-level field carried over untouched, every round-level field
 // fresh — a new word, a new imposter, a reshuffled turn order, back to the
-// reveal phase. s itself is not modified.
+// reveal phase. s itself is not modified. The word is the one match-level
+// exception: it is added to usedWords, so the next round draws a different one.
 //
 // Init uses it too, with a round-zero seed state, so there is exactly one
 // place that decides what starting a round means.
@@ -22,6 +23,16 @@ func (s *state) beginRound() *state {
 	copy(order, s.order)
 	rand.Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
 
+	imposterID, partnerID := pickImposters(order, imposterCount(s.imposters, len(order)))
+	entry := pickWord(s.wordCategory, s.usedWords)
+
+	// A fresh slice rather than a plain append. Every clone of s shares its
+	// usedWords, and append may write into the same underlying array when it
+	// has spare room, which would change a state the room is still holding.
+	usedWords := make([]string, 0, len(s.usedWords)+1)
+	usedWords = append(usedWords, s.usedWords...)
+	usedWords = append(usedWords, entry.word.en)
+
 	return &state{
 		roster:       s.roster,
 		locales:      s.locales,
@@ -32,16 +43,42 @@ func (s *state) beginRound() *state {
 		clueSeconds:  s.clueSeconds,
 		hintsEnabled: s.hintsEnabled,
 		wordCategory: s.wordCategory,
+		imposters:    s.imposters,
+		usedWords:    usedWords,
 
 		phase:      phaseReveal,
 		order:      order,
-		imposterID: order[rand.IntN(len(order))],
-		entry:      pickWord(s.wordCategory),
+		imposterID: imposterID,
+		partnerID:  partnerID,
+		entry:      entry,
 		deltas:     make(map[string]int32),
 		ready:      make(map[string]bool),
 		votes:      make(map[string]string),
 		cluePass:   1,
 	}
+}
+
+// pickImposters draws count imposters (one or two) from order, never the player
+// in order[0]. That player speaks first, and an imposter going first has heard
+// nothing at all to base a clue on, which loses most rounds on the spot. The cost
+// is that whoever speaks first is known to be crew; the first clue is the least
+// suspicious one anyway, so that gives little away.
+//
+// partnerID is empty when count is 1. It needs at least count+1 players, which
+// minPlayers and twoImposterMinPlayers guarantee.
+func pickImposters(order []string, count int) (imposterID, partnerID string) {
+	seats := order[1:]
+	first := rand.IntN(len(seats))
+	if count < 2 {
+		return seats[first], ""
+	}
+	// Draw from one seat fewer, then step over the seat already taken, so the
+	// two can never be the same player.
+	second := rand.IntN(len(seats) - 1)
+	if second >= first {
+		second++
+	}
+	return seats[first], seats[second]
 }
 
 // nextClue moves the clue phase on by one turn, which is the one rule shared

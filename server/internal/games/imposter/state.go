@@ -53,11 +53,15 @@ type state struct {
 	clueSeconds  int               // host option: seconds per clue turn; 0 for no clock
 	hintsEnabled bool              // host option: give the imposter the category
 	wordCategory string            // host option: StartOptions.category, so every round draws from the same pool
+	imposters    int               // host option: StartOptions.imposters, re-applied to each round's headcount
+	usedWords    []string          // English text of every word dealt so far; replaced, never appended to in place
 
 	// ── round-level ──
 	phase      phase
 	order      []string         // player ids still in the round, in turn order
 	imposterID string           // which of order is the imposter this round
+	partnerID  string           // the second imposter on a two-imposter round, otherwise empty
+	stealerID  string           // steal phase: the imposter the vote caught, the only one who may guess
 	entry      wordEntry        // the secret word, before localization
 	deltas     map[string]int32 // what this round alone awarded, once it resolved
 
@@ -73,6 +77,7 @@ type state struct {
 // clone returns a copy safe to mutate. roster and locales are never changed
 // after the match starts, so those are shared rather than copied; order is
 // shared too and rebuilt from scratch by the one place that changes it (Leave).
+// usedWords is shared on the same terms, rebuilt only by beginRound.
 func (s *state) clone() *state {
 	ready := make(map[string]bool, len(s.ready))
 	for k, v := range s.ready {
@@ -95,9 +100,13 @@ func (s *state) clone() *state {
 		clueSeconds:  s.clueSeconds,
 		hintsEnabled: s.hintsEnabled,
 		wordCategory: s.wordCategory,
+		imposters:    s.imposters,
+		usedWords:    s.usedWords,
 		phase:        s.phase,
 		order:        s.order,
 		imposterID:   s.imposterID,
+		partnerID:    s.partnerID,
+		stealerID:    s.stealerID,
 		entry:        s.entry,
 		deltas:       copyScores(s.deltas),
 		ready:        ready,
@@ -117,6 +126,34 @@ func copyScores(m map[string]int32) map[string]int32 {
 		out[k] = v
 	}
 	return out
+}
+
+// isImposter reports whether id is an imposter this round, either of them on a
+// two-imposter round.
+func (s *state) isImposter(id string) bool {
+	return id != "" && (id == s.imposterID || id == s.partnerID)
+}
+
+// imposterIDs lists this round's imposters, one or two of them.
+func (s *state) imposterIDs() []string {
+	if s.partnerID == "" {
+		return []string{s.imposterID}
+	}
+	return []string{s.imposterID, s.partnerID}
+}
+
+// partnerOf returns the other imposter on a two-imposter round. It is empty for
+// the crew and on a one-imposter round, so a caller can hand it straight to a
+// message without checking who is asking.
+func (s *state) partnerOf(id string) string {
+	switch id {
+	case s.imposterID:
+		return s.partnerID
+	case s.partnerID:
+		return s.imposterID
+	default:
+		return ""
+	}
 }
 
 func (s *state) allReady() bool {

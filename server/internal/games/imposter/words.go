@@ -45,9 +45,9 @@ type wordEntry struct {
 // (web/src/games/imposter/categories.ts) must list the same keys.
 //
 // When adding a word, prefer one with a single obvious form in both languages.
-// A steal guess has to match exactly (see normalizeWord), so "Bicycle" would
-// cost an imposter who correctly typed "bike", and a gendered French job title
-// would do the same. That is why the jobs here lean towards forms like
+// A steal guess has to match (see normalizeWord, which forgives only case,
+// spacing and accents), so "Bicycle" would cost an imposter who correctly typed
+// "bike", and a gendered French job title would do the same. That is why the jobs here lean towards forms like
 // "Dentiste" that read the same for anyone.
 var wordList = []wordEntry{
 	// Places
@@ -300,12 +300,26 @@ var wordList = []wordEntry{
 // known category. An empty or unrecognized categoryKey draws from every word
 // — see StartOptions.category's doc comment for why an unknown key is not an
 // error.
-func pickWord(categoryKey string) wordEntry {
+//
+// used is the English text of the words already dealt this match, and those are
+// avoided. Once a pool has been played through, its words come round again rather
+// than the round failing to deal.
+func pickWord(categoryKey string, used []string) wordEntry {
 	pool := wordList
 	if categoryKey != "" {
 		if filtered := wordsInCategory(categoryKey); len(filtered) > 0 {
 			pool = filtered
 		}
+	}
+
+	fresh := make([]wordEntry, 0, len(pool))
+	for _, w := range pool {
+		if !contains(used, w.word.en) {
+			fresh = append(fresh, w)
+		}
+	}
+	if len(fresh) > 0 {
+		pool = fresh
 	}
 	return pool[rand.IntN(len(pool))]
 }
