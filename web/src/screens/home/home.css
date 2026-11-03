@@ -259,14 +259,59 @@
   }
 }
 
-/* Point at the game, or press it, and the odd slip out gives itself away. */
+/* The tile itself keeps its colour under the pointer: it shares a card with the
+   one-phone button below it, and lightening only the top half would split the
+   card in two. The slips and the Play pill do the answering. */
+@media (hover: hover) and (pointer: fine) {
+  .tile:hover .tile-play {
+    background: var(--primary-hover);
+  }
+}
+
+/* Point at the game, or press it: the slips shuffle on the table, and the odd
+   one out gives itself away. */
 @media (prefers-reduced-motion: no-preference) {
-  .cover-slip-odd {
-    transition: transform 180ms ease;
+  .cover-slip {
+    transition: transform 320ms var(--ease-out);
+  }
+
+  .tile-play {
+    transition:
+      background-color var(--t-quick) ease,
+      transform var(--t-state) var(--ease-out);
+  }
+
+  /* The tile is one big button, so the global press shrink would squash the
+     cover. The slips answer the press instead. */
+  .tile:active:not(:disabled) {
+    transform: none;
+  }
+
+  .tile:hover .cover-slip:nth-child(1),
+  .tile:active .cover-slip:nth-child(1) {
+    transform: rotate(-4deg) translate(-4px, -3px);
+  }
+
+  .tile:hover .cover-slip:nth-child(2),
+  .tile:active .cover-slip:nth-child(2) {
+    transform: rotate(3deg) translate(3px, 1px);
+  }
+
+  .tile:hover .cover-slip:nth-child(3),
+  .tile:active .cover-slip:nth-child(3) {
+    transform: rotate(-0.5deg) translate(-6px, 4px);
   }
 
   .tile:hover .cover-slip-odd,
   .tile:active .cover-slip-odd {
-    transform: rotate(4deg) translate(2px, 1px) scale(1.04);
+    transform: rotate(6deg) translate(4px, 2px) scale(1.06);
+  }
+
+  .tile:hover .tile-play {
+    transform: translateX(4px);
+  }
+
+  .tile:active .tile-play {
+    transform: scale(0.96);
   }
 }

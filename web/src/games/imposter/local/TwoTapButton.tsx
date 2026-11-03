@@ -20,7 +20,7 @@ export function TwoTapButton({ label, confirmLabel, onConfirm }: Props) {
   }, [armed]);
 
   return (
-    <button className="danger" onClick={() => (armed ? onConfirm() : setArmed(true))}>
+    <button className="danger" data-armed={armed} onClick={() => (armed ? onConfirm() : setArmed(true))}>
       {armed ? confirmLabel : label}
     </button>
   );

@@ -82,7 +82,12 @@ export function ChatPanel({ room, lastEcho, onSend }: Props) {
         aria-controls="chat-body"
       >
         {t("lobby.chatHeading")}
-        {!open && unread > 0 && <span className="chat-unread num">{unread}</span>}
+        {/* Keyed by the count so each new message remounts it and replays the pop. */}
+        {!open && unread > 0 && (
+          <span key={unread} className="chat-unread num">
+            {unread}
+          </span>
+        )}
         <svg className="chat-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
           <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" />
         </svg>

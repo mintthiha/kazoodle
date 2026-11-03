@@ -34,7 +34,10 @@ export function SpeakView({ game, stage, dispatch }: SpeakProps) {
 
   return (
     <main className="screen">
-      <div className="slip slip-paper speaker">
+      {/* Keyed by the turn so each speaker gets a freshly dealt slip. Prefixed,
+          because TurnClock below is a sibling keyed by the same turn, and two
+          siblings sharing a key leaves React keeping stale copies on screen. */}
+      <div key={`slip:${stage.pass}:${stage.turn}`} className="slip slip-paper speaker">
         <span className="slip-note">{t("local.speakCue")}</span>
         <h1 className="slip-word" style={{ "--len": [...speaker].length } as CSSProperties}>
           {speaker}

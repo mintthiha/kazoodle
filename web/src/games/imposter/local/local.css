@@ -159,6 +159,53 @@
   border-radius: 14px;
 }
 
+.speak-order .roster-row {
+  transition:
+    background-color var(--t-state) ease,
+    color var(--t-state) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.vs-again:hover {
+    background: #1c1c1c;
+  }
+
+  button.vs-change:hover {
+    background: rgb(0 0 0 / 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Each turn deals a fresh slip with the next speaker's name on it (keyed by the
+     turn in PlayView), so whoever is holding the phone sees it change hands. */
+  .speaker {
+    animation: deal 360ms var(--ease-out);
+  }
+
+  /* Dropped from above, never slid in from the side: the slip is full width,
+     and any sideways travel would push it past a phone's edge mid-flight. */
+  @keyframes deal {
+    from {
+      opacity: 0;
+      transform: translateY(-18px) rotate(2.5deg) scale(1.03);
+    }
+    to {
+      transform: rotate(-1deg);
+    }
+  }
+
+  /* A seat added from the stepper slides in under the others. */
+  .seat-row {
+    animation: row-in var(--t-arrive) var(--ease-out) backwards;
+  }
+
+  /* Remounted on every change (keyed by the count), so each + or âˆ’ ticks it. */
+  .stepper-digit {
+    display: inline-block;
+    animation: badge-pop 280ms var(--ease-out);
+  }
+}
+
 /* --------------------------------------------------------------------------
    The verdict.
 

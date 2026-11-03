@@ -130,7 +130,12 @@ export function SetupView({ setup, onChange, onStart, onExit }: Props) {
                 −
               </button>
               <output className="stepper-count num" aria-live="polite">
-                {names.length}
+                {/* Keyed so each change remounts the digit and replays its
+                    tick (see .stepper-digit). The live region stays put, or
+                    screen readers would miss the change. */}
+                <span key={names.length} className="stepper-digit">
+                  {names.length}
+                </span>
               </output>
               <button
                 className="secondary"

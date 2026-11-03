@@ -31,6 +31,19 @@
   --pill-negative-bg: #2c1a20;
   --pill-negative-ink: #f0707f;
 
+  /* One step lighter than the surface under a pointer. Hover is lightness, the
+     same way everything else here is told apart. */
+  --surface-hover: #1a1a1a;
+  --raised-hover: #383838;
+  --primary-hover: #dedede;
+
+  /* Motion. Arrivals decelerate hard and settle; nothing bounces. The one-phone
+     verdict sequence (local.css) keeps its own clock and curves. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-quick: 120ms;
+  --t-state: 200ms;
+  --t-arrive: 280ms;
+
   --radius-card: 20px;
   --radius-chip: 10px;
   --radius-slip: 4px;
@@ -211,7 +224,7 @@ button.danger {
   font-size: var(--fs-body);
 }
 
-/* Neutral status text — "dealing roles…", "waiting for X…" — as opposed to
+/* Neutral status text â€” "dealing rolesâ€¦", "waiting for Xâ€¦" â€” as opposed to
    .hint, which is reserved for errors and warnings. */
 .status {
   margin: 0;
@@ -270,7 +283,7 @@ button.danger {
   color: var(--pill-negative-ink);
 }
 
-/* Transient room notices — "Ben left.", "The imposter left — the round was
+/* Transient room notices â€” "Ben left.", "The imposter left â€” the round was
    abandoned." Reads as information rather than as an error, and takes itself
    away after a few seconds. */
 .room-notice {
@@ -294,7 +307,7 @@ button.danger {
   color: var(--muted);
 }
 
-/* An in-screen notice, for something that changed under the player's hands —
+/* An in-screen notice, for something that changed under the player's hands â€”
    a ballot reissued mid-vote. Distinct from .status (ambient progress) and
    .hint (their mistake): this is the game telling them to look again. */
 .notice-line {
@@ -454,17 +467,198 @@ button.danger {
   color: var(--text);
 }
 
-/* Press feedback. The app has no entrances: things respond when touched, and
-   otherwise hold still. */
+/* --------------------------------------------------------------------------
+   Interaction states.
+
+   Colour changes are not movement, so they run for everyone, reduced motion
+   included. Anything that moves lives in the no-preference block further down.
+   -------------------------------------------------------------------------- */
+button,
+input,
+textarea {
+  transition:
+    background-color var(--t-quick) ease,
+    color var(--t-quick) ease,
+    box-shadow var(--t-quick) ease;
+}
+
+/* The armed half of a two-tap button: it has stopped being words and become a
+   thing about to happen. */
+button.danger[data-armed="true"] {
+  padding: 0 16px;
+  background: var(--pill-negative-bg);
+  color: var(--pill-negative-ink);
+}
+
+/* Hover only where there is a real pointer. On a phone a tap leaves :hover stuck
+   on the last thing touched, which reads as a bug. */
+@media (hover: hover) and (pointer: fine) {
+  button.primary:hover:not(:disabled) {
+    background: var(--primary-hover);
+  }
+
+  button.secondary:hover:not(:disabled) {
+    background: var(--raised-hover);
+  }
+
+  button.danger:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  input:not([type="radio"], [type="checkbox"]):hover:not(:focus),
+  textarea:hover:not(:focus) {
+    background: var(--surface-hover);
+  }
+
+  .lang button:hover:not([aria-pressed="true"]) {
+    color: var(--text);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Motion.
+
+   Every screen arrives the same quick way, so moving between phases reads as
+   one table rather than a page reload. Inside a screen, only things that just
+   changed move: a player joining, a banner dropping in, a ring landing on the
+   control the keyboard just reached. Everything else holds still.
+   -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: no-preference) {
   button {
     transition:
-      transform 120ms ease,
-      background-color 120ms ease,
-      color 120ms ease;
+      transform var(--t-quick) ease,
+      background-color var(--t-quick) ease,
+      color var(--t-quick) ease,
+      box-shadow var(--t-quick) ease;
   }
 
   button:active:not(:disabled) {
     transform: scale(0.98);
+  }
+
+  /* Backwards fill only: once it has played, no transform is left on the
+     screen, because a transformed ancestor would trap anything position: fixed
+     inside it. The verdict screen has its own choreography. */
+  .screen:not(.vs-result) {
+    animation: screen-in var(--t-arrive) var(--ease-out) backwards;
+  }
+
+  @keyframes screen-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+
+  /* Rows arrive one after another the first time a list shows, and a player who
+     joins later slides in on their own. The stagger stops at the sixth row so a
+     full room never waits on its own list. */
+  .roster-row {
+    animation: row-in var(--t-arrive) var(--ease-out) backwards;
+  }
+
+  .roster > :nth-child(2) {
+    animation-delay: 40ms;
+  }
+  .roster > :nth-child(3) {
+    animation-delay: 80ms;
+  }
+  .roster > :nth-child(4) {
+    animation-delay: 120ms;
+  }
+  .roster > :nth-child(5) {
+    animation-delay: 160ms;
+  }
+  .roster > :nth-child(n + 6) {
+    animation-delay: 200ms;
+  }
+
+  @keyframes row-in {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+  }
+
+  /* Shared by every "this one is now selected" control: chips, ballot rows,
+     segmented options. The pick settles into place. Keyframe names are global
+     across stylesheets, so it is defined once, here. */
+  @keyframes pick {
+    from {
+      transform: scale(0.93);
+    }
+  }
+
+  /* A number that just changed: the unread count, the player stepper. */
+  @keyframes badge-pop {
+    from {
+      transform: scale(0.4);
+    }
+  }
+
+  .conn-banner {
+    animation: drop-in 240ms var(--ease-out) backwards;
+  }
+
+  .room-notice,
+  .notice-line {
+    animation: drop-in var(--t-arrive) var(--ease-out) backwards;
+  }
+
+  @keyframes drop-in {
+    from {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+  }
+
+  /* An error is the player's to fix, so it gives one small shake to say "this,
+     here", then holds still to be read. */
+  .hint {
+    animation: nudge 320ms ease-out;
+  }
+
+  button.danger[data-armed="true"] {
+    animation: nudge 320ms ease-out;
+  }
+
+  @keyframes nudge {
+    0%,
+    100% {
+      transform: none;
+    }
+    20% {
+      transform: translateX(-5px);
+    }
+    45% {
+      transform: translateX(4px);
+    }
+    70% {
+      transform: translateX(-2px);
+    }
+  }
+
+  /* The focus ring closes in on what the keyboard just reached, so it can be
+     found at a glance. Zero specificity, so any element with its own animation
+     keeps it. */
+  :where(:focus-visible) {
+    animation: focus-in 160ms var(--ease-out);
+  }
+
+  @keyframes focus-in {
+    from {
+      outline-offset: 7px;
+    }
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .session-nav .back svg {
+      transition: transform var(--t-state) var(--ease-out);
+    }
+
+    .session-nav .back:hover svg {
+      transform: translateX(-3px);
+    }
   }
 }

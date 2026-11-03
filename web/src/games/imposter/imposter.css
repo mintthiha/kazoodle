@@ -549,7 +549,232 @@ button.ledger-row:disabled {
   font-size: var(--fs-small);
 }
 
+.stages li,
+.ledger-row,
+.peek .slip-eye {
+  transition:
+    background-color var(--t-state) ease,
+    color var(--t-state) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .slip-down:hover {
+    background: var(--raised-hover);
+  }
+
+  .peek:hover {
+    background: var(--surface-hover);
+  }
+
+  .peek:hover .slip-eye,
+  .peek:hover .peek-action {
+    color: var(--text);
+  }
+
+  button.ledger-row:hover:not(:disabled, [aria-pressed="true"]) {
+    background: var(--raised);
+  }
+
+  .abstain:hover:not([aria-pressed="true"]) {
+    color: var(--text);
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
+  /* Slips are paper. Under a pointer one lifts off the table, and a press
+     pushes it back down, without losing its tilt the way the global press
+     shrink would. */
+  .slip {
+    transition:
+      transform var(--t-state) var(--ease-out),
+      background-color var(--t-quick) ease;
+  }
+
+  button.slip:active:not(:disabled) {
+    transform: rotate(-1deg) scale(0.98);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    button.slip:hover {
+      transform: rotate(-1.75deg) translateY(-4px);
+    }
+
+    button.slip:active:not(:disabled) {
+      transform: rotate(-1.25deg) translateY(-1px) scale(0.985);
+    }
+  }
+
+  /* The highlighter goes over the word once the slip is face up: the marker,
+     not the slip, is what says "this is the secret". */
+  .slip-turned .slip-word mark {
+    background: linear-gradient(var(--accent), var(--accent)) no-repeat left / 100% 100%;
+    animation: highlight 420ms var(--ease-out) 160ms backwards;
+  }
+
+  @keyframes highlight {
+    from {
+      background-size: 0% 100%;
+    }
+  }
+
+  /* The same stroke on the small chip, which carries its own ink. */
+  .peek-chip {
+    animation: swipe-on 300ms var(--ease-out);
+  }
+
+  @keyframes swipe-on {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  .ready-tick {
+    animation: tick-in 360ms var(--ease-out);
+  }
+
+  @keyframes tick-in {
+    from {
+      opacity: 0;
+      transform: scale(0.3) rotate(-30deg);
+    }
+  }
+
+  /* A clue lands in the ledger like a slip pressed down on the table. Each one
+     mounts as its own element, so only the clue that just arrived does it. */
+  .clue:not(.clue-empty, .clue-now, .clue-missed) {
+    animation: stamp 300ms var(--ease-out) backwards;
+  }
+
+  @keyframes stamp {
+    from {
+      opacity: 0;
+      transform: scale(1.35) rotate(-5deg);
+    }
+  }
+
+  .clue-missed {
+    animation: row-in var(--t-arrive) var(--ease-out) backwards;
+  }
+
+  /* The slot being typed into right now, somewhere in the room. A slow breath,
+     not a blink: it says "waiting", not "alarm". */
+  .clue-now {
+    animation: breathe 1.6s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  button.ledger-row {
+    transition:
+      transform var(--t-quick) ease,
+      background-color var(--t-quick) ease,
+      color var(--t-quick) ease;
+  }
+
+  /* pick: see app.css. */
+  button.ledger-row[aria-pressed="true"],
+  .abstain[aria-pressed="true"] {
+    animation: pick 220ms var(--ease-out);
+  }
+
+  /* Under five seconds the words throb in time with the clock. */
+  .countdown[data-low="true"] .countdown-label {
+    animation: throb 1s ease-out infinite;
+  }
+
+  @keyframes throb {
+    0% {
+      transform: scale(1.12);
+    }
+    40%,
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* Results. The verdict arrives the way the one-phone verdict does: colour
+     bursts out for the crew, a shutter falls for the imposter. */
+  .verdict[data-side="crew"] {
+    animation: burst 520ms var(--ease-out) 80ms backwards;
+  }
+
+  @keyframes burst {
+    from {
+      clip-path: circle(0% at 50% 50%);
+    }
+    to {
+      clip-path: circle(150% at 50% 50%);
+    }
+  }
+
+  .verdict[data-side="imposter"] {
+    animation: shutter 420ms cubic-bezier(0.55, 0, 0.2, 1) 80ms backwards;
+  }
+
+  @keyframes shutter {
+    from {
+      clip-path: inset(0 0 100% 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  .match-winner {
+    animation: slam 380ms cubic-bezier(0.3, 0, 0.1, 1) 60ms backwards;
+  }
+
+  @keyframes slam {
+    from {
+      opacity: 0;
+      transform: scale(1.5);
+    }
+    70% {
+      opacity: 1;
+      transform: scale(0.97);
+    }
+  }
+
+  /* The vote bars fill up to their share, one after another, so the room can
+     watch the count come in. */
+  .vote-fill {
+    animation: fill-up 640ms var(--ease-out) 260ms backwards;
+  }
+
+  .votes > :nth-child(2) .vote-fill {
+    animation-delay: 340ms;
+  }
+  .votes > :nth-child(3) .vote-fill {
+    animation-delay: 420ms;
+  }
+  .votes > :nth-child(n + 4) .vote-fill {
+    animation-delay: 500ms;
+  }
+
+  @keyframes fill-up {
+    from {
+      transform: scaleX(0);
+    }
+  }
+
+  .score-delta {
+    animation: rise 360ms var(--ease-out) 420ms backwards;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+
   /* The clock ticks once a second, so easing across that second turns a stepping
      bar into a smooth one. */
   .countdown-fill {

@@ -368,9 +368,98 @@
   }
 }
 
+.choice-option > span,
+.switch,
+.switch::after,
+.chat-chevron {
+  transition:
+    background-color var(--t-quick) ease,
+    color var(--t-quick) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .choice-option:hover input:not(:checked, :disabled) + span {
+    background: var(--raised-hover);
+  }
+
+  .switch-row:hover input:not(:checked) + .switch {
+    background: var(--raised-hover);
+  }
+
+  .switch-row:hover input:checked + .switch {
+    background: var(--primary-hover);
+  }
+
+  .chat-toggle:hover .chat-chevron {
+    color: var(--text);
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .switch::after,
+  /* The thumb slides; under a pressing finger it stretches toward where it is
+     about to go, the way a physical switch gives before it flips. */
+  .switch::after {
+    transition:
+      transform var(--t-state) var(--ease-out),
+      width var(--t-quick) ease,
+      background-color var(--t-quick) ease;
+  }
+
+  .switch-row:active .switch::after {
+    width: 30px;
+  }
+
+  .switch-row:active input:checked + .switch::after {
+    transform: translateX(14px);
+  }
+
   .chat-chevron {
-    transition: transform 140ms ease;
+    transition:
+      transform var(--t-state) var(--ease-out),
+      color var(--t-quick) ease;
+  }
+
+  .choice-option > span {
+    transition:
+      transform var(--t-quick) ease,
+      background-color var(--t-quick) ease,
+      color var(--t-quick) ease;
+  }
+
+  .choice-option:active > span {
+    transform: scale(0.96);
+  }
+
+  /* The option that was just picked settles into place. pick: see app.css. */
+  .choice-option input:checked + span {
+    animation: pick 220ms var(--ease-out);
+  }
+
+  .chat-body {
+    animation: unfold 220ms var(--ease-out);
+  }
+
+  @keyframes unfold {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+
+  .chat-line {
+    animation: line-in var(--t-state) var(--ease-out) backwards;
+  }
+
+  @keyframes line-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  /* Remounted on every new message (keyed by the count), so each one taps the
+     badge. badge-pop: see app.css. */
+  .chat-unread {
+    animation: badge-pop 300ms var(--ease-out);
   }
 }
