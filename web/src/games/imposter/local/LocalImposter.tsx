@@ -5,15 +5,17 @@ import type { LocalGameProps } from "../../registry";
 import { AccuseView } from "./AccuseView";
 import { DealView } from "./DealView";
 import { DiscussView, SpeakView } from "./PlayView";
-import { newGame, resolveNames, step, type LocalEvent, type LocalGame, type Stage } from "./localGame";
+import { resolveNames } from "../../onephone/seats";
+import { newGame, step, type LocalEvent, type LocalGame, type Stage } from "./localGame";
 import { loadGame, loadSetup, saveGame, saveSetup, type LocalSetup } from "./saved";
 import { SetupView } from "./SetupView";
 import { unlockSound } from "./sound";
-import { TwoTapButton } from "./TwoTapButton";
+import { TwoTapButton } from "../../onephone/TwoTapButton";
 import { useWakeLock } from "./useWakeLock";
 import { VerdictView } from "./VerdictView";
 import "../imposter.css";
 import "../../../screens/lobby.css";
+import "../../onephone/onephone.css";
 import "./local.css";
 
 const HEADER_STAGE: Record<Exclude<Stage["kind"], "verdict">, HeaderStage> = {

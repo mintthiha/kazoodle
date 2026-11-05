@@ -17,16 +17,20 @@ interface Props {
 // tapping the tile opens a connection, and this mode has to be reachable with no
 // server and no signal. It is a sibling of the tile, not inside it: one button
 // cannot legally contain another.
+//
+// A game with no online version has nothing to connect to, so the tile itself
+// opens the one-phone version and there is no second button.
 export function GameTile({ game, onPick, onPickLocal }: Props) {
   const { t } = useT();
   const name = t(game.nameKey);
+  const localOnly = !game.view;
 
   return (
     <div className="tile-card">
       <button
         className="tile"
         style={{ "--cover": game.cover } as CSSProperties}
-        onClick={() => onPick(game.id)}
+        onClick={() => (localOnly ? onPickLocal(game.id) : onPick(game.id))}
       >
         <GameCover gameId={game.id} name={name} />
 
@@ -36,12 +40,13 @@ export function GameTile({ game, onPick, onPickLocal }: Props) {
           <span className="tile-foot">
             <span className="tile-meta">
               {t("home.players", { min: game.minPlayers })} · {t(game.lengthKey)}
+              {localOnly && ` · ${t("home.onePhone")}`}
             </span>
             <span className="tile-play">{t("home.play")}</span>
           </span>
         </span>
       </button>
-      {game.localView && (
+      {game.localView && !localOnly && (
         <button className="secondary tile-local" onClick={() => onPickLocal(game.id)}>
           {t("local.entry")}
         </button>

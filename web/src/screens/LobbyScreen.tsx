@@ -6,7 +6,8 @@ import { Avatar } from "../players/Avatar";
 import { makeHueFor } from "../players/hues";
 import { ChatPanel } from "./ChatPanel";
 import { Segmented } from "./Segmented";
-import { RulesCard } from "../games/imposter/RulesCard";
+import { RulesCard } from "./RulesCard";
+import { IMPOSTER_RULES } from "../games/imposter/rules";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
 import { CATEGORY_OPTIONS } from "../games/imposter/categories";
@@ -175,7 +176,7 @@ export function LobbyScreen({
             </ul>
           </section>
 
-          <RulesCard />
+          <RulesCard rules={IMPOSTER_RULES} />
         </div>
 
         <div className="lobby-col">

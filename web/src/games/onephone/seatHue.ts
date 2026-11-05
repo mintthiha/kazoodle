@@ -1,4 +1,4 @@
-import { makeHueFor } from "../../../players/hues";
+import { makeHueFor } from "../../players/hues";
 
 /** A hue lookup by seat number. The players/ colours are keyed by id, and in this
  * mode a seat number is all the id a player has. */

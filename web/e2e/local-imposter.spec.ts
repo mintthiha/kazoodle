@@ -100,7 +100,7 @@ test.describe("getting in", () => {
 
     // The control: prove that check can fail, by taking the online door.
     await page.goto("/");
-    await page.locator(".tile").click();
+    await page.locator(".tile", { hasText: "Imposter" }).click();
     await expect.poll(() => sockets.length).toBeGreaterThan(0);
   });
 
@@ -114,7 +114,7 @@ test.describe("getting in", () => {
 
   test("the tile still leads to the online game", async ({ page }) => {
     await page.goto("/");
-    await page.locator(".tile").click();
+    await page.locator(".tile", { hasText: "Imposter" }).click();
     await expect(page.getByRole("heading", { name: "Join a game" })).toBeVisible();
     await button(page, "All games").click();
     await expect(page).toHaveURL("/");
@@ -370,7 +370,7 @@ test.describe("custom categories", () => {
 
   test("a word in French keeps its hint, spaced the French way, in a French app", async ({ page }) => {
     await openSetup(page);
-    await button(page, "FR").click();
+    await page.getByRole("button", { name: "FR", exact: true }).click();
     await button(page, "Nouvelle catégorie").click();
     await page.getByRole("textbox", { name: "Nom de la catégorie" }).fill("Couleurs");
     await page
@@ -716,7 +716,7 @@ test.describe("real life", () => {
 
   test("the whole game plays in French", async ({ page }) => {
     await page.goto("/");
-    await button(page, "FR").click();
+    await page.getByRole("button", { name: "FR", exact: true }).click();
     await button(page, "Jouer sur un seul téléphone").click();
     await button(page, "Distribuer les mots").click();
 
@@ -742,7 +742,7 @@ test.describe("real life", () => {
   test("the game bar fits the smallest phone in French", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 568 });
     await page.goto("/");
-    await button(page, "FR").click();
+    await page.getByRole("button", { name: "FR", exact: true }).click();
     await button(page, "Jouer sur un seul téléphone").click();
     await button(page, "Distribuer les mots").click();
     await button(page, "Terminer").click();

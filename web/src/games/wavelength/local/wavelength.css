@@ -1,0 +1,400 @@
+/* Styles for one-phone Wavelength. Same material as Imposter: the secret lives on
+   a slip of paper, marker yellow is what is live or winning, and everything else
+   is told apart by lightness on black. The shared bar and seat list come from
+   ../../onephone/onephone.css, the setup card and rules card from lobby.css. */
+
+.wl-round {
+  padding-left: var(--margin);
+  font-size: var(--fs-small);
+}
+
+.wl-headline {
+  font-size: clamp(2rem, 10vw, 2.75rem);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.wl-lead {
+  margin: 0;
+  font-size: var(--fs-lead);
+  line-height: 1.4;
+}
+
+/* The secret number, on its slip */
+.wl-slip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  /* Tall enough for the face-up side, so nothing below it jumps on the turn. */
+  min-height: 16rem;
+  padding: 24px 20px;
+  border-radius: var(--radius-slip);
+  font-weight: 400;
+  text-align: center;
+  transform: rotate(-1deg);
+}
+
+.wl-slip-down {
+  background: var(--raised);
+  color: var(--text);
+}
+
+/* The handover slip is a notice, not a button, and needs less height. */
+.wl-slip-static {
+  min-height: 12rem;
+}
+
+.wl-slip-paper {
+  background: var(--paper);
+  color: var(--paper-ink);
+}
+
+.wl-slip-prompt {
+  font-family: var(--display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.wl-slip-note {
+  max-width: 34ch;
+  font-size: var(--fs-body);
+  line-height: 1.35;
+}
+
+.wl-slip-down .wl-slip-note {
+  color: var(--muted);
+}
+
+.wl-slip-paper .wl-slip-note {
+  color: var(--paper-muted);
+}
+
+.wl-slip-number {
+  font-family: var(--display);
+  font-size: 6.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.wl-slip-number mark,
+.wl-mine-number mark,
+.wl-reveal-number mark {
+  padding: 0 0.12em;
+  background: var(--accent);
+  color: var(--paper-ink);
+}
+
+.wl-slip-hide {
+  margin-top: 4px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 1 to 10, two rows of five keys. Each key is at least the app's tap size. */
+.wl-pad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.wl-key {
+  min-height: 64px;
+  padding: 0;
+  border-radius: 14px;
+  font-family: var(--display);
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+/* Selected is inverted, the same as every other pick-one control. */
+.wl-key[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--ground);
+}
+
+/* A Clue Giver's own number, kept small beside their answer. */
+.wl-mine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 12px 20px;
+  border-radius: var(--radius-slip);
+  background: var(--paper);
+  color: var(--paper-ink);
+  transform: rotate(-0.5deg);
+}
+
+.wl-mine-label {
+  font-weight: 500;
+}
+
+.wl-mine-number {
+  font-family: var(--display);
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+/* Category ideas: tapping one fills the box, it does not send it. */
+.wl-ideas-label {
+  margin: 0 0 8px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.wl-ideas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+button.wl-idea {
+  width: auto;
+  min-height: var(--tap-small);
+  padding: 0 14px;
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+/* The board: every category asked so far, with each Clue Giver's answer. */
+.wl-board {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.wl-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+/* The category's name on a scrap of paper, the way it would be written down. */
+.wl-cat-name {
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 2px 10px;
+  border-radius: var(--radius-slip);
+  background: var(--paper);
+  color: var(--paper-ink);
+  font-family: var(--display);
+  font-size: var(--fs-lead);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  transform: rotate(-1deg);
+}
+
+.wl-answers {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+}
+
+.wl-answer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+}
+
+.wl-answer-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wl-answer-name {
+  font-size: var(--fs-small);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.wl-answer-text {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* The result: the real number beside the guess. */
+.wl-reveal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.wl-reveal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 10rem;
+  padding: 16px 10px;
+  border-radius: var(--radius-slip);
+  text-align: center;
+}
+
+.wl-reveal-secret {
+  background: var(--paper);
+  color: var(--paper-ink);
+  transform: rotate(-1.5deg);
+}
+
+.wl-reveal-guess {
+  background: var(--raised);
+  color: var(--text);
+  transform: rotate(1deg);
+}
+
+/* A guess that matched is the round's win, so it gets the winning colour too. */
+.wl-reveal-guess[data-hit="true"] {
+  background: var(--accent);
+  color: var(--on-colour);
+}
+
+.wl-reveal-label {
+  font-size: var(--fs-small);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.wl-reveal-number {
+  font-family: var(--display);
+  font-size: 4.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+/* Standings */
+.wl-standings {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.wl-standing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 16px 8px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.wl-standing[data-lead="true"] {
+  background: var(--accent);
+  color: var(--on-colour);
+}
+
+.wl-delta {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.wl-standing[data-lead="true"] .wl-delta {
+  color: var(--on-colour);
+}
+
+.wl-score {
+  min-width: 2ch;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .wl-key:hover:not([aria-pressed="true"]),
+  button.wl-idea:hover,
+  .wl-slip-down:hover {
+    background: var(--raised-hover);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Turning the slip face up drops it onto the table, from above and never from
+     the side: it is full width, and sideways travel would push it off a phone. */
+  .wl-slip-paper {
+    animation: wl-deal 320ms var(--ease-out);
+  }
+
+  @keyframes wl-deal {
+    from {
+      opacity: 0;
+      transform: translateY(-14px) rotate(2deg) scale(1.03);
+    }
+    to {
+      transform: rotate(-1deg);
+    }
+  }
+
+  .wl-key[aria-pressed="true"] {
+    animation: pick var(--t-state) var(--ease-out);
+  }
+
+  /* The answers just revealed come in one after another. */
+  .wl-cat[data-fresh="true"] .wl-answer {
+    animation: row-in var(--t-arrive) var(--ease-out) backwards;
+  }
+
+  .wl-cat[data-fresh="true"] .wl-answer:nth-child(2) {
+    animation-delay: 120ms;
+  }
+  .wl-cat[data-fresh="true"] .wl-answer:nth-child(3) {
+    animation-delay: 240ms;
+  }
+  .wl-cat[data-fresh="true"] .wl-answer:nth-child(n + 4) {
+    animation-delay: 360ms;
+  }
+
+  /* The result: the real number lands first, then the guess beside it. */
+  .wl-result .wl-reveal-secret {
+    animation: wl-land 360ms var(--ease-out) 80ms backwards;
+  }
+
+  .wl-result .wl-reveal-guess {
+    animation: wl-land-guess 360ms var(--ease-out) 320ms backwards;
+  }
+
+  @keyframes wl-land {
+    from {
+      opacity: 0;
+      transform: translateY(-16px) rotate(3deg) scale(1.08);
+    }
+  }
+
+  @keyframes wl-land-guess {
+    from {
+      opacity: 0;
+      transform: translateY(-16px) rotate(-2deg) scale(1.08);
+    }
+  }
+}

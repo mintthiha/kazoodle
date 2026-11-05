@@ -13,7 +13,7 @@ import {
   type CustomCategory,
   type CustomWord,
 } from "./customCategories";
-import { TwoTapButton } from "./TwoTapButton";
+import { TwoTapButton } from "../../onephone/TwoTapButton";
 
 const UNFINISHED: CategoryProblem["kind"][] = ["nameMissing", "hintMissing", "tooFew"];
 

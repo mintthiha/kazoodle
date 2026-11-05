@@ -9,6 +9,7 @@
 // over from an older build, so every read here tolerates anything and answers with
 // "nothing saved".
 
+import { readStored, writeStored } from "../../onephone/storage";
 import { isCustomKey, type CustomCategory } from "./customCategories";
 import {
   DEFAULT_SETTINGS,
@@ -83,35 +84,18 @@ export function parseGame(json: string | null): LocalGame | null {
   }
 }
 
-function read(store: () => Storage, key: string): string | null {
-  try {
-    return store().getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function write(store: () => Storage, key: string, value: string | null): void {
-  try {
-    if (value === null) store().removeItem(key);
-    else store().setItem(key, value);
-  } catch {
-    // Nothing to do about it. The game plays on, and only a reload would notice.
-  }
-}
-
 export function loadSetup(): LocalSetup {
-  return parseSetup(read(() => localStorage, SETUP_KEY));
+  return parseSetup(readStored(() => localStorage, SETUP_KEY));
 }
 
 export function saveSetup(setup: LocalSetup): void {
-  write(() => localStorage, SETUP_KEY, JSON.stringify(setup));
+  writeStored(() => localStorage, SETUP_KEY, JSON.stringify(setup));
 }
 
 export function loadGame(): LocalGame | null {
-  return parseGame(read(() => sessionStorage, GAME_KEY));
+  return parseGame(readStored(() => sessionStorage, GAME_KEY));
 }
 
 export function saveGame(game: LocalGame | null): void {
-  write(() => sessionStorage, GAME_KEY, game && JSON.stringify(game));
+  writeStored(() => sessionStorage, GAME_KEY, game && JSON.stringify(game));
 }

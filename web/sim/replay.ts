@@ -175,22 +175,38 @@ function inline(value: unknown): string {
   return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
-export function buildReplay(beats: Beat[], images: Map<string, string>, when: Date): string {
+/** What the page calls itself, and the line under the title saying what was run. */
+export interface ReplayLabels {
+  title: string;
+  source: string;
+}
+
+const IMPOSTER_LABELS: ReplayLabels = {
+  title: "Imposter Party Replay",
+  source: "Real browsers against the real server",
+};
+
+export function buildReplay(
+  beats: Beat[],
+  images: Map<string, string>,
+  when: Date,
+  labels: ReplayLabels = IMPOSTER_LABELS,
+): string {
   // Only the images this run's steps still refer to.
   const used = new Set(beats.flatMap((b) => b.shots.map((s) => s.image)));
   const table = Object.fromEntries([...images].filter(([id]) => used.has(id)));
   const date = when.toISOString().slice(0, 16).replace("T", " ");
 
   return `<meta charset="utf-8">
-<title>Imposter Party Replay</title>
+<title>${labels.title}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,800&family=Inter:wght@400;600&display=swap">
 <style>${STYLE}</style>
 <div class="page">
   <header class="top">
-    <h1>Imposter Party Replay</h1>
-    <p class="run">Real browsers against the real server · ${beats.length} checked steps · run ${date} UTC</p>
+    <h1>${labels.title}</h1>
+    <p class="run">${labels.source} ·${beats.length} checked steps · run ${date} UTC</p>
   </header>
   <section class="now" aria-live="polite">
     <p class="act" id="act"></p>

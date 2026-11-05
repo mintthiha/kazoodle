@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { MessageKey } from "../i18n";
 import { ImposterGame, LocalImposter } from "./imposter";
+import { LocalWavelength } from "./wavelength";
 
 /** Every game view gets the same props: who this player is, the roster, and
  * whether this player is the room's host (the one who can start a new round).
@@ -26,8 +27,12 @@ export interface LocalGameProps {
  * hub list, the URL slug and the view map all read from it. */
 export interface GameListing {
   id: string;
-  view: ComponentType<GameViewProps>;
-  /** The one-device version, for a game that has one. */
+  /** The online version, played in a room with a phone each. A game without one
+   * is one-phone only: the server has never heard of it, and its tile opens the
+   * one-phone version directly. */
+  view?: ComponentType<GameViewProps>;
+  /** The one-device version, for a game that has one. A listing needs at least
+   * one of `view` and `localView`. */
   localView?: ComponentType<LocalGameProps>;
   nameKey: MessageKey;
   /** One line, in the player's words, of what the game actually is. */
@@ -50,11 +55,21 @@ export const GAMES: GameListing[] = [
     minPlayers: 3,
     cover: "#ffd60a",
   },
+  {
+    id: "wavelength",
+    localView: LocalWavelength,
+    nameKey: "game.wavelength.name",
+    hookKey: "game.wavelength.hook",
+    lengthKey: "game.wavelength.length",
+    minPlayers: 3,
+    cover: "#7aa2ff",
+  },
 ];
 
-/** game_id -> the component that renders that game for the current player. */
+/** game_id -> the component that renders that game for the current player, for
+ * the games that can be played online. */
 export const gameViews: Record<string, ComponentType<GameViewProps>> = Object.fromEntries(
-  GAMES.map((g) => [g.id, g.view]),
+  GAMES.flatMap((g) => (g.view ? [[g.id, g.view]] : [])),
 );
 
 /** game_id -> the one-device version, for the games that have one. */
@@ -62,8 +77,10 @@ export const localGameViews: Record<string, ComponentType<LocalGameProps>> = Obj
   GAMES.flatMap((g) => (g.localView ? [[g.id, g.localView]] : [])),
 );
 
-/** The slugs the router accepts. */
-export const GAME_IDS: string[] = GAMES.map((g) => g.id);
+/** The slugs the router accepts as an online session. A one-phone-only game is
+ * left out, so a typed /wavelength falls back to the hub instead of opening a
+ * room the server could not start a game in. */
+export const GAME_IDS: string[] = Object.keys(gameViews);
 
 /** The slugs that also accept /<slug>/local. */
 export const LOCAL_GAME_IDS: string[] = Object.keys(localGameViews);

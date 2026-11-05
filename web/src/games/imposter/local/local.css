@@ -1,78 +1,10 @@
 /* Styles for one-phone Imposter. Most of it borrows the online game's slip,
-   ledger and setup card; what is new here is the verdict sequence at the bottom. */
-
-/* Stage names on the left, the way out on the right. */
-.local-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0 12px;
-  padding: 6px var(--margin) 0 0;
-}
+   ledger and setup card, and the shared one-phone bar and seat list come from
+   ../../onephone/onephone.css. What is new here is the verdict sequence at the
+   bottom. */
 
 .local-bar .game-bar {
   padding-top: 0;
-}
-
-.local-bar .danger {
-  margin-left: auto;
-  white-space: nowrap;
-}
-
-/* Setup */
-.seat-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.stepper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.stepper button {
-  width: var(--tap);
-  padding: 0;
-  font-size: 1.75rem;
-  line-height: 1;
-}
-
-.stepper-count {
-  min-width: 2.25ch;
-  font-family: var(--display);
-  font-size: 1.75rem;
-  font-weight: 700;
-  text-align: center;
-}
-
-.seat-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-}
-
-.seat-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.seat-row[data-clash="true"] input {
-  outline: 2px solid var(--negative);
-  outline-offset: -2px;
-}
-
-/* The help line says what the choice above it does, so it sits close to it. */
-.local-help {
-  margin-top: 8px;
-  font-size: var(--fs-small);
 }
 
 /* Custom categories */
@@ -194,16 +126,6 @@
     }
   }
 
-  /* A seat added from the stepper slides in under the others. */
-  .seat-row {
-    animation: row-in var(--t-arrive) var(--ease-out) backwards;
-  }
-
-  /* Remounted on every change (keyed by the count), so each + or âˆ’ ticks it. */
-  .stepper-digit {
-    display: inline-block;
-    animation: badge-pop 280ms var(--ease-out);
-  }
 }
 
 /* --------------------------------------------------------------------------

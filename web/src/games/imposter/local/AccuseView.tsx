@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useT } from "../../../i18n";
 import { Avatar } from "../../../players/Avatar";
 import type { LocalEvent, LocalGame } from "./localGame";
-import { makeSeatHue } from "./seatHue";
+import { makeSeatHue } from "../../onephone/seatHue";
 
 interface Props {
   game: LocalGame;

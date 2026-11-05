@@ -1,27 +1,17 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { useT } from "../../../i18n";
-import { Avatar } from "../../../players/Avatar";
 import type { MessageKey } from "../../../i18n";
 import { BackNav } from "../../../screens/BackNav";
+import { RulesCard } from "../../../screens/RulesCard";
 import { Segmented } from "../../../screens/Segmented";
+import { SeatEditor } from "../../onephone/SeatEditor";
+import { duplicateSeats, resolveNames } from "../../onephone/seats";
 import { CATEGORY_OPTIONS } from "../categories";
-import { RulesCard } from "../RulesCard";
 import { CLUE_PASS_OPTIONS, TWO_IMPOSTER_MIN_PLAYERS } from "../rounds";
 import { CategoryEditor } from "./CategoryEditor";
 import { nextCustomKey, type CustomCategory } from "./customCategories";
-import {
-  AUTO_SECONDS_OPTIONS,
-  MAX_NAME_LENGTH,
-  MAX_PLAYERS,
-  MIN_PLAYERS,
-  duplicateSeats,
-  resizeNames,
-  resolveNames,
-  type AdvanceMode,
-  type LocalSettings,
-} from "./localGame";
+import { AUTO_SECONDS_OPTIONS, SEAT_BOUNDS, type AdvanceMode, type LocalSettings } from "./localGame";
 import type { LocalSetup } from "./saved";
-import { makeSeatHue } from "./seatHue";
 
 interface Props {
   setup: LocalSetup;
@@ -63,20 +53,10 @@ export function SetupView({ setup, onChange, onStart, onExit }: Props) {
   const builtInCategories = CATEGORY_OPTIONS.map((o) => ({ value: o.key, label: t(o.labelKey) }));
   const selectedCustom = customCategories.find((c) => c.key === settings.category);
 
-  const resolved = resolveNames(names, (n) => t("local.playerN", { n }));
-  const clashes = duplicateSeats(resolved);
-  const hue = makeSeatHue(names.length);
+  const clashes = duplicateSeats(resolveNames(names, (n) => t("local.playerN", { n })));
 
   function pick(change: Partial<LocalSettings>) {
     onChange({ ...setup, settings: { ...settings, ...change } });
-  }
-
-  function setCount(count: number) {
-    onChange({ ...setup, names: resizeNames(names, count) });
-  }
-
-  function rename(seat: number, name: string) {
-    onChange({ ...setup, names: names.map((old, i) => (i === seat ? name : old)) });
   }
 
   if (editing) {
@@ -117,63 +97,11 @@ export function SetupView({ setup, onChange, onStart, onExit }: Props) {
       <main className="screen local-setup">
         <h1>{t("local.setupHeading")}</h1>
 
-        <section>
-          <div className="seat-head">
-            <h2>{t("lobby.players")}</h2>
-            <div className="stepper">
-              <button
-                className="secondary"
-                aria-label={t("local.removePlayer")}
-                disabled={names.length <= MIN_PLAYERS}
-                onClick={() => setCount(names.length - 1)}
-              >
-                −
-              </button>
-              <output className="stepper-count num" aria-live="polite">
-                {/* Keyed so each change remounts the digit and replays its
-                    tick (see .stepper-digit). The live region stays put, or
-                    screen readers would miss the change. */}
-                <span key={names.length} className="stepper-digit">
-                  {names.length}
-                </span>
-              </output>
-              <button
-                className="secondary"
-                aria-label={t("local.addPlayer")}
-                disabled={names.length >= MAX_PLAYERS}
-                onClick={() => setCount(names.length + 1)}
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          <ol className="seat-list">
-            {names.map((name, seat) => (
-              <li key={seat} className="seat-row" data-clash={clashes.has(seat)}>
-                <Avatar name={resolved[seat]} hue={hue(seat)} />
-                <input
-                  value={name}
-                  onChange={(e) => rename(seat, e.target.value)}
-                  placeholder={t("local.playerN", { n: seat + 1 })}
-                  aria-label={t("local.nameLabel", { n: seat + 1 })}
-                  aria-invalid={clashes.has(seat)}
-                  autoComplete="off"
-                  autoCapitalize="words"
-                  maxLength={MAX_NAME_LENGTH}
-                  enterKeyHint="next"
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    // Typing a whole table's names one-handed: Enter moves down
-                    // the list, so nobody has to aim for the next box.
-                    const next = e.currentTarget.closest("li")?.nextElementSibling;
-                    next?.querySelector("input")?.focus();
-                  }}
-                />
-              </li>
-            ))}
-          </ol>
-        </section>
+        <SeatEditor
+          names={names}
+          bounds={SEAT_BOUNDS}
+          onChange={(next) => onChange({ ...setup, names: next })}
+        />
 
         <section className="setup">
           <h2>{t("lobby.setupHeading")}</h2>

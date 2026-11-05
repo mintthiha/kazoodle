@@ -8,6 +8,7 @@
 // device. It also means the mode works with no server and no signal.
 
 import type { Locale } from "../../../i18n";
+import type { SeatBounds } from "../../onephone/seats";
 import { TWO_IMPOSTER_MIN_PLAYERS } from "../rounds";
 import { customEntries, type CustomCategory } from "./customCategories";
 import wordList from "./words.gen.json";
@@ -16,8 +17,7 @@ import wordList from "./words.gen.json";
 export const MIN_PLAYERS = 3;
 /** A device passed around further than this stops being one table. */
 export const MAX_PLAYERS = 12;
-/** Mirrors the server's longest display name (room/guest.go's maxNameLen). */
-export const MAX_NAME_LENGTH = 24;
+export const SEAT_BOUNDS: SeatBounds = { min: MIN_PLAYERS, max: MAX_PLAYERS };
 
 /** "manual": someone taps Next player, and Reveal is always available.
  * "auto": a clock moves the turns on, and Reveal waits until they are done. */
@@ -143,36 +143,6 @@ export function pickWord(
   const fresh = pool.filter((w) => !used.includes(w.word.en));
   const choices = fresh.length > 0 ? fresh : pool;
   return choices[randomInt(choices.length, rng)];
-}
-
-/** The names the game will use: trimmed, with a blank seat falling back to
- * `fallback`, which is given the seat's 1-based number. Nobody has to type a name
- * to play, the same promise the online join screen makes. */
-export function resolveNames(raw: readonly string[], fallback: (n: number) => string): string[] {
-  return raw.map((name, i) => name.trim() || fallback(i + 1));
-}
-
-/** Seats whose name is also used by another seat, ignoring case. Two people
- * called "Sam" cannot be told apart on the ballot, so setup asks for a change. */
-export function duplicateSeats(names: readonly string[]): Set<number> {
-  const seatsByName = new Map<string, number[]>();
-  names.forEach((name, seat) => {
-    const key = name.toLocaleLowerCase();
-    seatsByName.set(key, [...(seatsByName.get(key) ?? []), seat]);
-  });
-  const out = new Set<number>();
-  for (const seats of seatsByName.values()) {
-    if (seats.length > 1) seats.forEach((s) => out.add(s));
-  }
-  return out;
-}
-
-/** Grow or shrink the list of names to `count`, keeping what was already typed.
- * Dropping a seat and adding it back again loses that one name, on purpose: the
- * stepper means "fewer people", not "hide this person". */
-export function resizeNames(names: readonly string[], count: number): string[] {
-  const bounded = Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, count));
-  return Array.from({ length: bounded }, (_, i) => names[i] ?? "");
 }
 
 /** Who the imposters are and who speaks first, for this many seats. */
