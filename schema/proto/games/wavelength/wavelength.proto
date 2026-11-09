@@ -1,0 +1,215 @@
+syntax = "proto3";
+
+package wavelength.v1;
+
+option go_package = "github.com/mintthiha/party-games/server/internal/games/wavelength/pb;pb";
+
+// Wire messages for online Wavelength, a phone each. Carried inside the core
+// protocol's GameEvent / GameAction envelopes as proto3 JSON.
+//
+// Ruleset: each round one player is the Psychic and everyone else is a Clue
+// Giver. The Clue Givers share a secret number from 1 to 10, read as a scale
+// from least to most favourite. The Psychic names a category, and every Clue
+// Giver answers at the same time, in private, with something from it that
+// matches the number. Answers are shown to everyone only once all of them are
+// in. After three categories the Psychic guesses the number.
+//
+// A right guess scores 1 point to the Psychic for every Clue Giver in the
+// round; a wrong one scores 1 point to each Clue Giver. Everyone is the Psychic
+// once, in join order, so a match has one round per player.
+//
+// With spoken answers (StartOptions.spoken_answers) the categories and answers
+// happen out loud: the server only deals the number and takes the guess, and
+// the round goes straight from one to the other.
+//
+// With a chosen secret (StartOptions.chosen_secret) the Clue Givers agree on a
+// number away from the Psychic and the first of them enters it. Until then
+// nobody has a number.
+//
+// A finished round stays on screen until a player sends PlayAgain, which deals
+// the next round, or on the last one ends the match with GameEnded "finished".
+//
+// A player leaving does not end the match unless fewer than three remain
+// (reason "player_left"). A Clue Giver who leaves drops out of the round, and
+// the round stops waiting for them. A Psychic who leaves mid-round takes the
+// round with them: it is not scored, and the next one is dealt.
+
+// Sent as StartGame.options (proto3-JSON) when the host starts a match. The
+// zero value of each field is the default.
+message StartOptions {
+  // When true, Clue Givers answer out loud instead of typing. Default typed.
+  bool spoken_answers = 1;
+
+  // When true, the Clue Givers agree on the number themselves and the first
+  // of them enters it. Default: the server draws it.
+  bool chosen_secret = 2;
+}
+
+// ── Server → Client ───────────────────────────────────────────────────────
+
+message WavelengthServerMessage {
+  oneof body {
+    RoundStart round_start = 1;
+    SecretSet secret_set = 2;
+    CategoryTurn category_turn = 3;
+    AnswerPhase answer_phase = 4;
+    AnswerProgress answer_progress = 5;
+    TalkPhase talk_phase = 6;
+    GuessTurn guess_turn = 7;
+    Result result = 8;
+  }
+}
+
+// Sent privately to each player as a round begins. A second RoundStart is how
+// a client learns the next round has begun, so it clears the last one.
+message RoundStart {
+  // 1-based, and how many rounds the match has. total_rounds can shrink
+  // mid-match when a player who had not been the Psychic yet leaves.
+  int32 round = 1;
+  int32 total_rounds = 2;
+
+  string psychic_id = 3;
+
+  // The Clue Givers this round, going round the table from the Psychic.
+  repeated string giver_ids = 4;
+
+  // The secret number, set only on a Clue Giver's own copy, and only when the
+  // server drew it. 0 means "not yet known to you".
+  int32 secret = 5;
+
+  // Copied from StartOptions, so a screen knows which version it is playing.
+  bool spoken_answers = 6;
+  bool chosen_secret = 7;
+
+  // With a chosen secret: the Clue Giver who enters the agreed number. Empty
+  // when the server drew it.
+  string chooser_id = 8;
+}
+
+// Sent privately once a chosen secret has been entered. Clue Givers get the
+// number; the Psychic gets 0, so their screen knows to move on without it.
+message SecretSet {
+  int32 secret = 1;
+}
+
+// One category asked this round, and every Clue Giver's answer to it, in
+// giver order. Only sent once every answer is in.
+message Category {
+  string name = 1;
+  repeated Answer answers = 2;
+}
+
+message Answer {
+  string player_id = 1;
+  string text = 2;
+}
+
+// Broadcast when it is the Psychic's turn to name a category, with every
+// category already answered this round, oldest first.
+message CategoryTurn {
+  int32 number = 1; // 1-based: which category this will be
+  int32 total = 2;  // categories per round
+  repeated Category categories = 3;
+}
+
+// Broadcast when the Psychic has named a category and the Clue Givers are
+// answering it.
+message AnswerPhase {
+  string category = 1;
+  int32 number = 2; // 1-based
+  int32 total = 3;
+  // The categories before this one, already answered.
+  repeated Category categories = 4;
+}
+
+// Broadcast as answers come in. Only who has answered, never what.
+message AnswerProgress {
+  repeated string answered_ids = 1;
+  int32 total = 2;
+}
+
+// Broadcast in a spoken round once the number is settled: the table talks,
+// and the Psychic says when they are ready to guess.
+message TalkPhase {}
+
+// Broadcast when the Psychic is to guess, with every category of the round
+// (empty in a spoken round).
+message GuessTurn {
+  repeated Category categories = 1;
+}
+
+// One player's standing in the match after a round.
+message ScoreEntry {
+  string player_id = 1;
+  int32 score = 2;
+  int32 delta = 3; // what this round alone earned them
+}
+
+// Broadcast once the Psychic has guessed. Nothing in it is secret any more.
+message Result {
+  string psychic_id = 1;
+  int32 secret = 2;
+  int32 guess = 3;
+  bool psychic_won = 4;
+
+  // The Clue Givers still in the round when it was scored.
+  repeated string giver_ids = 5;
+
+  int32 round = 6;
+  int32 total_rounds = 7;
+
+  // Every player the match started with, highest score first, ties in join
+  // order. Players who left stay listed with what they earned.
+  repeated ScoreEntry scores = 8;
+
+  // True when no round follows: PlayAgain then ends the match.
+  bool match_over = 9;
+  // Who won, set only when match_over. Limited to players still here.
+  repeated string winner_ids = 10;
+
+  // Who the Psychic will be next round. Empty when match_over.
+  string next_psychic_id = 11;
+
+  repeated Category categories = 12;
+}
+
+// ── Client → Server ───────────────────────────────────────────────────────
+
+message WavelengthClientMessage {
+  oneof body {
+    ChooseSecret choose_secret = 1;
+    SetCategory set_category = 2;
+    SubmitAnswer submit_answer = 3;
+    ReadyToGuess ready_to_guess = 4;
+    MakeGuess make_guess = 5;
+    PlayAgain play_again = 6;
+  }
+}
+
+// The agreed number, from the chooser only, once per round.
+message ChooseSecret {
+  int32 value = 1;
+}
+
+// The Psychic's next category. Refused when empty, over 32 characters, or a
+// repeat of one already asked this round (ignoring case).
+message SetCategory {
+  string text = 1;
+}
+
+// One Clue Giver's answer to the current category. Replaceable until the last
+// answer arrives. Refused when empty or over 40 characters.
+message SubmitAnswer {
+  string text = 1;
+}
+
+// Spoken rounds only, from the Psychic: the talking is done.
+message ReadyToGuess {}
+
+// The Psychic's one guess, 1 to 10.
+message MakeGuess {
+  int32 value = 1;
+}
+
+// "On to the next round." Only accepted once the round has a Result.
+message PlayAgain {}

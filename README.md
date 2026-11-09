@@ -13,8 +13,10 @@ different cities. Same game library, no separate apps, no TV required.
 create or join a room, watch players sync, bounce a message through the server.
 **Imposter** is the first playable game: role assignment, clues, voting, a
 steal-the-win guess for a caught imposter, and play-again, in English and
-French. Most of this README is still architecture direction that the code is
-growing into.
+French. **Wavelength** is the second: read a secret number from your friends'
+answers. Both play online with a phone each, or on one phone passed around.
+Most of this README is still architecture direction that the code is growing
+into.
 
 ---
 
@@ -162,7 +164,8 @@ player's physical location. It receives players and events; it emits state.
 Mobile-browser-first. No install, no store review, join by link or code.
 Ship 2–3 games that each exercise a different play mode, to prove the session
 layer generalizes. **Imposter** (pass-and-play / local multi-device) is the
-first; 1–2 more, each covering a different play mode, are still to come.
+first, and **Wavelength** (one phone or a phone each, answers typed or out
+loud) the second; one more is still to come.
 
 **Phase 2 — Native**
 Wrap for iOS / Android once the web version is genuinely good. Native buys

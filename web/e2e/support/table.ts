@@ -39,16 +39,17 @@ export async function newPlayer(
   return { name, page, context };
 }
 
-/** Brings a table together in one room and returns its code. The first player hosts. */
-export async function seatTable(players: Player[]): Promise<string> {
+/** Brings a table together in one room and returns its code. The first player
+ * hosts. `path` is the game's page, Imposter's unless said otherwise. */
+export async function seatTable(players: Player[], path = "/imposter"): Promise<string> {
   const [host, ...rest] = players;
-  await host.page.goto("/imposter");
+  await host.page.goto(path);
   await host.page.getByLabel("Your name (optional)").fill(host.name);
   await button(host.page, "Create a room").click();
   const code = await host.page.locator(".room-code-value").innerText();
 
   for (const p of rest) {
-    await p.page.goto("/imposter");
+    await p.page.goto(path);
     await p.page.getByLabel("Your name (optional)").fill(p.name);
     await p.page.getByLabel("Room code").fill(code);
     await button(p.page, "Join").click();

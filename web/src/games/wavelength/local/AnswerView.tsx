@@ -1,14 +1,7 @@
 import { useState } from "react";
 import { useT } from "../../../i18n";
-import {
-  CATEGORIES_PER_ROUND,
-  MAX_ANSWER_LENGTH,
-  answerProblem,
-  clueGivers,
-  currentCategory,
-  type LocalEvent,
-  type LocalGame,
-} from "./localGame";
+import { AnswerForm } from "../AnswerForm";
+import { CATEGORIES_PER_ROUND, clueGivers, currentCategory, type LocalEvent, type LocalGame } from "./localGame";
 
 interface Props {
   game: LocalGame;
@@ -27,13 +20,11 @@ interface Props {
 export function AnswerView({ game, giver, dispatch }: Props) {
   const { t } = useT();
   const [ready, setReady] = useState(false);
-  const [text, setText] = useState("");
 
   const { names, round } = game;
   const givers = clueGivers(game);
   const name = names[givers[giver]];
   const category = currentCategory(round);
-  const problem = answerProblem(text);
 
   if (!ready) {
     return (
@@ -59,50 +50,11 @@ export function AnswerView({ game, giver, dispatch }: Props) {
   }
 
   return (
-    <main className="screen">
-      <div>
-        <p className="status">{name}</p>
-        <h1 className="wl-headline">{category}</h1>
-      </div>
-
-      <div className="wl-mine">
-        <span className="wl-mine-label">{t("wl.yourNumber")}</span>
-        <span className="wl-mine-number num">
-          <mark>{round.secret}</mark>
-        </span>
-      </div>
-      <div>
-        <p className="wl-lead">{t("wl.answerPrompt", { n: round.secret ?? "" })}</p>
-        <p className="status local-help">{t("wl.scale")}</p>
-      </div>
-
-      <form
-        id="wl-answer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (problem === null) dispatch({ type: "submitAnswer", text });
-        }}
-      >
-        <label className="field">
-          <span>{t("wl.answerLabel")}</span>
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            maxLength={MAX_ANSWER_LENGTH}
-            autoComplete="off"
-            autoCapitalize="sentences"
-            enterKeyHint="done"
-            autoFocus
-          />
-        </label>
-      </form>
-      {problem === "tooLong" && <p className="hint">{t("wl.answerTooLong", { n: MAX_ANSWER_LENGTH })}</p>}
-
-      <div className="dock">
-        <button type="submit" form="wl-answer" className="primary" disabled={problem !== null}>
-          {t("wl.lockAnswer")}
-        </button>
-      </div>
-    </main>
+    <AnswerForm
+      name={name}
+      category={category}
+      secret={round.secret ?? 0}
+      onLock={(text) => dispatch({ type: "submitAnswer", text })}
+    />
   );
 }

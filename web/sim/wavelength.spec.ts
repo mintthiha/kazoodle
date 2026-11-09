@@ -58,9 +58,9 @@ test("three players, one phone, a whole game of Wavelength", async () => {
     // ─── Setup ────────────────────────────────────────────────────────────────
     await page.goto("/");
     await expect(button(/Wavelength/)).toBeVisible();
-    await capture("The shelf", "Wavelength sits beside Imposter. It has no online version yet, so the whole tile opens the one-phone game.");
+    await capture("The shelf", "Wavelength sits beside Imposter. The tile opens the online game; the button beside it opens the one-phone game.");
 
-    await button(/Wavelength/).click();
+    await page.locator(".tile-card", { hasText: "Wavelength" }).getByRole("button", { name: "Play on one phone" }).click();
     for (const [i, name] of NAMES.entries()) {
       await page.getByRole("textbox", { name: `Name of player ${i + 1}`, exact: true }).fill(name);
     }

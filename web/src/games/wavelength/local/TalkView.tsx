@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useT } from "../../../i18n";
-import { joinNames } from "./names";
+import { joinNames } from "../names";
 import { clueGivers, type LocalGame } from "./localGame";
 
 interface Props {

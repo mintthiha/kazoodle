@@ -7,6 +7,7 @@ import type { MessageKey } from "../i18n";
 const EXPLAINED: Record<string, MessageKey> = {
   player_left: "gameEnd.player_left",
   imposter_left: "gameEnd.imposter_left",
+  psychic_left: "gameEnd.psychic_left",
 };
 
 /** The message key explaining why a round stopped, or null if it doesn't want

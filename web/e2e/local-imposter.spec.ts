@@ -6,10 +6,13 @@ const NAMES = ["Ana", "Ben", "Cleo", "Dov"];
 const button = (page: Page, name: string | RegExp) => page.getByRole("button", { name });
 const speaker = (page: Page) => page.locator(".speaker h1");
 const playAgain = (page: Page) => button(page, "Play again");
+/** Imposter's own one-phone button. Every game with a one-phone mode has one. */
+const onePhone = (page: Page, label = "Play on one phone") =>
+  page.locator(".tile-card", { hasText: /Imposter|Imposteur/ }).getByRole("button", { name: label });
 
 async function openSetup(page: Page) {
   await page.goto("/");
-  await button(page, "Play on one phone").click();
+  await onePhone(page).click();
   await expect(page.getByRole("heading", { name: "One phone, passed around" })).toBeVisible();
 }
 
@@ -109,7 +112,7 @@ test.describe("getting in", () => {
     await expect(page.getByRole("heading", { name: "One phone, passed around" })).toBeVisible();
     await button(page, "All games").click();
     await expect(page).toHaveURL("/");
-    await expect(button(page, "Play on one phone")).toBeVisible();
+    await expect(onePhone(page)).toBeVisible();
   });
 
   test("the tile still leads to the online game", async ({ page }) => {
@@ -125,7 +128,7 @@ test.describe("getting in", () => {
     const current = await speaker(page).innerText();
 
     await page.goBack();
-    await button(page, "Play on one phone").click();
+    await onePhone(page).click();
 
     await expect(speaker(page)).toHaveText(current);
   });
@@ -717,7 +720,7 @@ test.describe("real life", () => {
   test("the whole game plays in French", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "FR", exact: true }).click();
-    await button(page, "Jouer sur un seul téléphone").click();
+    await onePhone(page, "Jouer sur un seul téléphone").click();
     await button(page, "Distribuer les mots").click();
 
     let word = "";
@@ -743,7 +746,7 @@ test.describe("real life", () => {
     await page.setViewportSize({ width: 320, height: 568 });
     await page.goto("/");
     await page.getByRole("button", { name: "FR", exact: true }).click();
-    await button(page, "Jouer sur un seul téléphone").click();
+    await onePhone(page, "Jouer sur un seul téléphone").click();
     await button(page, "Distribuer les mots").click();
     await button(page, "Terminer").click();
 

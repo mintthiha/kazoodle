@@ -23,7 +23,7 @@ interface Props {
 export function GameTile({ game, onPick, onPickLocal }: Props) {
   const { t } = useT();
   const name = t(game.nameKey);
-  const localOnly = !game.view;
+  const localOnly = !game.online;
 
   return (
     <div className="tile-card">

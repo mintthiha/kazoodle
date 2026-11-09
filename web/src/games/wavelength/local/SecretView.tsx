@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useT } from "../../../i18n";
-import { NumberPad } from "./NumberPad";
-import { NumberSlip } from "./NumberSlip";
+import { NumberPad } from "../NumberPad";
+import { NumberSlip } from "../NumberSlip";
 import { clueGivers, type LocalEvent, type LocalGame } from "./localGame";
 
 interface Props {

@@ -4,6 +4,7 @@ version: v2
 modules:
   - path: proto/core
   - path: proto/games/imposter
+  - path: proto/games/wavelength
 lint:
   use:
     - STANDARD

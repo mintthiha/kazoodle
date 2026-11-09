@@ -1,10 +1,11 @@
-import { useT, type MessageKey } from "../../../i18n";
+import { useT } from "../../../i18n";
 import { BackNav } from "../../../screens/BackNav";
 import { RulesCard } from "../../../screens/RulesCard";
 import { Segmented } from "../../../screens/Segmented";
 import { SeatEditor } from "../../onephone/SeatEditor";
 import { duplicateSeats, resolveNames } from "../../onephone/seats";
 import { SEAT_BOUNDS, type AnswerMode, type LocalSettings, type SecretSource } from "./localGame";
+import { rulesFor } from "../rules";
 import type { LocalSetup } from "./saved";
 
 interface Props {
@@ -12,18 +13,6 @@ interface Props {
   onChange: (setup: LocalSetup) => void;
   onStart: () => void;
   onExit: () => void;
-}
-
-/** The rules as this group will play them: only the line about answering changes. */
-function rulesFor(answers: AnswerMode): MessageKey[] {
-  return [
-    "wl.rule.roles",
-    "wl.rule.scale",
-    answers === "spoken" ? "wl.rule.categorySpoken" : "wl.rule.category",
-    "wl.rule.three",
-    "wl.rule.scoring",
-    "wl.rule.rotate",
-  ];
 }
 
 // Who is playing and who picks the number. Everything else about a round is

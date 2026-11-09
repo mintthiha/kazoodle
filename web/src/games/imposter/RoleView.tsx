@@ -4,7 +4,7 @@ import { Avatar } from "../../players/Avatar";
 import { makeHueFor } from "../../players/hues";
 import type { RevealProgress, RoleAssignment } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
-import { makeNameFor } from "./nameFor";
+import { makeNameFor } from "../../players/nameFor";
 import { RevealSlip } from "./WordSlip";
 
 interface Props extends GameViewProps {

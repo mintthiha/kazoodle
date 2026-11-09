@@ -6,7 +6,7 @@ import type { Outcome, VotePhase, VoteTally } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
 import { ClueLedger } from "./ClueLedger";
 import { buildLedger } from "./ledger";
-import { makeNameFor } from "./nameFor";
+import { makeNameFor } from "../../players/nameFor";
 
 interface Props extends GameViewProps {
   tally: VoteTally | null;

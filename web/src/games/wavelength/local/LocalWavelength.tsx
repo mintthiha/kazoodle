@@ -18,7 +18,7 @@ import { TalkView } from "./TalkView";
 import { useWakeLock } from "../../onephone/useWakeLock";
 import "../../../screens/lobby.css";
 import "../../onephone/onephone.css";
-import "./wavelength.css";
+import "../wavelength.css";
 
 // One-phone Wavelength: setup, then the rules in ./localGame, rendered one stage
 // at a time. Reached without mounting GameSession, so no socket is ever opened.

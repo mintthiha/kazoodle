@@ -1,4 +1,4 @@
-import { HIGHEST, LOWEST } from "./localGame";
+import { HIGHEST, LOWEST } from "./local/localGame";
 
 interface Props {
   /** What the pad is for, for screen readers. The heading above says it on screen. */

@@ -1,0 +1,16 @@
+version: v2
+clean: true
+inputs:
+  - directory: proto/games/wavelength
+plugins:
+  # Go types -> server/internal/games/wavelength/pb/wavelength.pb.go
+  - local: protoc-gen-go
+    out: ../server/internal/games/wavelength/pb
+    opt: paths=source_relative
+
+  # TypeScript types -> web/src/games/wavelength/gen/wavelength_pb.ts
+  - local: protoc-gen-es
+    out: ../web/src/games/wavelength/gen
+    opt:
+      - target=ts
+      - import_extension=none

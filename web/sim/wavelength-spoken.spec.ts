@@ -87,7 +87,7 @@ test("three players, one phone, Wavelength out loud", async () => {
   try {
     // ─── Setup ────────────────────────────────────────────────────────────────
     await page.goto("/");
-    await button(/Wavelength/).click();
+    await page.locator(".tile-card", { hasText: "Wavelength" }).getByRole("button", { name: "Play on one phone" }).click();
     for (const [i, name] of NAMES.entries()) {
       await page.getByRole("textbox", { name: `Name of player ${i + 1}`, exact: true }).fill(name);
     }

@@ -1,5 +1,6 @@
 import { useT } from "../../../i18n";
-import { Board } from "./Board";
+import { Board } from "../Board";
+import { boardOf } from "./rows";
 import { CATEGORIES_PER_ROUND, currentCategory, type LocalGame } from "./localGame";
 
 interface Props {
@@ -21,7 +22,7 @@ export function RevealView({ game, onContinue }: Props) {
         <h1 className="wl-headline">{currentCategory(round)}</h1>
       </div>
 
-      <Board game={game} freshNewest />
+      <Board categories={boardOf(game)} freshNewest />
 
       <div className="dock">
         <button className="primary" onClick={onContinue}>

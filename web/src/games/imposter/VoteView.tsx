@@ -3,7 +3,7 @@ import { useT } from "../../i18n";
 import { makeHueFor } from "../../players/hues";
 import type { RoleAssignment, VotePhase, VoteProgress } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
-import { makeNameFor } from "./nameFor";
+import { makeNameFor } from "../../players/nameFor";
 import { ClueLedger } from "./ClueLedger";
 import { Countdown } from "./Countdown";
 import { buildLedger } from "./ledger";

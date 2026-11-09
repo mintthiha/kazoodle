@@ -125,3 +125,6 @@ export function encodePlayAgain(): string {
     create(ImposterClientMessageSchema, { body: { case: "playAgain", value: {} } }),
   );
 }
+
+/** DEFAULT_MATCH_OPTIONS as the lobby holds them: proto3-JSON. */
+export const imposterDefaultOptions = encodeStartOptions(DEFAULT_MATCH_OPTIONS);

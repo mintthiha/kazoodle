@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useT } from "../../../i18n";
-import { Board } from "./Board";
-import { NumberPad } from "./NumberPad";
+import { Board } from "../Board";
+import { boardOf } from "./rows";
+import { NumberPad } from "../NumberPad";
 import type { LocalEvent, LocalGame } from "./localGame";
 
 interface Props {
@@ -27,7 +28,7 @@ export function GuessView({ game, dispatch }: Props) {
       <NumberPad label={t("wl.pickNumber")} value={picked} onPick={setPicked} />
 
       {/* Spoken rounds have nothing written down to show. */}
-      {game.round.categories.length > 0 && <Board game={game} />}
+      {game.round.categories.length > 0 && <Board categories={boardOf(game)} />}
 
       <div className="dock">
         <button

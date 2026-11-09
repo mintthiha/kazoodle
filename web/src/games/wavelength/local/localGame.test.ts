@@ -134,7 +134,7 @@ describe("categoryProblem", () => {
   ];
   for (const tt of tests) {
     it(tt.name, () => {
-      expect(categoryProblem(tt.r, tt.text)).toBe(tt.want);
+      expect(categoryProblem(tt.r.categories, tt.text)).toBe(tt.want);
     });
   }
 });

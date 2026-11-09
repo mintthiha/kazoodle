@@ -1,8 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { useConnection } from "../net/useConnection";
 import { useT } from "../i18n";
-import { gameViews } from "../games/registry";
-import { encodeStartOptions } from "../games/imposter/messages";
+import { GAMES, onlineGames } from "../games/registry";
 import { BackNav } from "./BackNav";
 import { ConnBanner } from "./ConnBanner";
 import { JoinScreen } from "./JoinScreen";
@@ -11,8 +10,8 @@ import { OfflineNotice } from "./OfflineNotice";
 import { RoomNotice } from "./RoomNotice";
 
 interface Props {
-  /** Which game the hub sent us here to play. Only used for the start call for
-   * now; the running view comes from the server's own game id. */
+  /** Which game the hub sent us here to play: it decides the lobby's setup and
+   * what Start starts. The running view comes from the server's own game id. */
   gameId: string;
   onExit: () => void;
 }
@@ -42,7 +41,7 @@ export function GameSession({ gameId, onExit }: Props) {
 
   let content: ReactNode;
   if (snapshot.room && snapshot.game) {
-    const GameView = gameViews[snapshot.game.id];
+    const GameView = onlineGames[snapshot.game.id]?.view;
     content = GameView ? (
       <GameView
         selfId={snapshot.room.selfId}
@@ -59,11 +58,14 @@ export function GameSession({ gameId, onExit }: Props) {
     content = (
       <LobbyScreen
         room={snapshot.room}
+        gameId={gameId}
+        game={onlineGames[gameId]}
+        minPlayers={GAMES.find((g) => g.id === gameId)?.minPlayers ?? 3}
         lastEcho={snapshot.lastEcho}
         lastError={snapshot.lastError}
         isHost={snapshot.room.hostId === snapshot.room.selfId}
-        onStartGame={(opts) => actions.startGame(gameId, encodeStartOptions(opts))}
-        onSetOptions={(opts) => actions.setGameOptions(gameId, encodeStartOptions(opts))}
+        onStartGame={(opts) => actions.startGame(gameId, opts)}
+        onSetOptions={(opts) => actions.setGameOptions(gameId, opts)}
         onEcho={actions.echo}
         onLeave={actions.leaveRoom}
       />

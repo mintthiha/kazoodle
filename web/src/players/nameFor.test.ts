@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { translate } from "../../i18n/messages";
+import { translate } from "../i18n/messages";
 import { makeNameFor } from "./nameFor";
 
 // The real catalogue rather than a stub, so a key renamed out from under this

@@ -9,7 +9,8 @@ const key = (page: Page, n: number) => page.getByRole("button", { name: String(n
 
 async function openSetup(page: Page) {
   await page.goto("/");
-  await button(page, /Wavelength/).click();
+  // The tile itself opens the online game; one-phone is the button beside it.
+  await page.locator(".tile-card", { hasText: "Wavelength" }).getByRole("button", { name: "Play on one phone" }).click();
   await expect(heading(page, "Wavelength")).toBeVisible();
 }
 

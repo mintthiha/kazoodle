@@ -5,46 +5,37 @@ import { errorKey } from "../errorKey";
 import { Avatar } from "../players/Avatar";
 import { makeHueFor } from "../players/hues";
 import { ChatPanel } from "./ChatPanel";
-import { Segmented } from "./Segmented";
 import { RulesCard } from "./RulesCard";
-import { IMPOSTER_RULES } from "../games/imposter/rules";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
-import { CATEGORY_OPTIONS } from "../games/imposter/categories";
-import {
-  CLUE_PASS_OPTIONS,
-  CLUE_SECONDS_OPTIONS,
-  ROUND_OPTIONS,
-  TWO_IMPOSTER_MIN_PLAYERS,
-} from "../games/imposter/rounds";
-import {
-  DEFAULT_MATCH_OPTIONS,
-  decodeStartOptions,
-  type MatchOptions,
-} from "../games/imposter/messages";
+import type { OnlineGame } from "../games/registry";
 import "./lobby.css";
-
-// IMPOSTER_MIN_PLAYERS mirrors the server's minPlayers for Imposter. If they
-// drift, the server still rejects the start — this only gates the button.
-const IMPOSTER_MIN_PLAYERS = 3;
 
 type CopyState = "idle" | "copied" | "failed";
 
 interface Props {
   room: RoomState;
+  /** Which game this room is for, and how that game sets up a match. */
+  gameId: string;
+  game: OnlineGame;
+  /** Mirrors the server's minimum for this game. If they drift the server still
+   * refuses the start; this only gates the button. */
+  minPlayers: number;
   lastEcho: EchoLine | null;
   /** The last server error code, or null. Shown above the Start button: a
    * refusal the player cannot see is how a button comes to look broken. */
   lastError: string | null;
   isHost: boolean;
-  onStartGame: (opts: MatchOptions) => void;
-  onSetOptions: (opts: MatchOptions) => void;
+  /** Both take the game's options as proto3-JSON. */
+  onStartGame: (options: string) => void;
+  onSetOptions: (options: string) => void;
   onEcho: (text: string) => void;
   onLeave: () => void;
 }
 
-// Second screen: the room's code, who is in it, the host-only match setup
-// (category, match length, imposter-hints) and start control, and the chat.
+// Second screen: the room's code, who is in it, the match setup and start
+// control, and the chat. The setup panel belongs to the game (game.Setup); the
+// lobby only holds the options it produces, as an opaque string.
 //
 // The host's picks are live choices, not just start-time ones: every change
 // calls onSetOptions, which the app wires to SetGameOptions, so the whole
@@ -52,6 +43,9 @@ interface Props {
 // their mind. See room.pendingOptions in net/connection.ts.
 export function LobbyScreen({
   room,
+  gameId,
+  game,
+  minPlayers,
   lastEcho,
   lastError,
   isHost,
@@ -61,7 +55,7 @@ export function LobbyScreen({
   onLeave,
 }: Props) {
   const { t } = useT();
-  const [opts, setOpts] = useState<MatchOptions>(DEFAULT_MATCH_OPTIONS);
+  const [opts, setOpts] = useState(game.defaultOptions);
   // Result of the last "copy code" press. `n` increments on every press so
   // pressing twice restarts the confirmation timer even when the outcome is
   // the same both times (React skips a re-render if the value is unchanged).
@@ -69,10 +63,10 @@ export function LobbyScreen({
   // Only connected players get dealt in, so a held seat does not count towards
   // starting. Otherwise the button could promise a game the server will refuse.
   const onlineCount = room.players.length - room.offline.length;
-  const canStart = onlineCount >= IMPOSTER_MIN_PLAYERS;
-  const bigTable = onlineCount >= TWO_IMPOSTER_MIN_PLAYERS;
+  const canStart = onlineCount >= minPlayers;
   const hueFor = makeHueFor(room.players, room.departed);
-  const openSeats = Math.max(0, IMPOSTER_MIN_PLAYERS - room.players.length);
+  const openSeats = Math.max(0, minPlayers - room.players.length);
+  const { Setup } = game;
 
   // Clear the copy confirmation a couple of seconds after it appears. The
   // returned function is the cleanup: React runs it before the next effect and
@@ -88,17 +82,15 @@ export function LobbyScreen({
   // pendingOptions. Until the host touches anything nothing has been broadcast,
   // and what will be played is exactly the defaults, so that is what they see.
   const pending =
-    room.pendingOptions && room.pendingOptions.gameId === "imposter"
-      ? decodeStartOptions(room.pendingOptions.options)
-      : DEFAULT_MATCH_OPTIONS;
+    room.pendingOptions && room.pendingOptions.gameId === gameId
+      ? room.pendingOptions.options
+      : game.defaultOptions;
 
   const host = room.players.find((p) => p.id === room.hostId);
 
-  // One setter for all the options: a partial update is merged into what the
-  // host already picked, then the whole set goes out, since SetGameOptions
+  // The host's pick is kept here and broadcast whole, since SetGameOptions
   // carries the options as one payload rather than a patch.
-  function pick(change: Partial<MatchOptions>) {
-    const next = { ...opts, ...change };
+  function pick(next: string) {
     setOpts(next);
     onSetOptions(next);
   }
@@ -176,120 +168,16 @@ export function LobbyScreen({
             </ul>
           </section>
 
-          <RulesCard rules={IMPOSTER_RULES} />
+          <RulesCard rules={game.rules(isHost ? opts : pending)} />
         </div>
 
         <div className="lobby-col">
           <section className="setup">
             <h2>{t("lobby.setupHeading")}</h2>
             {isHost ? (
-              <>
-                <Segmented
-                  name="category"
-                  legend={t("lobby.categoryLabel")}
-                  wrap
-                  value={opts.category}
-                  options={CATEGORY_OPTIONS.map((o) => ({ value: o.key, label: t(o.labelKey) }))}
-                  onChange={(category) => pick({ category })}
-                />
-                <Segmented
-                  name="rounds"
-                  legend={t("lobby.roundsLabel")}
-                  value={opts.rounds}
-                  options={ROUND_OPTIONS.map((n) => ({
-                    value: n as number,
-                    label: t("lobby.roundsOption", { n }),
-                  }))}
-                  onChange={(rounds) => pick({ rounds })}
-                />
-                <Segmented
-                  name="clue-passes"
-                  legend={t("lobby.cluePassesLabel")}
-                  value={opts.cluePasses}
-                  options={CLUE_PASS_OPTIONS.map((o) => ({
-                    value: o.value,
-                    label: String(o.value),
-                  }))}
-                  onChange={(cluePasses) => pick({ cluePasses })}
-                />
-                <Segmented
-                  name="clue-seconds"
-                  legend={t("lobby.clueSecondsLabel")}
-                  value={opts.clueSeconds}
-                  options={CLUE_SECONDS_OPTIONS.map((o) => ({
-                    value: o.value,
-                    label:
-                      o.value === 0
-                        ? t("lobby.clueSecondsOffShort")
-                        : t("lobby.clueSecondsShort", { n: o.value }),
-                  }))}
-                  onChange={(clueSeconds) => pick({ clueSeconds })}
-                />
-                {bigTable && (
-                  <Segmented
-                    name="imposters"
-                    legend={t("lobby.impostersLabel")}
-                    // Zero is "the server's default", which is two.
-                    value={opts.imposters || 2}
-                    options={[
-                      { value: 1, label: "1" },
-                      { value: 2, label: "2" },
-                    ]}
-                    onChange={(imposters) => pick({ imposters })}
-                  />
-                )}
-                <label className="switch-row">
-                  <span>{t("lobby.hintsToggle")}</span>
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    className="visually-hidden"
-                    checked={opts.hintsEnabled}
-                    onChange={(e) => pick({ hintsEnabled: e.target.checked })}
-                  />
-                  <span className="switch" aria-hidden="true" />
-                </label>
-              </>
+              <Setup value={opts} onChange={pick} onlineCount={onlineCount} />
             ) : (
-              <dl className="setup-readout">
-                <div>
-                  <dt>{t("lobby.categoryLabel")}</dt>
-                  <dd>
-                    {t(
-                      CATEGORY_OPTIONS.find((o) => o.key === pending.category)?.labelKey ??
-                        "imposter.category.any",
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt>{t("lobby.roundsLabel")}</dt>
-                  <dd>{t("lobby.roundsOption", { n: pending.rounds })}</dd>
-                </div>
-                <div>
-                  <dt>{t("lobby.cluePassesLabel")}</dt>
-                  <dd>
-                    {t(
-                      CLUE_PASS_OPTIONS.find((o) => o.value === pending.cluePasses)?.labelKey ??
-                        "lobby.cluePassesTwo",
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt>{t("lobby.clueSecondsLabel")}</dt>
-                  <dd>
-                    {t(
-                      CLUE_SECONDS_OPTIONS.find((o) => o.value === pending.clueSeconds)?.labelKey ??
-                        "lobby.clueSecondsOff",
-                    )}
-                  </dd>
-                </div>
-                {bigTable && (
-                  <div>
-                    <dt>{t("lobby.impostersLabel")}</dt>
-                    <dd>{t(pending.imposters === 1 ? "lobby.impostersOne" : "lobby.impostersTwo")}</dd>
-                  </div>
-                )}
-              </dl>
+              <Setup value={pending} onlineCount={onlineCount} />
             )}
           </section>
 
@@ -302,10 +190,10 @@ export function LobbyScreen({
         {isHost ? (
           <>
             {!canStart && (
-              <p className="status">{t("lobby.needPlayers", { min: IMPOSTER_MIN_PLAYERS })}</p>
+              <p className="status">{t("lobby.needPlayers", { min: minPlayers })}</p>
             )}
             <button className="primary" onClick={() => onStartGame(opts)} disabled={!canStart}>
-              {t("lobby.startImposter")}
+              {t(game.startKey)}
             </button>
           </>
         ) : (

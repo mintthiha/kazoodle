@@ -165,15 +165,16 @@ export function currentCategory(round: Round): string {
 }
 
 /** Why a category can't be used, or null if it can. The same name twice in one
- * round would only ask the same question again. */
+ * round would only ask the same question again. `asked` is the categories
+ * already asked this round, so online Wavelength can use the same check. */
 export type CategoryProblem = "empty" | "tooLong" | "repeated";
 
-export function categoryProblem(round: Round, text: string): CategoryProblem | null {
+export function categoryProblem(asked: readonly string[], text: string): CategoryProblem | null {
   const name = text.trim();
   if (name === "") return "empty";
   if ([...name].length > MAX_CATEGORY_LENGTH) return "tooLong";
   const key = name.toLocaleLowerCase();
-  if (round.categories.some((c) => c.toLocaleLowerCase() === key)) return "repeated";
+  if (asked.some((c) => c.toLocaleLowerCase() === key)) return "repeated";
   return null;
 }
 
@@ -249,7 +250,7 @@ export function step(game: LocalGame, event: LocalEvent, rng: Rng = Math.random)
 
     case "setCategory": {
       if (stage.kind !== "category") return game;
-      if (categoryProblem(round, event.text) !== null) return game;
+      if (categoryProblem(round.categories, event.text) !== null) return game;
       return {
         ...game,
         round: {

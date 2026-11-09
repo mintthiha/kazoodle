@@ -1,6 +1,7 @@
 import { useT } from "../../../i18n";
-import { Standings } from "./Standings";
-import { joinNames } from "./names";
+import { Standings } from "../Standings";
+import { standingsOf } from "./rows";
+import { joinNames } from "../names";
 import { leaders, type LocalGame } from "./localGame";
 
 interface Props {
@@ -26,7 +27,7 @@ export function FinalView({ game, onPlayAgain, onChangePlayers }: Props) {
         </h1>
       </div>
 
-      <Standings names={game.names} scores={game.scores} />
+      <Standings rows={standingsOf(game.names, game.scores)} />
 
       <div className="dock">
         <button className="primary" onClick={onPlayAgain}>
