@@ -12,6 +12,10 @@
 // Clue Giver privately answers with something from that category that matches the
 // number on a scale from least to most favourite. After three categories the
 // Psychic guesses the number. Everyone takes one turn as the Psychic.
+//
+// With spoken answers the categories and answers happen out loud, so the app only
+// deals the number and takes the guess, and a round skips straight from one to
+// the other.
 
 import type { SeatBounds } from "../../onephone/seats";
 
@@ -39,11 +43,18 @@ export const MAX_ANSWER_LENGTH = 40;
  * first of them enters it. */
 export type SecretSource = "random" | "chosen";
 
+/** "typed": each Clue Giver types their answers into the app in private, and the
+ * app shows them to everyone and keeps them for the guess.
+ * "spoken": the table talks. The app only holds the number and takes the guess,
+ * and everything between happens out loud. */
+export type AnswerMode = "typed" | "spoken";
+
 export interface LocalSettings {
   secret: SecretSource;
+  answers: AnswerMode;
 }
 
-export const DEFAULT_SETTINGS: LocalSettings = { secret: "random" };
+export const DEFAULT_SETTINGS: LocalSettings = { secret: "random", answers: "typed" };
 
 export interface Round {
   /** The Psychic's seat. Round r's Psychic is seat r, so everyone gets one turn. */
@@ -64,6 +75,9 @@ export type Stage =
   | { kind: "intro" }
   /** Clue Giver `giver` holds the phone to see, or enter, the secret number. */
   | { kind: "secret"; giver: number }
+  /** Spoken answers only: the phone is on the table while the round is talked
+   * through, until the Psychic is ready to guess. */
+  | { kind: "talk" }
   /** The Psychic types the next category. */
   | { kind: "category" }
   /** Clue Giver `giver` answers the newest category in private. */
@@ -93,6 +107,7 @@ export type LocalEvent =
   | { type: "begin" }
   | { type: "chooseSecret"; value: number }
   | { type: "secretSeen" }
+  | { type: "readyToGuess" }
   | { type: "setCategory"; text: string }
   | { type: "submitAnswer"; text: string }
   | { type: "continue" }
@@ -200,7 +215,7 @@ export function leaders(scores: readonly number[]): number[] {
 /** Where the phone goes after Clue Giver `giver` is done with the secret. */
 function afterSecret(game: LocalGame, giver: number): Stage {
   if (giver + 1 < clueGivers(game).length) return { kind: "secret", giver: giver + 1 };
-  return { kind: "category" };
+  return game.settings.answers === "spoken" ? { kind: "talk" } : { kind: "category" };
 }
 
 /** The rules. An event that makes no sense for the current stage returns the game
@@ -225,6 +240,12 @@ export function step(game: LocalGame, event: LocalEvent, rng: Rng = Math.random)
     case "secretSeen":
       if (stage.kind !== "secret" || round.secret === null) return game;
       return { ...game, stage: afterSecret(game, stage.giver) };
+
+    case "readyToGuess":
+      // The app has no record of a spoken round, so it cannot hold the Psychic to
+      // three categories. The table keeps that rule, as it would on paper.
+      if (stage.kind !== "talk") return game;
+      return { ...game, stage: { kind: "guess" } };
 
     case "setCategory": {
       if (stage.kind !== "category") return game;

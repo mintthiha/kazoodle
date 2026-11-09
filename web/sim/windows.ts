@@ -234,6 +234,25 @@ export async function measureWindows(stage: Stage) {
   );
 }
 
+/** The longest a screenshot waits for the page to stop moving. */
+const SETTLE_LIMIT_MS = 5000;
+
+/** Waits out anything still moving, so a frame shows where a screen ends up.
+ *
+ * The wait is capped. A window that is covered, minimised or on a sleeping computer
+ * stops drawing, and its animations stop with it, so without a cap one moved window
+ * would hang the whole run. A frame taken a little early is the better failure. */
+export async function settled(page: Page) {
+  await page.evaluate(
+    (limit) =>
+      Promise.race([
+        Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))),
+        new Promise((resolve) => setTimeout(resolve, limit)),
+      ]),
+    SETTLE_LIMIT_MS,
+  );
+}
+
 /** Closes every window and removes the throwaway profiles. */
 export async function closeAll() {
   await Promise.all(contexts.splice(0).map((c) => c.close().catch(() => undefined)));

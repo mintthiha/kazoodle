@@ -26,7 +26,9 @@ export function SecretView({ game, giver, dispatch }: Props) {
   const { names, round } = game;
   const givers = clueGivers(game);
   const seat = givers[giver];
-  const nextSeat = giver + 1 < givers.length ? givers[giver + 1] : round.psychic;
+  const last = giver + 1 >= givers.length;
+  const nextSeat = last ? round.psychic : givers[giver + 1];
+  const lastToTable = last && game.settings.answers === "spoken";
 
   return (
     <main className="screen">
@@ -58,7 +60,9 @@ export function SecretView({ game, giver, dispatch }: Props) {
           </button>
         ) : (
           <button className="primary" disabled={!seen} onClick={() => dispatch({ type: "secretSeen" })}>
-            {t("wl.passOn", { who: names[nextSeat] })}
+            {/* With spoken answers the last Clue Giver puts the phone down for the
+                table instead of handing it to the Psychic. */}
+            {lastToTable ? t("wl.startTalking") : t("wl.passOn", { who: names[nextSeat] })}
           </button>
         )}
       </div>

@@ -21,7 +21,8 @@ import {
 } from "./localGame";
 
 const NAMES = ["Ana", "Ben", "Cleo"];
-const CHOSEN: LocalSettings = { secret: "chosen" };
+const CHOSEN: LocalSettings = { ...DEFAULT_SETTINGS, secret: "chosen" };
+const SPOKEN: LocalSettings = { ...DEFAULT_SETTINGS, answers: "spoken" };
 
 // Always rolls the lowest value, so the secret is always 1.
 const lowRng = () => 0;
@@ -270,6 +271,54 @@ describe("events out of turn", () => {
       expect(step(fresh, ev)).toBe(fresh);
     });
   }
+});
+
+describe("spoken answers", () => {
+  function talking(settings = SPOKEN): LocalGame {
+    let g = apply(newGame(NAMES, settings, lowRng), { type: "begin" });
+    if (settings.secret === "chosen") g = apply(g, { type: "chooseSecret", value: 4 });
+    while (g.stage.kind === "secret") g = apply(g, { type: "secretSeen" });
+    return g;
+  }
+
+  it("puts the phone on the table once every Clue Giver has the number", () => {
+    expect(talking().stage).toEqual({ kind: "talk" });
+  });
+
+  it("works with a number the Clue Givers chose", () => {
+    const g = talking({ answers: "spoken", secret: "chosen" });
+    expect(g.stage).toEqual({ kind: "talk" });
+    expect(g.round.secret).toBe(4);
+  });
+
+  it("goes from talking straight to the guess, with nothing recorded", () => {
+    const g = apply(talking(), { type: "readyToGuess" });
+    expect(g.stage).toEqual({ kind: "guess" });
+    expect(g.round.categories).toEqual([]);
+  });
+
+  it("scores the guess the same way as typed answers", () => {
+    const g = apply(talking(), { type: "readyToGuess" }, { type: "guess", value: 1 });
+    expect(g.stage).toEqual({ kind: "result" });
+    expect(g.scores).toEqual([2, 0, 0]);
+  });
+
+  it("refuses typed categories and answers while talking", () => {
+    const g = talking();
+    expect(step(g, { type: "setCategory", text: "Animals" })).toBe(g);
+    expect(step(g, { type: "submitAnswer", text: "Otter" })).toBe(g);
+  });
+
+  it("ignores readyToGuess outside the talk", () => {
+    const g = playedTo("category");
+    expect(step(g, { type: "readyToGuess" })).toBe(g);
+  });
+
+  it("keeps talking in the next round", () => {
+    const done = apply(talking(), { type: "readyToGuess" }, { type: "guess", value: 1 }, { type: "nextRound" });
+    const g = apply(done, { type: "begin" }, { type: "secretSeen" }, { type: "secretSeen" });
+    expect(g.stage).toEqual({ kind: "talk" });
+  });
 });
 
 describe("leaders", () => {

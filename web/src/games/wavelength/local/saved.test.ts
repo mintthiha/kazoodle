@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS, MAX_PLAYERS, newGame } from "./localGame";
 import { defaultSetup, parseGame, parseSetup } from "./saved";
 
 describe("parseSetup", () => {
-  const good = { names: ["Ana", "", "Cleo"], settings: { secret: "chosen" } };
+  const good = { names: ["Ana", "", "Cleo"], settings: { secret: "chosen", answers: "spoken" } };
   const tests = [
     { name: "nothing saved", json: null, want: defaultSetup() },
     { name: "not JSON", json: "{oops", want: defaultSetup() },
@@ -20,9 +20,14 @@ describe("parseSetup", () => {
       want: { names: defaultSetup().names, settings: good.settings },
     },
     {
-      name: "an unknown secret source",
-      json: JSON.stringify({ ...good, settings: { secret: "psychic" } }),
+      name: "unknown setting values",
+      json: JSON.stringify({ ...good, settings: { secret: "psychic", answers: "mimed" } }),
       want: { names: good.names, settings: DEFAULT_SETTINGS },
+    },
+    {
+      name: "a setup saved before answers could be spoken",
+      json: JSON.stringify({ ...good, settings: { secret: "chosen" } }),
+      want: { names: good.names, settings: { secret: "chosen", answers: "typed" } },
     },
   ];
   for (const tt of tests) {

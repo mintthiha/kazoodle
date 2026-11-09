@@ -360,6 +360,22 @@ const en = {
   "wl.idea.tv": "TV shows",
   "wl.idea.holidays": "Holiday spots",
   "wl.idea.snacks": "Snacks",
+
+  "wl.answersLabel": "How do the Clue Givers answer?",
+  "wl.answersSpoken": "Out loud",
+  "wl.answersTyped": "Typed in",
+  "wl.answersSpokenHelp": "Talk it through at the table. The app only holds the number and takes the guess.",
+  "wl.answersTypedHelp": "Each Clue Giver types their answers in private, and the app keeps them on screen for the Psychic.",
+  "wl.rule.categorySpoken": "The Psychic names a category out loud, like Animals. Each Clue Giver says something from it that matches the number.",
+  "wl.startTalking": "Done, put the phone down",
+  "wl.talkHeading": "Talk it out",
+  "wl.talkCategory": "{who} names a category out loud.",
+  "wl.talkAnswers": "{who} each say something from it that matches the number.",
+  "wl.talkRepeat": "Do that three times, then {who} makes the guess here.",
+  "wl.peekShow": "Clue Givers: check the number",
+  "wl.peekNote": "Keep it away from {who}.",
+  "wl.readyToGuess": "{who} is ready to guess",
+  "wl.suspense": "{who} says…",
 } satisfies Record<string, string>;
 
 export type MessageKey = keyof typeof en;
@@ -719,6 +735,22 @@ const fr: Record<MessageKey, string> = {
   "wl.idea.tv": "Séries télé",
   "wl.idea.holidays": "Destinations de vacances",
   "wl.idea.snacks": "Collations",
+
+  "wl.answersLabel": "Comment répondent les donneurs d’indices ?",
+  "wl.answersSpoken": "À voix haute",
+  "wl.answersTyped": "Par écrit",
+  "wl.answersSpokenHelp": "Tout se dit autour de la table. L’appli garde seulement le nombre et prend la réponse du médium.",
+  "wl.answersTypedHelp": "Chaque donneur d’indices écrit ses réponses en secret, et l’appli les garde à l’écran pour le médium.",
+  "wl.rule.categorySpoken": "Le médium annonce une catégorie à voix haute, comme Animaux. Chaque donneur d’indices dit quelque chose de cette catégorie qui correspond au nombre.",
+  "wl.startTalking": "C’est vu, posez le téléphone",
+  "wl.talkHeading": "À vous de parler",
+  "wl.talkCategory": "{who} annonce une catégorie à voix haute.",
+  "wl.talkAnswers": "{who} disent chacun quelque chose de cette catégorie qui correspond au nombre.",
+  "wl.talkRepeat": "Trois fois, puis {who} donne sa réponse ici.",
+  "wl.peekShow": "Donneurs d’indices : revoir le nombre",
+  "wl.peekNote": "À cacher de {who}.",
+  "wl.readyToGuess": "{who} est prêt(e) à deviner",
+  "wl.suspense": "{who} dit…",
 };
 
 const dictionaries: Record<Locale, Record<MessageKey, string>> = { en, fr };

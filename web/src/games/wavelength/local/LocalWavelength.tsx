@@ -14,6 +14,8 @@ import { RevealView } from "./RevealView";
 import { loadGame, loadSetup, saveGame, saveSetup, type LocalSetup } from "./saved";
 import { SecretView } from "./SecretView";
 import { SetupView } from "./SetupView";
+import { TalkView } from "./TalkView";
+import { useWakeLock } from "../../onephone/useWakeLock";
 import "../../../screens/lobby.css";
 import "../../onephone/onephone.css";
 import "./wavelength.css";
@@ -27,6 +29,10 @@ export function LocalWavelength({ onExit }: LocalGameProps) {
 
   useEffect(() => saveSetup(setup), [setup]);
   useEffect(() => saveGame(game), [game]);
+
+  // A spoken round leaves the phone face up on the table for minutes at a time,
+  // and a screen that locks itself would have to be unlocked for the guess.
+  useWakeLock(game?.stage.kind === "talk");
 
   // The dice are rolled here, outside the state update, and handed in as a fixed
   // value. React may run an update function twice in development to catch impure
@@ -77,6 +83,7 @@ export function LocalWavelength({ onExit }: LocalGameProps) {
       {stage.kind === "secret" && (
         <SecretView key={`${turn}-${stage.giver}`} game={game} giver={stage.giver} dispatch={dispatch} />
       )}
+      {stage.kind === "talk" && <TalkView game={game} onReady={() => dispatch({ type: "readyToGuess" })} />}
       {stage.kind === "category" && <CategoryView key={turn} game={game} dispatch={dispatch} />}
       {stage.kind === "answer" && (
         <AnswerView key={`${turn}-${stage.giver}`} game={game} giver={stage.giver} dispatch={dispatch} />

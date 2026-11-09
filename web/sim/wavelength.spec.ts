@@ -1,10 +1,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { WEB_URL } from "../e2e/support/stack";
 import { buildReplay, type Beat } from "./replay";
-import { closeAll, openOnePhone } from "./windows";
+import { TASTES } from "./tastes";
+import { closeAll, openOnePhone, settled } from "./windows";
 
 // One-phone Wavelength, played by three people round one phone, live on your screen:
 // `npm run sim:wavelength`. Every step asserts what should now be true, so a run
@@ -21,48 +22,6 @@ const OUTPUT = fileURLToPath(new URL("./output/", import.meta.url));
 
 const NAMES = ["Ana", "Ben", "Cleo"];
 
-/** Each Clue Giver's own taste in a category, from least favourite (1) to favourite
- * (10). Two different ladders, so the two answers to one number differ the way two
- * real people's would. */
-const TASTES: Record<string, [string[], string[]]> = {
-  Animals: [
-    ["Mosquito", "Cockroach", "Rat", "Pigeon", "Goat", "Horse", "Penguin", "Dolphin", "Red panda", "Otter"],
-    ["Tick", "Wasp", "Snake", "Seagull", "Cow", "Sheep", "Owl", "Fox", "Elephant", "Dog"],
-  ],
-  Food: [
-    ["Liver", "Olives", "Brussels sprouts", "Tofu", "Rice", "Pasta", "Burritos", "Ramen", "Sushi", "Pizza"],
-    ["Blue cheese", "Anchovies", "Beets", "Cabbage", "Salad", "Soup", "Curry", "Tacos", "Steak", "Poutine"],
-  ],
-  "Movies you've seen": [
-    ["Cats (2019)", "Morbius", "Twilight", "Transformers", "Frozen", "Jaws", "Shrek", "Inception", "Up", "The Lion King"],
-    ["The Room", "Batman & Robin", "Fifty Shades", "Avatar", "Titanic", "Toy Story", "Spirited Away", "Interstellar", "Parasite", "The Matrix"],
-  ],
-  Drinks: [
-    ["Prune juice", "Fernet", "Tomato juice", "Tonic water", "Water", "Iced tea", "Lemonade", "Cold brew", "Bubble tea", "Hot chocolate"],
-    ["Jägermeister", "Kombucha", "Milk", "Diet cola", "Orange juice", "Ginger ale", "Beer", "Matcha latte", "Margarita", "Espresso"],
-  ],
-  "Holiday spots": [
-    ["Airport hotel", "Parking lot", "Gas station", "Theme park", "Cottage", "Paris", "Barcelona", "Lisbon", "Bali", "Kyoto"],
-    ["Mall", "Motel", "Las Vegas", "Cruise ship", "Toronto", "New York", "London", "Rome", "Iceland", "Hawaii"],
-  ],
-  Sports: [
-    ["Golf", "Cricket", "Curling", "Baseball", "Tennis", "Cycling", "Volleyball", "Basketball", "Hockey", "Soccer"],
-    ["Darts", "Bowling", "Fishing", "Running", "Swimming", "Badminton", "Skiing", "Climbing", "Surfing", "Snowboarding"],
-  ],
-  Snacks: [
-    ["Rice cakes", "Celery", "Raisins", "Pretzels", "Popcorn", "Trail mix", "Nachos", "Gummy bears", "Cookies", "Chips"],
-    ["Licorice", "Prunes", "Granola bar", "Crackers", "Apple", "Cheese sticks", "Doritos", "M&Ms", "Brownies", "Ice cream"],
-  ],
-  Cars: [
-    ["Minivan", "Smart car", "Hummer", "Pickup truck", "Civic", "Corolla", "Jeep", "Mustang", "Tesla", "Porsche 911"],
-    ["Monster truck", "Hearse", "School bus", "Station wagon", "Mini", "Beetle", "Volvo", "BMW", "Ferrari", "Lamborghini"],
-  ],
-  Songs: [
-    ["Baby Shark", "Macarena", "Gangnam Style", "Despacito", "Hey Jude", "Wonderwall", "Africa", "Bohemian Rhapsody", "Mr. Brightside", "Dancing Queen"],
-    ["Crazy Frog", "Friday", "Cotton Eye Joe", "Call Me Maybe", "Let It Go", "Yellow", "Hallelujah", "Uptown Funk", "September", "Billie Jean"],
-  ],
-};
-
 /** Each round's Psychic, the categories they ask, and how far off their guess is. */
 const ROUNDS = [
   { categories: ["Animals", "Food", "Movies you've seen"], miss: 0 },
@@ -73,12 +32,6 @@ const ROUNDS = [
 const beats: Beat[] = [];
 const images = new Map<string, string>();
 
-async function settled(page: Page) {
-  await page.evaluate(() =>
-    Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))),
-  );
-}
-
 test("three players, one phone, a whole game of Wavelength", async () => {
   mkdirSync(OUTPUT, { recursive: true });
   const stage = await openOnePhone("The phone", WEB_URL);
@@ -88,9 +41,10 @@ test("three players, one phone, a whole game of Wavelength", async () => {
   const heading = (name: string | RegExp) => page.getByRole("heading", { name });
 
   let act = "Setup";
-  const capture = async (title: string, caption: string, fullPage = false, tag?: string) => {
+  const capture = async (title: string, caption: string, fullPage = false, tag?: string, settle = true) => {
     await narrator?.say(title, caption);
-    await settled(page);
+    // The reveal is the exception: settle = false catches it mid-air.
+    if (settle) await settled(page);
     const jpeg = await page.screenshot({ type: "jpeg", quality: 72, fullPage });
     const id = createHash("sha1").update(jpeg).digest("hex").slice(0, 16);
     images.set(id, jpeg.toString("base64"));
@@ -194,7 +148,7 @@ test("three players, one phone, a whole game of Wavelength", async () => {
       // Off by `miss`, upwards unless that would go past 10.
       const guess = secret + plan.miss <= 10 ? secret + plan.miss : secret - plan.miss;
       await expect(heading(`${psychic}, what’s the number?`)).toBeVisible();
-      await button(String(guess)).click();
+      await page.getByRole("button", { name: String(guess), exact: true }).click();
       await capture(`${psychic} guesses`, `All six answers are on screen to decide from. ${psychic} picks ${guess}.`, true, "Psychic");
       await button(`Guess ${guess}`).click();
 
@@ -202,6 +156,9 @@ test("three players, one phone, a whole game of Wavelength", async () => {
       await expect(heading(won ? `${psychic} read your minds!` : "The Clue Givers win!")).toBeVisible();
       if (won) scores.set(psychic, scores.get(psychic)! + givers.length);
       else for (const giver of givers) scores.set(giver, scores.get(giver)! + 1);
+      // The standings are held back until the end of the reveal, and hidden text
+      // reads as empty, so wait for the last thing the sequence shows.
+      await expect(page.locator(".wl-vs-next")).toBeVisible();
       for (const row of await page.locator(".wl-standing").all()) {
         const name = await row.locator(".roster-name").innerText();
         await expect(row.locator(".wl-score")).toHaveText(String(scores.get(name)));
@@ -228,24 +185,52 @@ test("three players, one phone, a whole game of Wavelength", async () => {
       true,
     );
 
-    // ─── The other way to pick the number ────────────────────────────────────
-    act = "Clue Givers choose the number";
+    // ─── Out loud, with a number the Clue Givers chose ───────────────────────
+    act = "Out loud: nothing to type";
     await button("Change players or settings").click();
+    await page.locator(".choice-option", { hasText: "Out loud" }).click();
     await page.locator(".choice-option", { hasText: "The Clue Givers" }).click();
+    await expect(page.getByText("Talk it through at the table.")).toBeVisible();
+    await capture(
+      "A new game, talked out loud",
+      "Answers out loud, and the Clue Givers choose the number themselves. The rules card now says categories and answers are spoken.",
+      true,
+    );
     await button("Start the game").click();
     await expect(page.getByText("Then Ben enters it.")).toBeVisible();
-    await capture("The other setting", "This time Ben and Cleo agree on a number between themselves, out of Ana's earshot.");
     await button("Start the round").click();
-    await button("7").click();
-    await capture("Ben enters it", "Ben types in the number they agreed on. Cleo will see it on the next slip, which is how they check they agreed.", false, "Clue Giver");
+    await page.getByRole("button", { name: "7", exact: true }).click();
+    await capture("Ben enters the number", "Ben and Cleo agreed on 7 out of Ana's earshot. Ben taps it in so the app can check Ana's guess.", false, "Clue Giver");
     await button("Lock in 7").click();
     await button(/Tap to see the number/).click();
     await expect(page.locator(".wl-slip-number mark")).toHaveText("7");
-    await capture("Cleo checks it", "Same 7. From here the round plays exactly as before.", false, "Clue Giver");
+    await button("Done, put the phone down").click();
+
+    await expect(page.getByRole("heading", { name: "Talk it out" })).toBeVisible();
+    await expect(page.getByRole("textbox")).toHaveCount(0);
+    await capture(
+      "Talk it out",
+      "The phone goes on the table and stays awake. Ana names categories out loud, Ben and Cleo answer out loud, three times over. The app records none of it.",
+    );
+    await button(/Clue Givers: check the number/).click();
+    await expect(page.locator(".wl-peek-number")).toHaveText("7");
+    await capture("Cleo forgets the number", "A Clue Giver can check it on the table, face down until opened, then tap to hide it again.", false, "Clue Giver");
+    await button(/Hide/).click();
+
+    await button("Ana is ready to guess").click();
+    await page.getByRole("button", { name: "4", exact: true }).click();
+    await button("Guess 4").click();
+    await expect(page.getByText("Ana says…")).toBeVisible();
+    await page.waitForTimeout(900);
+    await capture("The reveal", "Ana's guess goes down on a slip and trembles before it turns over to show the real number.", false, undefined, false);
+    await expect(heading("The Clue Givers win!")).toBeVisible({ timeout: 10_000 });
+    await capture("Wrong", "It was 7. A red shutter drops, the room shudders, and Ben and Cleo get a point each. A right guess bursts into yellow with paper flying instead.", true);
 
     if (!HEADLESS) {
       await narrator?.say("That's the whole game", `Every step was checked as it happened. This window closes in ${HOLD} seconds.`);
-      await page.waitForTimeout(HOLD * 1000);
+      // Closing the window early is a fine way to say "seen it", not a failure:
+      // every step has already been checked by now.
+      await page.waitForTimeout(HOLD * 1000).catch(() => undefined);
     }
   } finally {
     await closeAll();

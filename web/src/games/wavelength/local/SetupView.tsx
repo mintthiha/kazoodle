@@ -4,7 +4,7 @@ import { RulesCard } from "../../../screens/RulesCard";
 import { Segmented } from "../../../screens/Segmented";
 import { SeatEditor } from "../../onephone/SeatEditor";
 import { duplicateSeats, resolveNames } from "../../onephone/seats";
-import { SEAT_BOUNDS, type SecretSource } from "./localGame";
+import { SEAT_BOUNDS, type AnswerMode, type LocalSettings, type SecretSource } from "./localGame";
 import type { LocalSetup } from "./saved";
 
 interface Props {
@@ -14,14 +14,17 @@ interface Props {
   onExit: () => void;
 }
 
-const RULES: MessageKey[] = [
-  "wl.rule.roles",
-  "wl.rule.scale",
-  "wl.rule.category",
-  "wl.rule.three",
-  "wl.rule.scoring",
-  "wl.rule.rotate",
-];
+/** The rules as this group will play them: only the line about answering changes. */
+function rulesFor(answers: AnswerMode): MessageKey[] {
+  return [
+    "wl.rule.roles",
+    "wl.rule.scale",
+    answers === "spoken" ? "wl.rule.categorySpoken" : "wl.rule.category",
+    "wl.rule.three",
+    "wl.rule.scoring",
+    "wl.rule.rotate",
+  ];
+}
 
 // Who is playing and who picks the number. Everything else about a round is
 // decided while playing it, so this is short on purpose.
@@ -29,6 +32,10 @@ export function SetupView({ setup, onChange, onStart, onExit }: Props) {
   const { t } = useT();
   const { names, settings } = setup;
   const clashes = duplicateSeats(resolveNames(names, (n) => t("local.playerN", { n })));
+
+  function pick(change: Partial<LocalSettings>) {
+    onChange({ ...setup, settings: { ...settings, ...change } });
+  }
 
   return (
     <>
@@ -40,6 +47,21 @@ export function SetupView({ setup, onChange, onStart, onExit }: Props) {
 
         <section className="setup">
           <div>
+            <Segmented<AnswerMode>
+              name="answers"
+              legend={t("wl.answersLabel")}
+              value={settings.answers}
+              options={[
+                { value: "spoken", label: t("wl.answersSpoken") },
+                { value: "typed", label: t("wl.answersTyped") },
+              ]}
+              onChange={(answers) => pick({ answers })}
+            />
+            <p className="status local-help">
+              {settings.answers === "spoken" ? t("wl.answersSpokenHelp") : t("wl.answersTypedHelp")}
+            </p>
+          </div>
+          <div>
             <Segmented<SecretSource>
               name="secret"
               legend={t("wl.secretLabel")}
@@ -48,7 +70,7 @@ export function SetupView({ setup, onChange, onStart, onExit }: Props) {
                 { value: "random", label: t("wl.secretRandom") },
                 { value: "chosen", label: t("wl.secretChosen") },
               ]}
-              onChange={(secret) => onChange({ ...setup, settings: { ...settings, secret } })}
+              onChange={(secret) => pick({ secret })}
             />
             <p className="status local-help">
               {settings.secret === "random" ? t("wl.secretRandomHelp") : t("wl.secretChosenHelp")}
@@ -56,7 +78,7 @@ export function SetupView({ setup, onChange, onStart, onExit }: Props) {
           </div>
         </section>
 
-        <RulesCard rules={RULES} />
+        <RulesCard rules={rulesFor(settings.answers)} />
 
         <div className="dock">
           {clashes.size > 0 && <p className="hint">{t("wl.duplicateName")}</p>}

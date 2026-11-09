@@ -14,7 +14,8 @@
     "test:e2e:watch": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
     "sim": "playwright test --config playwright.sim.config.ts sim/simulation.spec.ts",
-    "sim:wavelength": "playwright test --config playwright.sim.config.ts sim/wavelength.spec.ts"
+    "sim:wavelength": "playwright test --config playwright.sim.config.ts sim/wavelength.spec.ts",
+    "sim:wavelength:spoken": "playwright test --config playwright.sim.config.ts sim/wavelength-spoken.spec.ts"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.14.1",

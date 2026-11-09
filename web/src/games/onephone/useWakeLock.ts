@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 
-/** Keeps the screen on while `active`. In auto mode the phone sits on the table
- * untouched, and a screen that dims after 30 seconds would stop the turn clock
- * in the middle of the round.
+/** Keeps the screen on while `active`, for the stretches when the phone sits on the
+ * table untouched: Imposter's auto mode, or a spoken round of Wavelength. A screen
+ * that dims after 30 seconds would stop Imposter's turn clock mid-round, and would
+ * leave a Wavelength table unlocking the phone just to make the guess.
  *
  * Best effort by design. Plain http and some browsers have no wake lock, and the
  * request can be refused (low battery), in which case the game still works and

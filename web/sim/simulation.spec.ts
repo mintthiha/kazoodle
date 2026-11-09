@@ -15,7 +15,7 @@ import {
   type Role,
 } from "../e2e/support/table";
 import { buildReplay, type Beat, type Shot } from "./replay";
-import { closeAll, measureWindows, openOnePhone, openTable, type Narrator } from "./windows";
+import { closeAll, measureWindows, openOnePhone, openTable, settled, type Narrator } from "./windows";
 
 // A whole party, played live on your screen against the real server: `npm run sim`.
 //
@@ -52,14 +52,6 @@ function save(jpeg: Buffer): string {
   const id = createHash("sha1").update(jpeg).digest("hex").slice(0, 16);
   images.set(id, jpeg.toString("base64"));
   return id;
-}
-
-/** Waits out anything still moving, so a frame shows where a screen ends up. The
- * verdict's sequence is the exception, and passes settle = false to catch it mid-air. */
-async function settled(page: Page) {
-  await page.evaluate(() =>
-    Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))),
-  );
 }
 
 async function shot(

@@ -26,7 +26,8 @@ export function GuessView({ game, dispatch }: Props) {
 
       <NumberPad label={t("wl.pickNumber")} value={picked} onPick={setPicked} />
 
-      <Board game={game} />
+      {/* Spoken rounds have nothing written down to show. */}
+      {game.round.categories.length > 0 && <Board game={game} />}
 
       <div className="dock">
         <button

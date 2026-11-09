@@ -26,7 +26,10 @@ export function defaultSetup(): LocalSetup {
 
 function parseSettings(value: unknown): LocalSettings {
   const s = value as Partial<LocalSettings> | null;
-  return { secret: s?.secret === "chosen" ? "chosen" : DEFAULT_SETTINGS.secret };
+  return {
+    secret: s?.secret === "chosen" ? "chosen" : DEFAULT_SETTINGS.secret,
+    answers: s?.answers === "spoken" ? "spoken" : DEFAULT_SETTINGS.answers,
+  };
 }
 
 /** Reads a saved setup, falling back to the defaults for anything that does not

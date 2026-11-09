@@ -268,12 +268,6 @@ button.wl-idea {
   transform: rotate(1deg);
 }
 
-/* A guess that matched is the round's win, so it gets the winning colour too. */
-.wl-reveal-guess[data-hit="true"] {
-  background: var(--accent);
-  color: var(--on-colour);
-}
-
 .wl-reveal-label {
   font-size: var(--fs-small);
   font-weight: 500;
@@ -375,26 +369,500 @@ button.wl-idea {
     animation-delay: 360ms;
   }
 
-  /* The result: the real number lands first, then the guess beside it. */
-  .wl-result .wl-reveal-secret {
-    animation: wl-land 360ms var(--ease-out) 80ms backwards;
+}
+
+/* A spoken round: the steps, and a way for a Clue Giver to check the number. */
+.wl-talk {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 18px 20px 20px 2.25rem;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  font-size: var(--fs-lead);
+  line-height: 1.4;
+}
+
+.wl-talk li::marker {
+  color: var(--faint);
+  font-weight: 600;
+}
+
+button.wl-peek {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 8px 20px;
+  border-radius: 14px;
+  background: var(--surface);
+  font-size: var(--fs-body);
+  text-align: left;
+}
+
+.wl-peek-note {
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.wl-peek-number {
+  font-family: var(--display);
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.wl-peek-number mark {
+  padding: 0 0.12em;
+  background: var(--accent);
+  color: var(--paper-ink);
+}
+
+.wl-peek-action {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   The result.
+
+   Every rule outside the media query below describes the FINISHED screen. The
+   animations hold each piece back until its moment, so skipping, reduced motion
+   and the end of the sequence are all the same screen.
+   -------------------------------------------------------------------------- */
+.wl-vs {
+  /* The beats of the sequence, on one clock. */
+  --t-flip: 1.5s;
+  --t-hit: 2.15s;
+  --t-headline: 2.5s;
+
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--ground);
+  color: var(--on-colour);
+}
+
+.wl-vs-field {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+}
+
+.wl-vs[data-side="hit"] .wl-vs-field {
+  background: var(--accent);
+}
+
+.wl-vs[data-side="miss"] .wl-vs-field {
+  background: var(--negative);
+}
+
+.wl-vs-result {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding-top: clamp(32px, 8dvh, 72px);
+  gap: 18px;
+}
+
+.wl-vs-headline {
+  font-size: clamp(2.5rem, 13vw, 4.25rem);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+
+.wl-vs-line {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+/* On a field of colour the guess is the black card, and the standings go dark on
+   light, with the leader inverted. */
+.wl-vs .wl-reveal-guess {
+  background: var(--ground);
+  color: var(--text);
+}
+
+.wl-vs .wl-standing {
+  background: rgb(0 0 0 / 0.1);
+  color: var(--on-colour);
+}
+
+.wl-vs .wl-standing[data-lead="true"] {
+  background: var(--ground);
+  color: var(--text);
+}
+
+/* As specific as the leader's rule further up, and later, so it wins: otherwise
+   the leader's +2 would be drawn black on their black row. */
+.wl-vs .wl-standing .wl-delta {
+  color: inherit;
+}
+
+.wl-vs-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* The primary action, inverted against what is behind it: here, a field of colour. */
+button.wl-vs-next {
+  background: var(--ground);
+  color: var(--text);
+}
+
+.wl-vs button:focus-visible {
+  outline-color: var(--on-colour);
+}
+
+/* Only ever seen while the sequence plays. */
+.wl-vs-suspense {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: var(--margin);
+  color: var(--text);
+  visibility: hidden;
+}
+
+.wl-vs-question {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.wl-vs-tremble {
+  width: min(64%, 14rem);
+  perspective: 900px;
+}
+
+.wl-vs-card {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  transform-style: preserve-3d;
+}
+
+.wl-vs-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: var(--radius-slip);
+  backface-visibility: hidden;
+}
+
+/* The guess, on the dark card it has on the result. */
+.wl-vs-front {
+  background: var(--raised);
+  color: var(--text);
+}
+
+/* The real number, on paper; on yellow when the guess was right. */
+.wl-vs-back {
+  transform: rotateY(180deg);
+  background: var(--paper);
+  color: var(--paper-ink);
+}
+
+.wl-vs[data-side="hit"] .wl-vs-back {
+  background: var(--accent);
+  color: var(--on-colour);
+}
+
+.wl-vs-digit {
+  font-family: var(--display);
+  font-size: 7rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.wl-vs-label {
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+
+.wl-vs-flying {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.wl-peek:hover {
+    background: var(--surface-hover);
   }
 
-  .wl-result .wl-reveal-guess {
-    animation: wl-land-guess 360ms var(--ease-out) 320ms backwards;
+  button.wl-vs-next:hover {
+    background: #1c1c1c;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Act one: the guess goes down on the table. */
+  .wl-vs-live .wl-vs-suspense {
+    animation: wl-vs-hold calc(var(--t-hit) + 0.5s) step-end both;
   }
 
-  @keyframes wl-land {
+  @keyframes wl-vs-hold {
     from {
-      opacity: 0;
-      transform: translateY(-16px) rotate(3deg) scale(1.08);
+      visibility: visible;
+    }
+    to {
+      visibility: hidden;
     }
   }
 
-  @keyframes wl-land-guess {
+  .wl-vs-live .wl-vs-question {
+    animation: wl-vs-fade 280ms ease-out 100ms both;
+  }
+
+  @keyframes wl-vs-fade {
     from {
       opacity: 0;
-      transform: translateY(-16px) rotate(-2deg) scale(1.08);
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Act two: it trembles, more and more. The shaking is on this wrapper and the
+     turn on the card inside it, because two animations on one element would
+     fight over its transform. */
+  .wl-vs-live .wl-vs-tremble {
+    animation:
+      wl-vs-slap 240ms cubic-bezier(0.3, 0, 0.2, 1) both,
+      wl-vs-tremble 1.26s linear 240ms;
+  }
+
+  @keyframes wl-vs-slap {
+    from {
+      opacity: 0;
+      transform: scale(1.5) rotate(-5deg);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) rotate(-1deg);
+    }
+  }
+
+  @keyframes wl-vs-tremble {
+    0% {
+      transform: rotate(-1deg);
+    }
+    20% {
+      transform: rotate(-0.4deg) translateX(1px);
+    }
+    40% {
+      transform: rotate(-1.8deg) translateX(-2px);
+    }
+    58% {
+      transform: rotate(0.6deg) translateX(3px) scale(1.01);
+    }
+    74% {
+      transform: rotate(-2.6deg) translateX(-3px) scale(1.03);
+    }
+    88% {
+      transform: rotate(1.6deg) translateX(4px) scale(1.04);
+    }
+    100% {
+      transform: rotate(-1deg) scale(1.05);
+    }
+  }
+
+  /* Act three: it turns over to the real number. */
+  .wl-vs-live .wl-vs-card {
+    animation: wl-vs-turn 460ms cubic-bezier(0.5, 0, 0.15, 1) var(--t-flip) forwards;
+  }
+
+  @keyframes wl-vs-turn {
+    from {
+      transform: rotateY(0deg);
+    }
+    to {
+      transform: rotateY(180deg);
+    }
+  }
+
+  /* Act four, right: colour bursts out of the middle of the slip. */
+  .wl-vs-live[data-side="hit"] .wl-vs-field {
+    animation: wl-vs-burst 560ms cubic-bezier(0.16, 0.84, 0.3, 1) var(--t-hit) both;
+  }
+
+  @keyframes wl-vs-burst {
+    from {
+      clip-path: circle(0% at 50% 50%);
+    }
+    to {
+      clip-path: circle(150% at 50% 50%);
+    }
+  }
+
+  /* Act four, wrong: a shutter drops over the room, and the room takes the blow. */
+  .wl-vs-live[data-side="miss"] .wl-vs-field {
+    animation: wl-vs-shutter 380ms cubic-bezier(0.55, 0, 1, 0.45) var(--t-hit) both;
+  }
+
+  @keyframes wl-vs-shutter {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .wl-vs-live[data-side="miss"] {
+    animation: wl-vs-shudder 400ms linear calc(var(--t-hit) + 360ms);
+  }
+
+  @keyframes wl-vs-shudder {
+    0%,
+    100% {
+      transform: none;
+    }
+    15% {
+      transform: translate(-8px, 6px) rotate(-0.6deg);
+    }
+    35% {
+      transform: translate(7px, -5px) rotate(0.5deg);
+    }
+    55% {
+      transform: translate(-5px, 3px) rotate(-0.3deg);
+    }
+    78% {
+      transform: translate(2px, -1px);
+    }
+  }
+
+  /* The paper thrown up by a right guess. --x, --y, --spin and --wait are each
+     between 0 and 1, set per slip in ResultView. */
+  .wl-vs-live .wl-vs-flying {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    display: block;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .wl-vs-fly {
+    --throw-x: calc((var(--x) - 0.5) * 120vw);
+    --throw-y: calc(-20vh - var(--y) * 34vh);
+    --turn: calc((var(--spin) - 0.5) * 1800deg);
+
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(10px + var(--spin) * 10px);
+    height: calc(16px + var(--y) * 14px);
+    border-radius: 1px;
+    background: var(--paper);
+    animation: wl-vs-thrown calc(1.5s + var(--y) * 0.9s) linear calc(var(--t-hit) + var(--wait) * 120ms)
+      both;
+  }
+
+  .wl-vs-fly:nth-child(3n) {
+    background: var(--paper-ink);
+  }
+
+  @keyframes wl-vs-thrown {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0) rotate(0deg);
+      animation-timing-function: cubic-bezier(0.1, 0.7, 0.4, 1);
+    }
+    2% {
+      opacity: 1;
+    }
+    32% {
+      transform: translate(calc(var(--throw-x) * 0.62), var(--throw-y)) rotate(calc(var(--turn) * 0.35));
+      animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.5);
+    }
+    100% {
+      opacity: 1;
+      transform: translate(var(--throw-x), 70vh) rotate(var(--turn));
+    }
+  }
+
+  /* Act five: the headline lands, then the rest is there to read. Hidden, not just
+     transparent, so a tap cannot hit Next round before anyone has seen the result. */
+  .wl-vs-live .wl-vs-headline {
+    animation: wl-vs-slam 320ms cubic-bezier(0.3, 0, 0.1, 1) var(--t-headline) both;
+  }
+
+  @keyframes wl-vs-slam {
+    from {
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(1.8);
+    }
+    to {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1);
+    }
+  }
+
+  .wl-vs-live .wl-reveal,
+  .wl-vs-live .wl-vs-line,
+  .wl-vs-live .wl-vs-result section,
+  .wl-vs-live .wl-vs-actions {
+    animation: wl-vs-settle 280ms ease-out both;
+  }
+
+  .wl-vs-live .wl-reveal {
+    animation-delay: calc(var(--t-headline) + 280ms);
+  }
+
+  .wl-vs-live .wl-vs-line {
+    animation-delay: calc(var(--t-headline) + 420ms);
+  }
+
+  .wl-vs-live .wl-vs-result section {
+    animation-delay: calc(var(--t-headline) + 560ms);
+  }
+
+  .wl-vs-live .wl-vs-actions {
+    animation-delay: calc(var(--t-headline) + 720ms);
+  }
+
+  @keyframes wl-vs-settle {
+    from {
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
     }
   }
 }

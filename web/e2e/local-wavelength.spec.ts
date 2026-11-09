@@ -4,6 +4,8 @@ const NAMES = ["Ana", "Ben", "Cleo"];
 
 const button = (page: Page, name: string | RegExp) => page.getByRole("button", { name });
 const heading = (page: Page, name: string | RegExp) => page.getByRole("heading", { name });
+/** A key on the number pad. Exact, or "1" would also match "10". */
+const key = (page: Page, n: number) => page.getByRole("button", { name: String(n), exact: true });
 
 async function openSetup(page: Page) {
   await page.goto("/");
@@ -79,10 +81,44 @@ async function playRound(page: Page, names: string[], psychicSeat: number, right
 
   const guess = right ? secret : secret === 10 ? 9 : secret + 1;
   await expect(heading(page, `${psychic}, what’s the number?`)).toBeVisible();
-  await button(page, String(guess)).click();
+  await key(page, guess).click();
   await button(page, `Guess ${guess}`).click();
+  await skipSequence(page);
   await expect(heading(page, right ? `${psychic} read your minds!` : "The Clue Givers win!")).toBeVisible();
   return secret;
+}
+
+/** Skips the reveal, by tapping a corner where no button can be. */
+const skipSequence = (page: Page) => page.locator(".wl-vs").click({ position: { x: 10, y: 10 } });
+
+/** The colour of the reveal's field, once it has settled. */
+const fieldColour = (page: Page) =>
+  page.locator(".wl-vs-field").evaluate((el) => getComputedStyle(el).backgroundColor);
+const YELLOW = "rgb(255, 214, 10)";
+const RED = "rgb(229, 72, 77)";
+
+/** A spoken round from the intro to the talk: each Clue Giver reads the number,
+ * the last one puts the phone down. Returns the number. */
+async function spokenToTalk(page: Page, givers: string[], psychic: string): Promise<number> {
+  await expect(heading(page, `${psychic} is the Psychic`)).toBeVisible();
+  await button(page, "Start the round").click();
+  let secret = 0;
+  for (const [i, giver] of givers.entries()) {
+    await expect(heading(page, `Pass the phone to ${giver}`)).toBeVisible();
+    await button(page, /Tap to see the number/).click();
+    secret = Number(await page.locator(".wl-slip-number mark").innerText());
+    const last = i === givers.length - 1;
+    await button(page, last ? "Done, put the phone down" : `Done, pass it to ${givers[i + 1]}`).click();
+  }
+  await expect(heading(page, "Talk it out")).toBeVisible();
+  return secret;
+}
+
+async function startSpoken(page: Page) {
+  await openSetup(page);
+  await enterNames(page, NAMES);
+  await page.locator(".choice-option", { hasText: "Out loud" }).click();
+  await button(page, "Start the game").click();
 }
 
 test("a whole game: everyone is the Psychic once, and the scores add up", async ({ page }) => {
@@ -122,7 +158,7 @@ test("the Clue Givers can choose the number themselves", async ({ page }) => {
   await button(page, "Start the round").click();
 
   await expect(heading(page, "Pass the phone to Ben")).toBeVisible();
-  await button(page, "7").click();
+  await key(page, 7).click();
   await button(page, "Lock in 7").click();
 
   // The next Clue Giver reads it back, which is how the table checks they agreed.
@@ -170,4 +206,73 @@ test("no screen scrolls sideways on a phone", async ({ page }) => {
   await button(page, "Start the round").click();
   await button(page, /Tap to see the number/).click();
   expect(await fits()).toBe(true);
+});
+
+test.describe("answers out loud", () => {
+  test("the app only deals the number and takes the guess", async ({ page }) => {
+    await startSpoken(page);
+    const secret = await spokenToTalk(page, ["Ben", "Cleo"], "Ana");
+
+    // Nothing to type anywhere in the round.
+    await expect(page.getByRole("textbox")).toHaveCount(0);
+    await expect(page.getByText("Ben and Cleo each say something")).toBeVisible();
+
+    // The number is face down on the table until a Clue Giver opens it.
+    await expect(page.locator(".wl-peek-number")).toHaveCount(0);
+    await button(page, /Clue Givers: check the number/).click();
+    await expect(page.locator(".wl-peek-number")).toHaveText(String(secret));
+    await button(page, /Hide/).click();
+    await expect(page.locator(".wl-peek-number")).toHaveCount(0);
+
+    await button(page, "Ana is ready to guess").click();
+    await expect(heading(page, "Ana, what’s the number?")).toBeVisible();
+    await expect(page.locator(".wl-board")).toHaveCount(0);
+    await key(page, secret).click();
+    await button(page, `Guess ${secret}`).click();
+
+    await skipSequence(page);
+    await expect(heading(page, "Ana read your minds!")).toBeVisible();
+    expect(await fieldColour(page)).toBe(YELLOW);
+    await expect(page.locator(".wl-standing").first()).toContainText("Ana");
+  });
+
+  test("a wrong guess goes red, and the next round talks too", async ({ page }) => {
+    await startSpoken(page);
+    const secret = await spokenToTalk(page, ["Ben", "Cleo"], "Ana");
+    await button(page, "Ana is ready to guess").click();
+    const guess = secret === 10 ? 1 : 10;
+    await key(page, guess).click();
+    await button(page, `Guess ${guess}`).click();
+
+    await skipSequence(page);
+    await expect(heading(page, "The Clue Givers win!")).toBeVisible();
+    expect(await fieldColour(page)).toBe(RED);
+
+    await button(page, "Next round: Ben is the Psychic").click();
+    await spokenToTalk(page, ["Cleo", "Ana"], "Ben");
+  });
+
+  test("the reveal plays through on its own, guess first", async ({ page }) => {
+    await startSpoken(page);
+    const secret = await spokenToTalk(page, ["Ben", "Cleo"], "Ana");
+    await button(page, "Ana is ready to guess").click();
+    await key(page, secret).click();
+    await button(page, `Guess ${secret}`).click();
+
+    // Mid-sequence: the guess is on the slip and the result is held back.
+    await expect(page.getByText("Ana says…")).toBeVisible();
+    await expect(page.locator(".wl-vs-front .wl-vs-digit")).toHaveText(String(secret));
+    await expect(heading(page, "Ana read your minds!")).toBeHidden();
+
+    // Nobody taps, and it lands.
+    await expect(heading(page, "Ana read your minds!")).toBeVisible({ timeout: 8_000 });
+    await expect(button(page, "Next round: Ben is the Psychic")).toBeVisible();
+  });
+
+  test("the setting is remembered for the next game", async ({ page }) => {
+    await startSpoken(page);
+    await button(page, "End game").click();
+    await button(page, "End game?").click();
+    await expect(page.getByRole("radio", { name: "Out loud" })).toBeChecked();
+  });
 });

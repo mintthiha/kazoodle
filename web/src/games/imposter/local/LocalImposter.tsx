@@ -11,7 +11,7 @@ import { loadGame, loadSetup, saveGame, saveSetup, type LocalSetup } from "./sav
 import { SetupView } from "./SetupView";
 import { unlockSound } from "./sound";
 import { TwoTapButton } from "../../onephone/TwoTapButton";
-import { useWakeLock } from "./useWakeLock";
+import { useWakeLock } from "../../onephone/useWakeLock";
 import { VerdictView } from "./VerdictView";
 import "../imposter.css";
 import "../../../screens/lobby.css";
