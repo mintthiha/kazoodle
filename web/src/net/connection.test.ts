@@ -324,6 +324,23 @@ describe("Connection", () => {
       });
     });
 
+    it("a main screen whose seat has gone rejoins as a main screen", () => {
+      const store = fakeStore();
+      const before = withStore(store);
+      before.start();
+      sockets[0].open();
+      before.actions.createRoom("", "en", true);
+      sockets[0].receive(seat);
+
+      const after = withStore(store);
+      after.start();
+      sockets[1].open();
+      sockets[1].receive({ error: { code: "session_expired", message: "gone" } });
+      expect(JSON.parse(sockets[1].sent[1])).toEqual({
+        joinRoom: { roomCode: "ABCD", locale: "en", screen: true },
+      });
+    });
+
     it("falls back to the saved name when that seat has gone", () => {
       const store = fakeStore();
       const before = withStore(store);
@@ -345,6 +362,7 @@ describe("Connection", () => {
       { name: "leaving the room", act: (c) => c.actions.leaveRoom() },
       { name: "the room being gone", act: () => sockets[0].receive({ error: { code: "room_not_found" } }) },
       { name: "another tab taking the seat", act: () => sockets[0].receive({ error: { code: "session_replaced" } }) },
+      { name: "being removed by the host", act: () => sockets[0].receive({ error: { code: "kicked" } }) },
     ];
     for (const tt of forgets) {
       it(`${tt.name} forgets the seat`, () => {
@@ -576,5 +594,73 @@ describe("Connection", () => {
     expect(JSON.parse(sockets[0].sent[0])).toEqual({
       gameAction: { gameId: "imposter", payload: '{"markReady":{}}' },
     });
+  });
+});
+
+describe("Connection: main screens and removal", () => {
+  let sockets: FakeSocket[];
+  let conn: Connection;
+
+  beforeEach(() => {
+    sockets = [];
+    conn = new Connection("ws://test/ws", {
+      socketFactory: () => {
+        const s = new FakeSocket();
+        sockets.push(s);
+        return s;
+      },
+    });
+    conn.start();
+    sockets[0].open();
+  });
+
+  it("creates a room as a main screen", () => {
+    conn.actions.createRoom("", "fr", true);
+    expect(JSON.parse(sockets[0].sent[0])).toEqual({ createRoom: { locale: "fr", screen: true } });
+  });
+
+  it("marks a main screen on the roster and leaves players plain", () => {
+    conn.actions.joinRoom("ABCD", "Ana", "en");
+    sockets[0].receive(
+      roomJoined({
+        selfPlayerId: "p2",
+        players: [
+          { id: "tv", displayName: "", screen: true },
+          { id: "p2", displayName: "Ana" },
+        ],
+      }),
+    );
+    sockets[0].receive({ playerJoined: { player: { id: "p3", displayName: "Ben" } } });
+    expect(conn.getSnapshot().room?.players).toEqual([
+      { id: "tv", displayName: "", screen: true },
+      { id: "p2", displayName: "Ana" },
+      { id: "p3", displayName: "Ben" },
+    ]);
+  });
+
+  it("sends a kick only from inside a room", () => {
+    conn.actions.kickPlayer("p2");
+    expect(sockets[0].sent).toEqual([]);
+
+    conn.actions.createRoom("Ana", "en");
+    sockets[0].receive(roomJoined());
+    sockets[0].sent.length = 0;
+    conn.actions.kickPlayer("p2");
+    expect(JSON.parse(sockets[0].sent[0])).toEqual({ kickPlayer: { playerId: "p2" } });
+  });
+
+  it("a removed player leaves the room and says why", () => {
+    conn.actions.joinRoom("ABCD", "Ana", "en");
+    sockets[0].receive(roomJoined());
+    sockets[0].receive({ gameStarted: { gameId: "fibblash" } });
+    sockets[0].sent.length = 0;
+
+    sockets[0].receive({ error: { code: "kicked" } });
+    const snap = conn.getSnapshot();
+    expect(snap.room).toBeNull();
+    expect(snap.game).toBeNull();
+    expect(snap.lastError).toBe("kicked");
+    // LeaveRoom frees this socket to join another room.
+    expect(JSON.parse(sockets[0].sent[0])).toEqual({ leaveRoom: {} });
   });
 });

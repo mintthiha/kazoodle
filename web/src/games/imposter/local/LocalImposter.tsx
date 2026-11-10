@@ -10,7 +10,7 @@ import { newGame, step, type LocalEvent, type LocalGame, type Stage } from "./lo
 import { loadGame, loadSetup, saveGame, saveSetup, type LocalSetup } from "./saved";
 import { SetupView } from "./SetupView";
 import { unlockSound } from "./sound";
-import { TwoTapButton } from "../../onephone/TwoTapButton";
+import { TwoTapButton } from "../../../screens/TwoTapButton";
 import { useWakeLock } from "../../onephone/useWakeLock";
 import { VerdictView } from "./VerdictView";
 import "../imposter.css";

@@ -31,6 +31,16 @@ type Event struct {
 	// than a player acting. A pointer, so the zero Event stays a plain
 	// player event and every existing game keeps compiling.
 	Timer *TimerFired
+
+	// FromHost is true when the acting player is the room's host at the
+	// moment the event is handled. The room decides who the host is (and
+	// moves the role when the host drops), so a game that has host-only
+	// controls — skip the question, end the match — asks this rather than
+	// keeping its own idea of who is in charge.
+	//
+	// The host can be a main screen that was never dealt in, so a host
+	// action may come from a PlayerID the game has no seat for.
+	FromHost bool
 }
 
 // IsTimer reports whether this event is an expired timer rather than a player

@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import { useT } from "../../../i18n";
 import { Avatar } from "../../../players/Avatar";
-import { Countdown } from "../Countdown";
+import { Countdown } from "../../../clock/Countdown";
 import { speakerSeat, type LocalEvent, type LocalGame, type Stage } from "./localGame";
 import { makeSeatHue } from "../../onephone/seatHue";
 import { playTurnEnd } from "./sound";

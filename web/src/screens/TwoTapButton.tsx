@@ -8,8 +8,9 @@ interface Props {
   onConfirm: () => void;
 }
 
-// For things that cannot be taken back. This phone is being passed between people,
-// and one stray thumb should not throw away a game or a list someone typed by hand.
+// For things that cannot be taken back: the first tap arms it, the second does
+// it. A phone passed between people, or a host ending a match for the whole
+// room, should not be one stray thumb away from losing a game.
 export function TwoTapButton({ label, confirmLabel, onConfirm }: Props) {
   const [armed, setArmed] = useState(false);
 

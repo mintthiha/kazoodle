@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file protocol.proto.
  */
 export const file_protocol: GenFile = /*@__PURE__*/
-  fileDesc("Cg5wcm90b2NvbC5wcm90bxINcGFydHlnYW1lcy52MSIqCgZQbGF5ZXISCgoCaWQYASABKAkSFAoMZGlzcGxheV9uYW1lGAIgASgJIp4DCg1DbGllbnRNZXNzYWdlEjAKC2NyZWF0ZV9yb29tGAEgASgLMhkucGFydHlnYW1lcy52MS5DcmVhdGVSb29tSAASLAoJam9pbl9yb29tGAIgASgLMhcucGFydHlnYW1lcy52MS5Kb2luUm9vbUgAEi4KCmxlYXZlX3Jvb20YAyABKAsyGC5wYXJ0eWdhbWVzLnYxLkxlYXZlUm9vbUgAEiMKBGVjaG8YBCABKAsyEy5wYXJ0eWdhbWVzLnYxLkVjaG9IABIuCgpzdGFydF9nYW1lGAUgASgLMhgucGFydHlnYW1lcy52MS5TdGFydEdhbWVIABIwCgtnYW1lX2FjdGlvbhgGIAEoCzIZLnBhcnR5Z2FtZXMudjEuR2FtZUFjdGlvbkgAEjkKEHNldF9nYW1lX29wdGlvbnMYByABKAsyHS5wYXJ0eWdhbWVzLnYxLlNldEdhbWVPcHRpb25zSAASMAoLcmVzdW1lX3Jvb20YCCABKAsyGS5wYXJ0eWdhbWVzLnYxLlJlc3VtZVJvb21IAEIJCgdwYXlsb2FkIjIKCkNyZWF0ZVJvb20SFAoMZGlzcGxheV9uYW1lGAEgASgJEg4KBmxvY2FsZRgCIAEoCSJDCghKb2luUm9vbRIRCglyb29tX2NvZGUYASABKAkSFAoMZGlzcGxheV9uYW1lGAIgASgJEg4KBmxvY2FsZRgDIAEoCSILCglMZWF2ZVJvb20iNgoKUmVzdW1lUm9vbRIRCglyb29tX2NvZGUYASABKAkSFQoNc2Vzc2lvbl90b2tlbhgCIAEoCSIUCgRFY2hvEgwKBHRleHQYASABKAkiLQoJU3RhcnRHYW1lEg8KB2dhbWVfaWQYASABKAkSDwoHb3B0aW9ucxgCIAEoCSIuCgpHYW1lQWN0aW9uEg8KB2dhbWVfaWQYASABKAkSDwoHcGF5bG9hZBgCIAEoCSIyCg5TZXRHYW1lT3B0aW9ucxIPCgdnYW1lX2lkGAEgASgJEg8KB29wdGlvbnMYAiABKAki1gQKDVNlcnZlck1lc3NhZ2USMAoLcm9vbV9qb2luZWQYASABKAsyGS5wYXJ0eWdhbWVzLnYxLlJvb21Kb2luZWRIABI0Cg1wbGF5ZXJfam9pbmVkGAIgASgLMhsucGFydHlnYW1lcy52MS5QbGF5ZXJKb2luZWRIABIwCgtwbGF5ZXJfbGVmdBgDIAEoCzIZLnBhcnR5Z2FtZXMudjEuUGxheWVyTGVmdEgAEjAKC2VjaG9fcmVzdWx0GAQgASgLMhkucGFydHlnYW1lcy52MS5FY2hvUmVzdWx0SAASKQoFZXJyb3IYBSABKAsyGC5wYXJ0eWdhbWVzLnYxLkVycm9ySW5mb0gAEjIKDGhvc3RfY2hhbmdlZBgGIAEoCzIaLnBhcnR5Z2FtZXMudjEuSG9zdENoYW5nZWRIABIyCgxnYW1lX3N0YXJ0ZWQYByABKAsyGi5wYXJ0eWdhbWVzLnYxLkdhbWVTdGFydGVkSAASLgoKZ2FtZV9ldmVudBgIIAEoCzIYLnBhcnR5Z2FtZXMudjEuR2FtZUV2ZW50SAASLgoKZ2FtZV9lbmRlZBgJIAEoCzIYLnBhcnR5Z2FtZXMudjEuR2FtZUVuZGVkSAASQQoUZ2FtZV9vcHRpb25zX2NoYW5nZWQYCiABKAsyIS5wYXJ0eWdhbWVzLnYxLkdhbWVPcHRpb25zQ2hhbmdlZEgAEjgKD3BsYXllcl9wcmVzZW5jZRgLIAEoCzIdLnBhcnR5Z2FtZXMudjEuUGxheWVyUHJlc2VuY2VIAEIJCgdwYXlsb2FkIuEBCgpSb29tSm9pbmVkEhEKCXJvb21fY29kZRgBIAEoCRIWCg5zZWxmX3BsYXllcl9pZBgCIAEoCRImCgdwbGF5ZXJzGAMgAygLMhUucGFydHlnYW1lcy52MS5QbGF5ZXISDwoHaG9zdF9pZBgEIAEoCRIVCg1zZXNzaW9uX3Rva2VuGAUgASgJEg8KB3Jlc3VtZWQYBiABKAgSFgoOYWN0aXZlX2dhbWVfaWQYByABKAkSEwoLZ2FtZV9ldmVudHMYCCADKAkSGgoSb2ZmbGluZV9wbGF5ZXJfaWRzGAkgAygJIjYKDlBsYXllclByZXNlbmNlEhEKCXBsYXllcl9pZBgBIAEoCRIRCgljb25uZWN0ZWQYAiABKAgiNQoMUGxheWVySm9pbmVkEiUKBnBsYXllchgBIAEoCzIVLnBhcnR5Z2FtZXMudjEuUGxheWVyIh8KClBsYXllckxlZnQSEQoJcGxheWVyX2lkGAEgASgJIjIKCkVjaG9SZXN1bHQSDAoEdGV4dBgBIAEoCRIWCg5mcm9tX3BsYXllcl9pZBgCIAEoCSIqCglFcnJvckluZm8SDAoEY29kZRgBIAEoCRIPCgdtZXNzYWdlGAIgASgJIh4KC0hvc3RDaGFuZ2VkEg8KB2hvc3RfaWQYASABKAkiHgoLR2FtZVN0YXJ0ZWQSDwoHZ2FtZV9pZBgBIAEoCSItCglHYW1lRXZlbnQSDwoHZ2FtZV9pZBgBIAEoCRIPCgdwYXlsb2FkGAIgASgJIiwKCUdhbWVFbmRlZBIPCgdnYW1lX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSI2ChJHYW1lT3B0aW9uc0NoYW5nZWQSDwoHZ2FtZV9pZBgBIAEoCRIPCgdvcHRpb25zGAIgASgJQkRaQmdpdGh1Yi5jb20vbWludHRoaWhhL3BhcnR5LWdhbWVzL3NlcnZlci9pbnRlcm5hbC9wcm90b2NvbDtwcm90b2NvbGIGcHJvdG8z");
+  fileDesc("Cg5wcm90b2NvbC5wcm90bxINcGFydHlnYW1lcy52MSI6CgZQbGF5ZXISCgoCaWQYASABKAkSFAoMZGlzcGxheV9uYW1lGAIgASgJEg4KBnNjcmVlbhgDIAEoCCLQAwoNQ2xpZW50TWVzc2FnZRIwCgtjcmVhdGVfcm9vbRgBIAEoCzIZLnBhcnR5Z2FtZXMudjEuQ3JlYXRlUm9vbUgAEiwKCWpvaW5fcm9vbRgCIAEoCzIXLnBhcnR5Z2FtZXMudjEuSm9pblJvb21IABIuCgpsZWF2ZV9yb29tGAMgASgLMhgucGFydHlnYW1lcy52MS5MZWF2ZVJvb21IABIjCgRlY2hvGAQgASgLMhMucGFydHlnYW1lcy52MS5FY2hvSAASLgoKc3RhcnRfZ2FtZRgFIAEoCzIYLnBhcnR5Z2FtZXMudjEuU3RhcnRHYW1lSAASMAoLZ2FtZV9hY3Rpb24YBiABKAsyGS5wYXJ0eWdhbWVzLnYxLkdhbWVBY3Rpb25IABI5ChBzZXRfZ2FtZV9vcHRpb25zGAcgASgLMh0ucGFydHlnYW1lcy52MS5TZXRHYW1lT3B0aW9uc0gAEjAKC3Jlc3VtZV9yb29tGAggASgLMhkucGFydHlnYW1lcy52MS5SZXN1bWVSb29tSAASMAoLa2lja19wbGF5ZXIYCSABKAsyGS5wYXJ0eWdhbWVzLnYxLktpY2tQbGF5ZXJIAEIJCgdwYXlsb2FkIkIKCkNyZWF0ZVJvb20SFAoMZGlzcGxheV9uYW1lGAEgASgJEg4KBmxvY2FsZRgCIAEoCRIOCgZzY3JlZW4YAyABKAgiUwoISm9pblJvb20SEQoJcm9vbV9jb2RlGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIOCgZsb2NhbGUYAyABKAkSDgoGc2NyZWVuGAQgASgIIh8KCktpY2tQbGF5ZXISEQoJcGxheWVyX2lkGAEgASgJIgsKCUxlYXZlUm9vbSI2CgpSZXN1bWVSb29tEhEKCXJvb21fY29kZRgBIAEoCRIVCg1zZXNzaW9uX3Rva2VuGAIgASgJIhQKBEVjaG8SDAoEdGV4dBgBIAEoCSItCglTdGFydEdhbWUSDwoHZ2FtZV9pZBgBIAEoCRIPCgdvcHRpb25zGAIgASgJIi4KCkdhbWVBY3Rpb24SDwoHZ2FtZV9pZBgBIAEoCRIPCgdwYXlsb2FkGAIgASgJIjIKDlNldEdhbWVPcHRpb25zEg8KB2dhbWVfaWQYASABKAkSDwoHb3B0aW9ucxgCIAEoCSLWBAoNU2VydmVyTWVzc2FnZRIwCgtyb29tX2pvaW5lZBgBIAEoCzIZLnBhcnR5Z2FtZXMudjEuUm9vbUpvaW5lZEgAEjQKDXBsYXllcl9qb2luZWQYAiABKAsyGy5wYXJ0eWdhbWVzLnYxLlBsYXllckpvaW5lZEgAEjAKC3BsYXllcl9sZWZ0GAMgASgLMhkucGFydHlnYW1lcy52MS5QbGF5ZXJMZWZ0SAASMAoLZWNob19yZXN1bHQYBCABKAsyGS5wYXJ0eWdhbWVzLnYxLkVjaG9SZXN1bHRIABIpCgVlcnJvchgFIAEoCzIYLnBhcnR5Z2FtZXMudjEuRXJyb3JJbmZvSAASMgoMaG9zdF9jaGFuZ2VkGAYgASgLMhoucGFydHlnYW1lcy52MS5Ib3N0Q2hhbmdlZEgAEjIKDGdhbWVfc3RhcnRlZBgHIAEoCzIaLnBhcnR5Z2FtZXMudjEuR2FtZVN0YXJ0ZWRIABIuCgpnYW1lX2V2ZW50GAggASgLMhgucGFydHlnYW1lcy52MS5HYW1lRXZlbnRIABIuCgpnYW1lX2VuZGVkGAkgASgLMhgucGFydHlnYW1lcy52MS5HYW1lRW5kZWRIABJBChRnYW1lX29wdGlvbnNfY2hhbmdlZBgKIAEoCzIhLnBhcnR5Z2FtZXMudjEuR2FtZU9wdGlvbnNDaGFuZ2VkSAASOAoPcGxheWVyX3ByZXNlbmNlGAsgASgLMh0ucGFydHlnYW1lcy52MS5QbGF5ZXJQcmVzZW5jZUgAQgkKB3BheWxvYWQi4QEKClJvb21Kb2luZWQSEQoJcm9vbV9jb2RlGAEgASgJEhYKDnNlbGZfcGxheWVyX2lkGAIgASgJEiYKB3BsYXllcnMYAyADKAsyFS5wYXJ0eWdhbWVzLnYxLlBsYXllchIPCgdob3N0X2lkGAQgASgJEhUKDXNlc3Npb25fdG9rZW4YBSABKAkSDwoHcmVzdW1lZBgGIAEoCBIWCg5hY3RpdmVfZ2FtZV9pZBgHIAEoCRITCgtnYW1lX2V2ZW50cxgIIAMoCRIaChJvZmZsaW5lX3BsYXllcl9pZHMYCSADKAkiNgoOUGxheWVyUHJlc2VuY2USEQoJcGxheWVyX2lkGAEgASgJEhEKCWNvbm5lY3RlZBgCIAEoCCI1CgxQbGF5ZXJKb2luZWQSJQoGcGxheWVyGAEgASgLMhUucGFydHlnYW1lcy52MS5QbGF5ZXIiHwoKUGxheWVyTGVmdBIRCglwbGF5ZXJfaWQYASABKAkiMgoKRWNob1Jlc3VsdBIMCgR0ZXh0GAEgASgJEhYKDmZyb21fcGxheWVyX2lkGAIgASgJIioKCUVycm9ySW5mbxIMCgRjb2RlGAEgASgJEg8KB21lc3NhZ2UYAiABKAkiHgoLSG9zdENoYW5nZWQSDwoHaG9zdF9pZBgBIAEoCSIeCgtHYW1lU3RhcnRlZBIPCgdnYW1lX2lkGAEgASgJIi0KCUdhbWVFdmVudBIPCgdnYW1lX2lkGAEgASgJEg8KB3BheWxvYWQYAiABKAkiLAoJR2FtZUVuZGVkEg8KB2dhbWVfaWQYASABKAkSDgoGcmVhc29uGAIgASgJIjYKEkdhbWVPcHRpb25zQ2hhbmdlZBIPCgdnYW1lX2lkGAEgASgJEg8KB29wdGlvbnMYAiABKAlCRFpCZ2l0aHViLmNvbS9taW50dGhpaGEvcGFydHktZ2FtZXMvc2VydmVyL2ludGVybmFsL3Byb3RvY29sO3Byb3RvY29sYgZwcm90bzM");
 
 /**
  * A player in a room. `id` is assigned by the server and is unique within a
@@ -30,6 +30,16 @@ export type Player = Message<"partygames.v1.Player"> & {
    * @generated from field: string display_name = 2;
    */
   displayName: string;
+
+  /**
+   * True for a main screen: a shared display (a TV, a laptop on a projector)
+   * that sits in the room to show the game to everyone. It is on the roster so
+   * it gets every public broadcast and can be the host, but it is never dealt
+   * into a game as a player and does not count towards a game's minimum.
+   *
+   * @generated from field: bool screen = 3;
+   */
+  screen: boolean;
 };
 
 /**
@@ -96,6 +106,12 @@ export type ClientMessage = Message<"partygames.v1.ClientMessage"> & {
      */
     value: ResumeRoom;
     case: "resumeRoom";
+  } | {
+    /**
+     * @generated from field: partygames.v1.KickPlayer kick_player = 9;
+     */
+    value: KickPlayer;
+    case: "kickPlayer";
   } | { case: undefined; value?: undefined };
 };
 
@@ -125,6 +141,13 @@ export type CreateRoom = Message<"partygames.v1.CreateRoom"> & {
    * @generated from field: string locale = 2;
    */
   locale: string;
+
+  /**
+   * Join as a main screen rather than a player. See Player.screen.
+   *
+   * @generated from field: bool screen = 3;
+   */
+  screen: boolean;
 };
 
 /**
@@ -155,6 +178,13 @@ export type JoinRoom = Message<"partygames.v1.JoinRoom"> & {
    * @generated from field: string locale = 3;
    */
   locale: string;
+
+  /**
+   * Join as a main screen rather than a player. See Player.screen.
+   *
+   * @generated from field: bool screen = 4;
+   */
+  screen: boolean;
 };
 
 /**
@@ -163,6 +193,27 @@ export type JoinRoom = Message<"partygames.v1.JoinRoom"> & {
  */
 export const JoinRoomSchema: GenMessage<JoinRoom> = /*@__PURE__*/
   messageDesc(file_protocol, 3);
+
+/**
+ * Host-only: remove someone from the room — a phone left behind, or a guest
+ * spoiling the game. They are sent ErrorInfo "kicked" and then dropped exactly
+ * as if they had left, so a running game hears about it as a departure.
+ *
+ * @generated from message partygames.v1.KickPlayer
+ */
+export type KickPlayer = Message<"partygames.v1.KickPlayer"> & {
+  /**
+   * @generated from field: string player_id = 1;
+   */
+  playerId: string;
+};
+
+/**
+ * Describes the message partygames.v1.KickPlayer.
+ * Use `create(KickPlayerSchema)` to create a new message.
+ */
+export const KickPlayerSchema: GenMessage<KickPlayer> = /*@__PURE__*/
+  messageDesc(file_protocol, 4);
 
 /**
  * Leave the current room. The connection stays open; the client may create or
@@ -178,7 +229,7 @@ export type LeaveRoom = Message<"partygames.v1.LeaveRoom"> & {
  * Use `create(LeaveRoomSchema)` to create a new message.
  */
 export const LeaveRoomSchema: GenMessage<LeaveRoom> = /*@__PURE__*/
-  messageDesc(file_protocol, 4);
+  messageDesc(file_protocol, 5);
 
 /**
  * Reclaim a seat after the connection dropped. `session_token` is the secret
@@ -205,7 +256,7 @@ export type ResumeRoom = Message<"partygames.v1.ResumeRoom"> & {
  * Use `create(ResumeRoomSchema)` to create a new message.
  */
 export const ResumeRoomSchema: GenMessage<ResumeRoom> = /*@__PURE__*/
-  messageDesc(file_protocol, 5);
+  messageDesc(file_protocol, 6);
 
 /**
  * Round-trip probe. The server echoes `text` back to the whole room as
@@ -225,7 +276,7 @@ export type Echo = Message<"partygames.v1.Echo"> & {
  * Use `create(EchoSchema)` to create a new message.
  */
 export const EchoSchema: GenMessage<Echo> = /*@__PURE__*/
-  messageDesc(file_protocol, 6);
+  messageDesc(file_protocol, 7);
 
 /**
  * Host-only: start a game in the current room. `game_id` must name a game the
@@ -252,7 +303,7 @@ export type StartGame = Message<"partygames.v1.StartGame"> & {
  * Use `create(StartGameSchema)` to create a new message.
  */
 export const StartGameSchema: GenMessage<StartGame> = /*@__PURE__*/
-  messageDesc(file_protocol, 7);
+  messageDesc(file_protocol, 8);
 
 /**
  * An action within the running game. `payload` is the proto3-JSON encoding of a
@@ -278,7 +329,7 @@ export type GameAction = Message<"partygames.v1.GameAction"> & {
  * Use `create(GameActionSchema)` to create a new message.
  */
 export const GameActionSchema: GenMessage<GameAction> = /*@__PURE__*/
-  messageDesc(file_protocol, 8);
+  messageDesc(file_protocol, 9);
 
 /**
  * Host-only, before a game starts: declare the options the host currently has
@@ -308,7 +359,7 @@ export type SetGameOptions = Message<"partygames.v1.SetGameOptions"> & {
  * Use `create(SetGameOptionsSchema)` to create a new message.
  */
 export const SetGameOptionsSchema: GenMessage<SetGameOptions> = /*@__PURE__*/
-  messageDesc(file_protocol, 9);
+  messageDesc(file_protocol, 10);
 
 /**
  * Every message the server sends is a ServerMessage with exactly one payload set.
@@ -393,7 +444,7 @@ export type ServerMessage = Message<"partygames.v1.ServerMessage"> & {
  * Use `create(ServerMessageSchema)` to create a new message.
  */
 export const ServerMessageSchema: GenMessage<ServerMessage> = /*@__PURE__*/
-  messageDesc(file_protocol, 10);
+  messageDesc(file_protocol, 11);
 
 /**
  * Sent only to the player who just joined (via CreateRoom, JoinRoom or
@@ -470,7 +521,7 @@ export type RoomJoined = Message<"partygames.v1.RoomJoined"> & {
  * Use `create(RoomJoinedSchema)` to create a new message.
  */
 export const RoomJoinedSchema: GenMessage<RoomJoined> = /*@__PURE__*/
-  messageDesc(file_protocol, 11);
+  messageDesc(file_protocol, 12);
 
 /**
  * Broadcast when a player's connection drops or comes back. They stay on the
@@ -496,7 +547,7 @@ export type PlayerPresence = Message<"partygames.v1.PlayerPresence"> & {
  * Use `create(PlayerPresenceSchema)` to create a new message.
  */
 export const PlayerPresenceSchema: GenMessage<PlayerPresence> = /*@__PURE__*/
-  messageDesc(file_protocol, 12);
+  messageDesc(file_protocol, 13);
 
 /**
  * Broadcast to the players already in a room when someone new joins.
@@ -515,7 +566,7 @@ export type PlayerJoined = Message<"partygames.v1.PlayerJoined"> & {
  * Use `create(PlayerJoinedSchema)` to create a new message.
  */
 export const PlayerJoinedSchema: GenMessage<PlayerJoined> = /*@__PURE__*/
-  messageDesc(file_protocol, 13);
+  messageDesc(file_protocol, 14);
 
 /**
  * Broadcast when a player leaves explicitly or their connection is reaped.
@@ -534,7 +585,7 @@ export type PlayerLeft = Message<"partygames.v1.PlayerLeft"> & {
  * Use `create(PlayerLeftSchema)` to create a new message.
  */
 export const PlayerLeftSchema: GenMessage<PlayerLeft> = /*@__PURE__*/
-  messageDesc(file_protocol, 14);
+  messageDesc(file_protocol, 15);
 
 /**
  * Broadcast to the whole room in response to an Echo.
@@ -558,7 +609,7 @@ export type EchoResult = Message<"partygames.v1.EchoResult"> & {
  * Use `create(EchoResultSchema)` to create a new message.
  */
 export const EchoResultSchema: GenMessage<EchoResult> = /*@__PURE__*/
-  messageDesc(file_protocol, 15);
+  messageDesc(file_protocol, 16);
 
 /**
  * A problem with the client's last message. Not fatal to the connection.
@@ -568,8 +619,9 @@ export const EchoResultSchema: GenMessage<EchoResult> = /*@__PURE__*/
 export type ErrorInfo = Message<"partygames.v1.ErrorInfo"> & {
   /**
    * Stable, machine-readable: "room_not_found", "not_in_room", "bad_message",
-   * "session_expired", or "session_replaced" (another tab or device reclaimed
-   * this seat, so this connection no longer speaks for it).
+   * "session_expired", "session_replaced" (another tab or device reclaimed
+   * this seat, so this connection no longer speaks for it), or "kicked" (the
+   * host removed this player from the room; the client should leave it).
    *
    * @generated from field: string code = 1;
    */
@@ -588,7 +640,7 @@ export type ErrorInfo = Message<"partygames.v1.ErrorInfo"> & {
  * Use `create(ErrorInfoSchema)` to create a new message.
  */
 export const ErrorInfoSchema: GenMessage<ErrorInfo> = /*@__PURE__*/
-  messageDesc(file_protocol, 16);
+  messageDesc(file_protocol, 17);
 
 /**
  * Broadcast when the room's host changes — the previous host left, so the
@@ -608,7 +660,7 @@ export type HostChanged = Message<"partygames.v1.HostChanged"> & {
  * Use `create(HostChangedSchema)` to create a new message.
  */
 export const HostChangedSchema: GenMessage<HostChanged> = /*@__PURE__*/
-  messageDesc(file_protocol, 17);
+  messageDesc(file_protocol, 18);
 
 /**
  * Broadcast when a game begins. Game-specific setup then arrives as GameEvents.
@@ -627,7 +679,7 @@ export type GameStarted = Message<"partygames.v1.GameStarted"> & {
  * Use `create(GameStartedSchema)` to create a new message.
  */
 export const GameStartedSchema: GenMessage<GameStarted> = /*@__PURE__*/
-  messageDesc(file_protocol, 18);
+  messageDesc(file_protocol, 19);
 
 /**
  * A message from the running game. May be broadcast or targeted at one player
@@ -653,7 +705,7 @@ export type GameEvent = Message<"partygames.v1.GameEvent"> & {
  * Use `create(GameEventSchema)` to create a new message.
  */
 export const GameEventSchema: GenMessage<GameEvent> = /*@__PURE__*/
-  messageDesc(file_protocol, 19);
+  messageDesc(file_protocol, 20);
 
 /**
  * Broadcast when a game stops, whether it finished or was aborted.
@@ -681,7 +733,7 @@ export type GameEnded = Message<"partygames.v1.GameEnded"> & {
  * Use `create(GameEndedSchema)` to create a new message.
  */
 export const GameEndedSchema: GenMessage<GameEnded> = /*@__PURE__*/
-  messageDesc(file_protocol, 20);
+  messageDesc(file_protocol, 21);
 
 /**
  * Broadcast to the whole room whenever the host's SetGameOptions is accepted,
@@ -707,5 +759,5 @@ export type GameOptionsChanged = Message<"partygames.v1.GameOptionsChanged"> & {
  * Use `create(GameOptionsChangedSchema)` to create a new message.
  */
 export const GameOptionsChangedSchema: GenMessage<GameOptionsChanged> = /*@__PURE__*/
-  messageDesc(file_protocol, 21);
+  messageDesc(file_protocol, 22);
 

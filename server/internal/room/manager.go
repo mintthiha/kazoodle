@@ -68,18 +68,38 @@ type JoinResult struct {
 // Create makes a new room with a freshly generated code, adds the caller as its
 // first member (and so its host), and returns the roster (just them).
 func (m *Manager) Create(ctx context.Context, displayName, locale string, s Sender) (JoinResult, error) {
+	r, err := m.open()
+	if err != nil {
+		return JoinResult{}, err
+	}
+	return m.addPlayer(ctx, r, Player{DisplayName: displayName, Locale: locale}, s)
+}
+
+// CreateScreen makes a new room whose first member, and so its host, is a main
+// screen rather than a player: a TV that shows the room code and then the game,
+// while the players join from their phones. See Player.Screen.
+func (m *Manager) CreateScreen(ctx context.Context, locale string, s Sender) (JoinResult, error) {
+	r, err := m.open()
+	if err != nil {
+		return JoinResult{}, err
+	}
+	return m.addPlayer(ctx, r, Player{Locale: locale, Screen: true}, s)
+}
+
+// open starts an empty room under a fresh code and registers it. The lock is
+// released before returning, so the caller talks to the new room goroutine
+// without holding it.
+func (m *Manager) open() (*Room, error) {
 	m.mu.Lock()
+	defer m.mu.Unlock()
 	code, err := m.freeCodeLocked()
 	if err != nil {
-		m.mu.Unlock()
-		return JoinResult{}, err
+		return nil, err
 	}
 	r := newRoom(m.base, code, m.games, m.remove)
 	r.clock = m.clock
 	m.rooms[code] = r
-	m.mu.Unlock() // release before talking to the room goroutine
-
-	return m.addPlayer(ctx, r, displayName, locale, s)
+	return r, nil
 }
 
 // Join adds the caller to an existing room. It returns ErrRoomNotFound if no
@@ -91,7 +111,32 @@ func (m *Manager) Join(ctx context.Context, code, displayName, locale string, s 
 	if !ok {
 		return JoinResult{}, ErrRoomNotFound
 	}
-	return m.addPlayer(ctx, r, displayName, locale, s)
+	return m.addPlayer(ctx, r, Player{DisplayName: displayName, Locale: locale}, s)
+}
+
+// JoinScreen adds a main screen to an existing room, for a table that started on
+// phones and then found a TV. It returns ErrRoomNotFound like Join.
+func (m *Manager) JoinScreen(ctx context.Context, code, locale string, s Sender) (JoinResult, error) {
+	m.mu.RLock()
+	r, ok := m.rooms[code]
+	m.mu.RUnlock()
+	if !ok {
+		return JoinResult{}, ErrRoomNotFound
+	}
+	return m.addPlayer(ctx, r, Player{Locale: locale, Screen: true}, s)
+}
+
+// Kick has the host remove another member from the room. The removed player is
+// told why, then leaves exactly as if they had chosen to. It returns ErrNotHost,
+// ErrPlayerNotFound or ErrKickSelf when the request cannot be carried out.
+func (m *Manager) Kick(ctx context.Context, code, hostID, targetID string) error {
+	m.mu.RLock()
+	r, ok := m.rooms[code]
+	m.mu.RUnlock()
+	if !ok {
+		return ErrRoomNotFound
+	}
+	return r.kick(ctx, hostID, targetID)
 }
 
 // StartGame asks a room's host-driven state machine to begin a game. options
@@ -163,15 +208,23 @@ func (m *Manager) RoomCount() int {
 	return len(m.rooms)
 }
 
-// addPlayer assigns a server-side ID and hands the player to the room.
-func (m *Manager) addPlayer(ctx context.Context, r *Room, displayName, locale string, s Sender) (JoinResult, error) {
-	if locale == "" {
-		locale = defaultLocale
+// addPlayer assigns a server-side ID and hands the player to the room. p
+// arrives with only what the client chose: name, locale, and whether it is a
+// screen.
+//
+// p is a struct passed by value, so the changes made to it here are to this
+// function's own copy — the caller's Player is untouched. That is the opposite
+// of passing an object in TypeScript, where the callee would be editing the
+// caller's object.
+func (m *Manager) addPlayer(ctx context.Context, r *Room, p Player, s Sender) (JoinResult, error) {
+	if p.Locale == "" {
+		p.Locale = defaultLocale
 	}
 	// A blank name is not refused: the room gives the player a guest name
 	// instead, since it is the only thing that knows which names are already
 	// taken. See applyJoin.
-	p := Player{ID: newPlayerID(), DisplayName: cleanName(displayName), Locale: locale}
+	p.ID = newPlayerID()
+	p.DisplayName = cleanName(p.DisplayName)
 	token := newSessionToken()
 	rep, err := r.join(ctx, p, token, s)
 	if err != nil {

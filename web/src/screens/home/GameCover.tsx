@@ -14,6 +14,23 @@ interface Props {
 export function GameCover({ gameId, name }: Props) {
   const { t } = useT();
 
+  if (gameId === "fibblash") {
+    // The spec's own example: four answers to "bubble wrap was first made
+    // as…", and only one of them true, highlighted the way the reveal does.
+    return (
+      <span className="tile-cover" aria-hidden="true">
+        <span className="cover-slips">
+          <span className="cover-slip">{t("game.fibblash.cover1")}</span>
+          <span className="cover-slip">
+            <mark>{t("game.fibblash.cover2")}</mark>
+          </span>
+          <span className="cover-slip">{t("game.fibblash.cover3")}</span>
+          <span className="cover-slip">{t("game.fibblash.cover4")}</span>
+        </span>
+      </span>
+    );
+  }
+
   if (gameId === "imposter") {
     const word = t("game.imposter.coverWord");
     return (

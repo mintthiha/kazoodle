@@ -23,6 +23,11 @@ describe("parseRoute", () => {
     });
   }
 
+  it("opens a game's main screen when it has one", () => {
+    expect(parseRoute("/imposter/screen", known, [], known)).toEqual({ kind: "screen", id: "imposter" });
+    expect(parseRoute("/imposter/screen", known, known, [])).toEqual({ kind: "home" });
+  });
+
   it("does not offer a local version the game does not have", () => {
     expect(parseRoute("/imposter/local", known)).toEqual({ kind: "home" });
   });
@@ -34,9 +39,10 @@ describe("routePath", () => {
       { kind: "home" },
       { kind: "game", id: "imposter" },
       { kind: "local", id: "imposter" },
+      { kind: "screen", id: "imposter" },
     ];
     for (const route of routes) {
-      expect(parseRoute(routePath(route), known, known)).toEqual(route);
+      expect(parseRoute(routePath(route), known, known, known)).toEqual(route);
     }
   });
 });

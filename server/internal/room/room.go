@@ -96,7 +96,16 @@ type timerCmd struct {
 	tag string
 }
 
+// kickCmd is the host removing another member. reply is buffered for the same
+// reason joinCmd's is.
+type kickCmd struct {
+	hostID   string
+	targetID string
+	reply    chan error
+}
+
 func (joinCmd) isCommand()           {}
+func (kickCmd) isCommand()           {}
 func (leaveCmd) isCommand()          {}
 func (echoCmd) isCommand()           {}
 func (startGameCmd) isCommand()      {}
@@ -140,6 +149,11 @@ type Room struct {
 	members map[string]*member
 	order   []string // player IDs in join order, for a stable roster
 	hostID  string   // the player who may start games; "" only before anyone joins
+
+	// ownerScreen is the main screen that created this room, or "". The room is
+	// that screen's show, so it gets the host role back whenever it reconnects:
+	// a TV that reloads would otherwise hand the room to a phone for good.
+	ownerScreen string
 
 	// The running game, or nil. gameState is opaque; only gm interprets it.
 	gm        game.Game
@@ -232,6 +246,14 @@ func (r *Room) run(ctx context.Context) {
 			case joinCmd:
 				r.applyJoin(cmd)
 
+			case kickCmd:
+				err := r.applyKick(cmd)
+				cmd.reply <- err
+				if len(r.members) == 0 {
+					r.onEmpty(r.code)
+					return
+				}
+
 			case echoCmd:
 				r.applyEcho(cmd)
 				close(cmd.ack)
@@ -285,7 +307,11 @@ func (r *Room) applyJoin(cmd joinCmd) {
 	// place that knows which names are already taken — and because this
 	// goroutine is the only one reading it, two players joining at the same
 	// moment cannot both be told a name is free.
-	if taken := r.displayNames(); cmd.player.DisplayName == "" {
+	// A screen keeps its blank name: it is shown as "Main screen" in each
+	// reader's own language, and it never appears on a ballot.
+	if taken := r.displayNames(); cmd.player.Screen {
+		cmd.player.DisplayName = ""
+	} else if cmd.player.DisplayName == "" {
 		cmd.player.DisplayName = guestName(cmd.player.Locale, taken)
 	} else {
 		cmd.player.DisplayName = uniqueName(cmd.player.DisplayName, taken)
@@ -294,6 +320,9 @@ func (r *Room) applyJoin(cmd joinCmd) {
 	r.order = append(r.order, cmd.player.ID)
 	if r.hostID == "" {
 		r.hostID = cmd.player.ID
+		if cmd.player.Screen {
+			r.ownerScreen = cmd.player.ID
+		}
 	}
 
 	// The newcomer learns the whole roster (themselves included) and the host
@@ -387,7 +416,8 @@ func (r *Room) applyStartGame(cmd startGameCmd) error {
 	// is still running if they do not.
 	players := make([]game.Player, 0, len(r.order))
 	for _, id := range r.order {
-		if m := r.members[id]; m.online() {
+		// A main screen is in the room to show the game, not to play it.
+		if m := r.members[id]; m.online() && !m.player.Screen {
 			players = append(players, game.Player{ID: id, Locale: m.player.Locale})
 		}
 	}
@@ -438,7 +468,11 @@ func (r *Room) applyGameAction(cmd gameActionCmd) error {
 		return ErrNoActiveGame // not in the room; nothing to act on
 	}
 
-	next, effects, err := r.gm.Advance(r.gameState, game.Event{PlayerID: cmd.playerID, Data: cmd.data})
+	next, effects, err := r.gm.Advance(r.gameState, game.Event{
+		PlayerID: cmd.playerID,
+		Data:     cmd.data,
+		FromHost: cmd.playerID == r.hostID,
+	})
 	if err != nil {
 		return err
 	}

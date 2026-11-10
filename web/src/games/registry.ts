@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import type { MessageKey } from "../i18n";
 import { ImposterGame, ImposterLobbySetup, IMPOSTER_RULES, LocalImposter, imposterDefaultOptions } from "./imposter";
+import { FibblashGame, FibblashLobbySetup, FibblashScreen, fibblashDefaultOptions, fibblashRules } from "./fibblash";
 import { LocalWavelength, WavelengthGame, WavelengthLobbySetup, wavelengthDefaultOptions, wavelengthRules } from "./wavelength";
 
 /** Every game view gets the same props: who this player is, the roster, and
@@ -11,7 +12,9 @@ import { LocalWavelength, WavelengthGame, WavelengthLobbySetup, wavelengthDefaul
  * is no longer in `players` — see imposter/nameFor.ts. */
 export interface GameViewProps {
   selfId: string;
-  players: { id: string; displayName: string }[];
+  /** The room's roster. A main screen is on it (screen: true) but never in a
+   * game, so a game view only meets it when listing the room. */
+  players: { id: string; displayName: string; screen?: boolean }[];
   departed: { id: string; displayName: string }[];
   isHost: boolean;
 }
@@ -45,6 +48,12 @@ export interface OnlineGame {
   rules: (options: string) => MessageKey[];
   /** The start button's label. */
   startKey: MessageKey;
+  /** The most players a match takes, when the game has a limit. */
+  maxPlayers?: number;
+  /** The view for a main screen: a TV or laptop the whole room watches, which
+   * hosts the room but never plays. A game with one gets "Host on a big screen"
+   * on its tile and a /<id>/screen route. */
+  screen?: ComponentType<GameViewProps>;
 }
 
 /** One game as the hub advertises it: how to render it, how to describe it,
@@ -102,6 +111,23 @@ export const GAMES: GameListing[] = [
     minPlayers: 3,
     cover: "#7aa2ff",
   },
+  {
+    id: "fibblash",
+    online: {
+      view: FibblashGame,
+      screen: FibblashScreen,
+      Setup: FibblashLobbySetup,
+      defaultOptions: fibblashDefaultOptions,
+      rules: fibblashRules,
+      startKey: "lobby.startFibblash",
+      maxPlayers: 12,
+    },
+    nameKey: "game.fibblash.name",
+    hookKey: "game.fibblash.hook",
+    lengthKey: "game.fibblash.length",
+    minPlayers: 3,
+    cover: "#ff8fc2",
+  },
 ];
 
 /** game_id -> how to play that game online, for the games that can be. */
@@ -118,6 +144,9 @@ export const localGameViews: Record<string, ComponentType<LocalGameProps>> = Obj
  * left out, so typing its slug falls back to the hub instead of opening a
  * room the server could not start a game in. */
 export const GAME_IDS: string[] = Object.keys(onlineGames);
+
+/** The slugs that also accept /<slug>/screen: games with a main-screen view. */
+export const SCREEN_GAME_IDS: string[] = GAMES.flatMap((g) => (g.online?.screen ? [g.id] : []));
 
 /** The slugs that also accept /<slug>/local. */
 export const LOCAL_GAME_IDS: string[] = Object.keys(localGameViews);

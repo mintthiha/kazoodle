@@ -7,6 +7,8 @@ export interface Shot {
   /** "imposter" or "crew", when the run knows. Shown on the phone's frame. */
   tag?: string;
   image: string;
+  /** A main screen rather than a phone: it gets a row of its own. */
+  wide?: boolean;
 }
 
 export interface Beat {
@@ -67,8 +69,12 @@ button.play { background: var(--accent); color: var(--on-colour); }
 .pill { padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
 .pill[data-tag="imposter"] { background: var(--negative); color: var(--on-colour); }
 .pill[data-tag="crew"] { background: var(--raised); color: var(--muted); }
+/* Any other tag, e.g. a phone's role in another game. */
+.pill { background: var(--raised); color: var(--muted); }
 .frame { max-height: 72vh; overflow-y: auto; border-radius: 14px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--raised); }
 .frame img { display: block; width: 100%; height: auto; }
+.phone.wide { grid-column: 1 / -1; }
+.phone.wide .frame { max-width: 56rem; }
 
 .steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: 4px 16px; margin: 0; padding: 0; list-style: none; }
 .steps-act { grid-column: 1 / -1; margin: 12px 0 2px; color: var(--muted); font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
@@ -114,6 +120,7 @@ function show(i) {
 
   stage.replaceChildren(...beat.shots.map((s) => {
     const phone = el("figure", "phone");
+    if (s.wide) phone.classList.add("wide");
     phone.style.margin = "0";
     const label = el("figcaption", "label", s.name);
     if (s.tag) {

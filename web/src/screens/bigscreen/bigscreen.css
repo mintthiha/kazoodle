@@ -1,0 +1,91 @@
+/* The main screen's lobby: a room code to read from across the room. It takes
+   the whole width rather than the phone column, and still stacks on a phone,
+   so a laptop or a tablet works as well as a TV. */
+
+.app:has(.big-lobby) {
+  max-width: none;
+}
+
+.big-lobby {
+  gap: 24px;
+  padding: 24px clamp(16px, 4vw, 64px);
+}
+
+.big-opening {
+  align-items: center;
+  justify-content: center;
+}
+
+.big-opening button {
+  max-width: 24rem;
+}
+
+.big-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.big-brand {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+}
+
+.big-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+}
+
+.big-join {
+  align-items: center;
+  gap: 8px;
+  padding: clamp(24px, 4vw, 48px);
+  border-radius: var(--radius-card);
+  text-align: center;
+  background: var(--surface);
+}
+
+.big-join-line {
+  margin: 0;
+  font-size: clamp(1.1rem, 2vw, 1.75rem);
+  color: var(--muted);
+}
+
+.big-url {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 2.5rem);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* The code is what the whole room reads, so it is the biggest thing on the
+   screen, on marker yellow: this room is live. */
+.big-code {
+  margin: 12px 0 0;
+  padding: 0 0.12em;
+  border-radius: var(--radius-slip);
+  font-family: var(--display);
+  font-size: clamp(4.5rem, 16vw, 12rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.08em;
+  background: var(--accent);
+  color: var(--on-colour);
+}
+
+.big-side {
+  gap: 16px;
+}
+
+@media (min-width: 60rem) {
+  .big-grid {
+    grid-template-columns: 1.3fr 1fr;
+    align-items: start;
+  }
+
+  .big-join {
+    position: sticky;
+    top: 24px;
+  }
+}

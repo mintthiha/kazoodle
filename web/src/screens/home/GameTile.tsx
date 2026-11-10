@@ -7,6 +7,7 @@ interface Props {
   game: GameListing;
   onPick: (id: string) => void;
   onPickLocal: (id: string) => void;
+  onPickScreen: (id: string) => void;
 }
 
 // One game on the shelf. The whole tile is the button — on a phone, held
@@ -18,9 +19,12 @@ interface Props {
 // server and no signal. It is a sibling of the tile, not inside it: one button
 // cannot legally contain another.
 //
+// A game with a main-screen view gets a third way in, for the TV: it opens a
+// room that the screen hosts and the phones join.
+//
 // A game with no online version has nothing to connect to, so the tile itself
 // opens the one-phone version and there is no second button.
-export function GameTile({ game, onPick, onPickLocal }: Props) {
+export function GameTile({ game, onPick, onPickLocal, onPickScreen }: Props) {
   const { t } = useT();
   const name = t(game.nameKey);
   const localOnly = !game.online;
@@ -49,6 +53,11 @@ export function GameTile({ game, onPick, onPickLocal }: Props) {
       {game.localView && !localOnly && (
         <button className="secondary tile-local" onClick={() => onPickLocal(game.id)}>
           {t("local.entry")}
+        </button>
+      )}
+      {game.online?.screen && (
+        <button className="secondary tile-local" onClick={() => onPickScreen(game.id)}>
+          {t("home.bigScreen")}
         </button>
       )}
     </div>

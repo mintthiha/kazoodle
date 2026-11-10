@@ -5,9 +5,9 @@ import type { ClueTurn, RoleAssignment } from "./gen/imposter_pb";
 import type { GameViewProps } from "../registry";
 import { makeNameFor } from "../../players/nameFor";
 import { ClueLedger } from "./ClueLedger";
-import { Countdown } from "./Countdown";
+import { Countdown } from "../../clock/Countdown";
 import { buildLedger } from "./ledger";
-import { useCountdown } from "./useCountdown";
+import { useCountdown } from "../../clock/useCountdown";
 import { WordPeek } from "./WordSlip";
 
 interface Props extends GameViewProps {

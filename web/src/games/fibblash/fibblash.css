@@ -1,0 +1,638 @@
+/* Fibblash, on a phone and on the main screen.
+
+   Same material as the other games: the question is a paper slip, marker
+   yellow is what is true or winning, and everything else is told apart by
+   lightness on black. Each kind of question has its own flat colour (--kind),
+   spent only on what says which game is being played right now: the kind tag,
+   a picked choice, a player who has answered. The numbers match the wire's
+   Kind enum: 1 REAL, 2 CREATIVE, 3 HYBRID. */
+
+.fb,
+.fb-question {
+  --kind: #7ad7ff;
+}
+
+.fb[data-kind="2"],
+.fb-question[data-kind="2"] {
+  --kind: #ff8fc2;
+}
+
+.fb[data-kind="3"],
+.fb-question[data-kind="3"] {
+  --kind: #c3a6ff;
+}
+
+.fb-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fb-lead {
+  margin: 0;
+  font-size: var(--fs-lead);
+  line-height: 1.4;
+}
+
+.fb-vote-q {
+  font-size: clamp(1.75rem, 8vw, 2.25rem);
+}
+
+.fb-truth-label {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── The question ──────────────────────────────────────────────────────── */
+
+.fb-question {
+  gap: 12px;
+}
+
+.fb-kind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.fb-kind-tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  background: var(--kind);
+  color: var(--on-colour);
+}
+
+.fb-category {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+/* The prompt is a paper slip, like every secret in this app. */
+.fb-prompt {
+  padding: 22px 20px;
+  border-radius: var(--radius-slip);
+  background: var(--paper);
+  color: var(--paper-ink);
+  font-size: clamp(1.5rem, 7vw, 2rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  transform: rotate(-0.6deg);
+}
+
+/* The prompt again, small, above a ballot or a reveal. */
+.fb-prompt-small {
+  margin: 0;
+  font-size: var(--fs-lead);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+/* The "____" in a prompt: a line to write on, in the text's own colour. */
+.fb-blank {
+  display: inline-block;
+  width: 3.2em;
+  height: 0.9em;
+  margin: 0 0.15em;
+  border-bottom: 0.12em solid currentColor;
+  vertical-align: baseline;
+}
+
+/* ── Answering ─────────────────────────────────────────────────────────── */
+
+.fb-counter {
+  margin: 6px 6px 0;
+  text-align: right;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.fb-counter[data-over="true"] {
+  color: var(--negative);
+}
+
+.fb-locked {
+  gap: 4px;
+  padding: 16px 18px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.fb-locked-text {
+  margin: 0;
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ── Lists ─────────────────────────────────────────────────────────────── */
+
+.fb-choices,
+.fb-board,
+.fb-reveal,
+.fb-awards,
+.fb-standings,
+.fb-seats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A ballot row: the whole row is the button, a generous target. */
+.fb-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  text-align: left;
+  font-weight: 500;
+  background: var(--surface);
+}
+
+.fb-choice[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--ground);
+}
+
+.fb-choice:disabled {
+  background: var(--surface);
+  color: var(--faint);
+}
+
+.fb-choice-id {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: var(--fs-small);
+  font-weight: 700;
+  background: var(--raised);
+  color: var(--text);
+}
+
+.fb-choice[aria-pressed="true"] .fb-choice-id {
+  background: var(--kind);
+  color: var(--on-colour);
+}
+
+.fb-choice-text {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.fb-board-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: var(--fs-lead);
+  background: var(--surface);
+}
+
+.fb-board-item[data-picked="true"] {
+  box-shadow: inset 0 0 0 2px var(--kind);
+}
+
+.fb-board-item[data-own="true"] {
+  color: var(--muted);
+}
+
+/* ── The reveal ────────────────────────────────────────────────────────── */
+
+.fb-reveal-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.fb-reveal-text {
+  margin: 0;
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.fb-reveal-meta {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.fb-fooled {
+  color: var(--pill-warning-ink);
+}
+
+/* A matchup's winner is winning, so it is on marker yellow. */
+.fb-reveal-item[data-won="true"] {
+  background: var(--accent);
+  color: var(--on-colour);
+}
+
+.fb-reveal-item[data-won="true"] .fb-reveal-meta {
+  color: var(--on-colour);
+}
+
+.fb-win-pill {
+  align-self: flex-start;
+  background: var(--ground);
+  color: var(--accent);
+}
+
+/* The truth: a paper slip, its answer highlighted in marker yellow. */
+.fb-truth {
+  gap: 6px;
+  padding: 20px;
+  border-radius: var(--radius-slip);
+  background: var(--paper);
+  color: var(--paper-ink);
+  transform: rotate(0.6deg);
+}
+
+.fb-truth .fb-truth-label,
+.fb-truth .fb-reveal-meta {
+  color: var(--paper-muted);
+}
+
+.fb-truth-text {
+  align-self: flex-start;
+  margin: 0;
+  padding: 0 0.12em;
+  font-family: var(--display);
+  font-size: clamp(1.75rem, 8vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  background: var(--accent);
+}
+
+.fb-explanation {
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+.fb-source {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--paper-muted);
+}
+
+/* ── Points and standings ──────────────────────────────────────────────── */
+
+.fb-award {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.fb-award-why {
+  flex: 1 1 8rem;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.fb-delta {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.fb-award[data-self="true"],
+.fb-standing[data-self="true"] {
+  box-shadow: inset 0 0 0 1px var(--control);
+}
+
+.fb-standing {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.fb-rank {
+  flex: none;
+  width: 1.5em;
+  text-align: right;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.fb-score {
+  margin-left: auto;
+  font-size: var(--fs-lead);
+  font-weight: 700;
+}
+
+/* First place is winning, so it is on marker yellow. */
+.fb-standing[data-lead="true"] {
+  background: var(--accent);
+  color: var(--on-colour);
+}
+
+.fb-standing[data-lead="true"] .fb-rank,
+.fb-standing[data-lead="true"] .fb-delta {
+  color: var(--on-colour);
+}
+
+.fb-star {
+  margin-left: 8px;
+  background: var(--kind);
+  color: var(--on-colour);
+}
+
+.fb-final {
+  gap: 6px;
+  padding: 24px 20px;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.fb-final[data-winner="true"] {
+  background: var(--accent);
+  color: var(--on-colour);
+}
+
+.fb-final[data-winner="true"] .fb-truth-label,
+.fb-final[data-winner="true"] .status {
+  color: var(--on-colour);
+}
+
+.fb-final-headline {
+  font-size: clamp(2rem, 9vw, 3rem);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+/* ── Host controls ─────────────────────────────────────────────────────── */
+
+.fb-host {
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.fb-host summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap-small);
+  padding: 10px 16px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.fb-host-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.fb-host-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fb-host-actions button {
+  flex: 1 1 8rem;
+  width: auto;
+}
+
+.fb-host .roster-row {
+  background: var(--raised);
+}
+
+/* ── The main screen ───────────────────────────────────────────────────── */
+
+/* The main screen is read from across a room, so it takes the whole width
+   instead of the phone column, and everything scales with the viewport. */
+.app:has(.fb-tv) {
+  max-width: none;
+}
+
+.fb-tv {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px clamp(16px, 4vw, 64px);
+  font-size: clamp(1rem, 1.3vw, 1.5rem);
+}
+
+.fb-tv-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 24px;
+}
+
+.fb-tv-brand {
+  font-family: var(--display);
+  font-size: 1.5em;
+  font-weight: 800;
+}
+
+.fb-tv-code {
+  margin-left: auto;
+  font-size: 1.5em;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.fb-tv-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+}
+
+.fb-tv .fb-prompt {
+  padding: clamp(20px, 3vw, 40px);
+  font-size: clamp(1.75rem, 4.2vw, 4rem);
+}
+
+.fb-tv .fb-vote-q,
+.fb-tv h1 {
+  font-size: clamp(1.75rem, 3.4vw, 3rem);
+}
+
+.fb-tv .fb-prompt-small {
+  font-size: 1.25em;
+}
+
+.fb-tv-call {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.5rem, 3vw, 2.75rem);
+  font-weight: 800;
+  color: var(--kind);
+}
+
+/* On a wide screen, ballots and reveals spread out into a grid. */
+.fb-tv .fb-board,
+.fb-tv .fb-reveal {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 12px;
+}
+
+.fb-tv .fb-board-item,
+.fb-tv .fb-reveal-text {
+  font-size: 1.4em;
+}
+
+.fb-tv .fb-board-item {
+  min-height: 5.5rem;
+}
+
+.fb-tv .fb-truth-text {
+  font-size: clamp(2rem, 5vw, 4.5rem);
+}
+
+.fb-tv .fb-standing {
+  min-height: 4rem;
+  font-size: 1.2em;
+}
+
+.fb-tv-finish {
+  align-self: center;
+  max-width: 24rem;
+}
+
+/* Who the room is waiting on: everyone's chip lights up in the kind's colour
+   once they have answered. */
+.fb-seats {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fb-seat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px 6px 6px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface);
+}
+
+.fb-seat[data-done="true"] {
+  background: var(--kind);
+  color: var(--on-colour);
+}
+
+/* ── Interaction ───────────────────────────────────────────────────────── */
+
+@media (hover: hover) and (pointer: fine) {
+  .fb-choice:hover:not(:disabled):not([aria-pressed="true"]) {
+    background: var(--surface-hover);
+  }
+
+  .fb-host summary:hover {
+    color: var(--text);
+  }
+}
+
+/* ── Motion ────────────────────────────────────────────────────────────────
+   The reveal is the show: lies land one after another, and the truth comes
+   last. Nothing bounces, and full-width rows rise rather than slide sideways. */
+@media (prefers-reduced-motion: no-preference) {
+  .fb-prompt {
+    animation: fb-slip-in 360ms var(--ease-out) backwards;
+  }
+
+  @keyframes fb-slip-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px) rotate(-2.5deg);
+    }
+  }
+
+  .fb-reveal-item,
+  .fb-standing,
+  .fb-award {
+    animation: fb-rise var(--t-arrive) var(--ease-out) backwards;
+  }
+
+  .fb-reveal > :nth-child(2),
+  .fb-standings > :nth-child(2) {
+    animation-delay: 140ms;
+  }
+  .fb-reveal > :nth-child(3),
+  .fb-standings > :nth-child(3) {
+    animation-delay: 280ms;
+  }
+  .fb-reveal > :nth-child(4),
+  .fb-standings > :nth-child(4) {
+    animation-delay: 420ms;
+  }
+  .fb-reveal > :nth-child(n + 5),
+  .fb-standings > :nth-child(n + 5) {
+    animation-delay: 560ms;
+  }
+
+  @keyframes fb-rise {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+
+  /* The truth waits for the lies, then lands. */
+  .fb-truth {
+    animation: fb-truth-in 420ms var(--ease-out) 700ms backwards;
+  }
+
+  .fb-awards {
+    animation: fb-rise var(--t-arrive) var(--ease-out) 1100ms backwards;
+  }
+
+  @keyframes fb-truth-in {
+    from {
+      opacity: 0;
+      transform: scale(0.94) rotate(0.6deg);
+    }
+  }
+
+  .fb-tv-stage {
+    animation: screen-in var(--t-arrive) var(--ease-out) backwards;
+  }
+
+  /* pick and badge-pop: see app.css. */
+  .fb-choice[aria-pressed="true"],
+  .fb-seat[data-done="true"] {
+    animation: pick 220ms var(--ease-out);
+  }
+
+  .fb-standing[data-star="true"] .fb-star {
+    animation: badge-pop 320ms var(--ease-out) 600ms backwards;
+  }
+}

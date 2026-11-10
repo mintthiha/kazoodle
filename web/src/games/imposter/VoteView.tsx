@@ -5,7 +5,7 @@ import type { RoleAssignment, VotePhase, VoteProgress } from "./gen/imposter_pb"
 import type { GameViewProps } from "../registry";
 import { makeNameFor } from "../../players/nameFor";
 import { ClueLedger } from "./ClueLedger";
-import { Countdown } from "./Countdown";
+import { Countdown } from "../../clock/Countdown";
 import { buildLedger } from "./ledger";
 import { WordPeek } from "./WordSlip";
 

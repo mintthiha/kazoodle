@@ -16,7 +16,8 @@
     "sim": "playwright test --config playwright.sim.config.ts sim/simulation.spec.ts",
     "sim:wavelength": "playwright test --config playwright.sim.config.ts sim/wavelength.spec.ts",
     "sim:wavelength:spoken": "playwright test --config playwright.sim.config.ts sim/wavelength-spoken.spec.ts",
-    "sim:wavelength:online": "playwright test --config playwright.sim.config.ts sim/wavelength-online.spec.ts"
+    "sim:wavelength:online": "playwright test --config playwright.sim.config.ts sim/wavelength-online.spec.ts",
+    "sim:fibblash": "playwright test --config playwright.sim.config.ts sim/fibblash.spec.ts"
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.14.1",

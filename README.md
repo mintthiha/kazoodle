@@ -15,6 +15,9 @@ create or join a room, watch players sync, bounce a message through the server.
 steal-the-win guess for a caught imposter, and play-again, in English and
 French. **Wavelength** is the second: read a secret number from your friends'
 answers. Both play online with a phone each, or on one phone passed around.
+**Fibblash** is the third: trivia lies, comedy matchups and a mix of the two,
+played on phones with an optional main screen (a TV or laptop that hosts the
+room at `/fibblash/screen` and shows the show).
 Most of this README is still architecture direction that the code is growing
 into.
 
@@ -165,7 +168,8 @@ Mobile-browser-first. No install, no store review, join by link or code.
 Ship 2–3 games that each exercise a different play mode, to prove the session
 layer generalizes. **Imposter** (pass-and-play / local multi-device) is the
 first, and **Wavelength** (one phone or a phone each, answers typed or out
-loud) the second; one more is still to come.
+loud) the second, and **Fibblash** (a phone each plus a shared main screen)
+the third.
 
 **Phase 2 — Native**
 Wrap for iOS / Android once the web version is genuinely good. Native buys

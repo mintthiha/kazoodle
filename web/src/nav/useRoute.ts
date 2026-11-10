@@ -12,7 +12,11 @@ interface Nav {
   navigate: (path: string) => void;
 }
 
-export function useRoute(knownIds: readonly string[], localIds: readonly string[]): Nav {
+export function useRoute(
+  knownIds: readonly string[],
+  localIds: readonly string[],
+  screenIds: readonly string[] = [],
+): Nav {
   const [pathname, setPathname] = useState(() => window.location.pathname);
 
   // popstate fires on back/forward. Without this listener the URL would change
@@ -31,5 +35,5 @@ export function useRoute(knownIds: readonly string[], localIds: readonly string[
     setPathname(path);
   }, []);
 
-  return { route: parseRoute(pathname, knownIds, localIds), navigate };
+  return { route: parseRoute(pathname, knownIds, localIds, screenIds), navigate };
 }

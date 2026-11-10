@@ -1,0 +1,283 @@
+syntax = "proto3";
+
+package fibblash.v1;
+
+option go_package = "github.com/mintthiha/party-games/server/internal/games/fibblash/pb;pb";
+
+// Wire messages for Fibblash, played on phones with an optional main screen.
+// Carried inside the core protocol's GameEvent / GameAction envelopes as proto3
+// JSON.
+//
+// A match is a run of questions of three kinds, drawn at random by the server:
+//
+//   - REAL: a trivia question with a true answer. Everyone writes a believable
+//     lie, the truth is shuffled in among the lies, and everyone votes for the
+//     one they think is true. +1000 for finding the truth, +500 to a lie's
+//     author for every player it fooled.
+//   - CREATIVE: a prompt with no right answer. Everyone writes something
+//     funny, and the answers go head to head in pairs (one trio when the count
+//     is odd). +250 per vote, and +500 more for taking every vote there was.
+//   - HYBRID: a REAL question with a second vote for the funniest answer.
+//     +250 per funny vote on top of the REAL scoring.
+//
+// Every phase runs on a server clock, which ends early once everyone it is
+// waiting on is done. The host can move a phase on, skip a question, or end the
+// match. Scores carry across every question and kind.
+//
+// Messages fall in two groups. Broadcasts go to the whole room, main screen
+// included, and say nothing secret. Private messages ("Your...") go to one
+// player and tell them only about their own answer or vote. A main screen is
+// never a player, so it only ever gets broadcasts.
+
+// Sent as StartGame.options (proto3-JSON). The zero value is the default.
+message StartOptions {
+  // How many questions the match has. 0 means the default of 12. Values are
+  // clamped to 3..20, and to what the question bank can supply.
+  int32 questions = 1;
+}
+
+// What kind of question this is.
+enum Kind {
+  KIND_UNSPECIFIED = 0;
+  KIND_REAL = 1;
+  KIND_CREATIVE = 2;
+  KIND_HYBRID = 3;
+}
+
+// What a vote is for.
+enum VoteKind {
+  VOTE_KIND_UNSPECIFIED = 0;
+  // REAL and HYBRID: which answer is the truth?
+  VOTE_KIND_TRUTH = 1;
+  // HYBRID only, after the truth vote: which answer is the funniest?
+  VOTE_KIND_FUNNY = 2;
+  // CREATIVE: which of these two (or three) answers is better?
+  VOTE_KIND_MATCHUP = 3;
+}
+
+// Why points were awarded.
+enum AwardReason {
+  AWARD_REASON_UNSPECIFIED = 0;
+  // Voted for the truth.
+  AWARD_REASON_FOUND_TRUTH = 1;
+  // Your lie fooled `count` players.
+  AWARD_REASON_FOOLED = 2;
+  // Your answer got `count` funny votes (HYBRID) or matchup votes (CREATIVE).
+  AWARD_REASON_VOTES = 3;
+  // Your answer took every vote in its matchup.
+  AWARD_REASON_SWEEP = 4;
+}
+
+// ── Server → Client ───────────────────────────────────────────────────────
+
+message FibblashServerMessage {
+  oneof body {
+    QuestionIntro question_intro = 1;
+    AnswerPhase answer_phase = 2;
+    AnswerProgress answer_progress = 3;
+    YourAnswer your_answer = 4;
+    VotePhase vote_phase = 5;
+    YourBallot your_ballot = 6;
+    VoteProgress vote_progress = 7;
+    YourVote your_vote = 8;
+    MatchupResult matchup_result = 9;
+    QuestionResult question_result = 10;
+    Leaderboard leaderboard = 11;
+    FinalResult final_result = 12;
+  }
+}
+
+// Broadcast as each question begins. A client clears everything it knew about
+// the last question when this arrives.
+message QuestionIntro {
+  int32 number = 1; // 1-based
+  int32 total = 2;
+  Kind kind = 3;
+  // A category key, e.g. "history" or "ridiculous". The client translates it.
+  string category = 4;
+  // The question itself, in the match's language. For REAL and HYBRID it
+  // usually contains a blank, written as "____".
+  string prompt = 5;
+  int32 seconds = 6;
+  // The players taking part in this question, in join order.
+  repeated string player_ids = 7;
+}
+
+// Broadcast when answers open.
+message AnswerPhase {
+  int32 seconds = 1;
+  // The longest answer accepted, in characters.
+  int32 max_length = 2;
+}
+
+// Broadcast as answers come in: who has answered, never what.
+message AnswerProgress {
+  repeated string answered_ids = 1;
+  int32 total = 2;
+}
+
+// Sent privately to a player whose answer was accepted. Answers cannot be
+// changed once sent.
+message YourAnswer {
+  string text = 1;
+}
+
+// One answer as a voter sees it: no author, and nothing marks the truth.
+message Choice {
+  // A letter, assigned after shuffling, so it says nothing about who wrote
+  // the answer or whether it is true.
+  string id = 1;
+  string text = 2;
+}
+
+// Broadcast when a vote opens.
+message VotePhase {
+  VoteKind vote = 1;
+  repeated Choice choices = 2;
+  int32 seconds = 3;
+  // VOTE_KIND_MATCHUP only: which matchup this is, 1-based, and of how many.
+  int32 matchup = 4;
+  int32 matchups = 5;
+}
+
+// Sent privately to each player as a vote opens: what they may do in it.
+message YourBallot {
+  // False when this player has no vote here: an author in a two-answer
+  // matchup, or someone who joined after the question began.
+  bool can_vote = 1;
+  // Choices this player wrote, which they may not vote for.
+  repeated string own_choice_ids = 2;
+}
+
+// Broadcast as votes come in. Counts only: in a matchup, who has voted would
+// give away who wrote the answers.
+message VoteProgress {
+  int32 voted = 1;
+  int32 total = 2;
+}
+
+// Sent privately to a player whose vote was accepted. Votes cannot be changed.
+message YourVote {
+  string choice_id = 1;
+}
+
+// One answer once the votes are in: who wrote it and who picked it.
+message RevealedChoice {
+  string id = 1;
+  string text = 2;
+  // Empty for the truth. More than one when several players wrote the same lie.
+  repeated string author_ids = 3;
+  bool truth = 4;
+  // Who voted for it as the truth (REAL, HYBRID) or as the best (CREATIVE).
+  repeated string voter_ids = 5;
+  // HYBRID only: who voted for it as the funniest.
+  repeated string funny_voter_ids = 6;
+}
+
+// Points won, and why.
+message Award {
+  string player_id = 1;
+  int32 points = 2;
+  AwardReason reason = 3;
+  // How many players were fooled, or how many votes, where that applies.
+  int32 count = 4;
+}
+
+// Broadcast when a CREATIVE matchup's votes are in.
+message MatchupResult {
+  int32 matchup = 1; // 1-based
+  int32 matchups = 2;
+  repeated RevealedChoice choices = 3;
+  // The choice ids with the most votes. Empty when nobody voted.
+  repeated string winner_ids = 4;
+  repeated Award awards = 5;
+  int32 seconds = 6;
+}
+
+// Broadcast when a REAL or HYBRID question is revealed.
+message QuestionResult {
+  Kind kind = 1;
+  // The true answer, in the match's language, and a sentence on why.
+  string answer = 2;
+  string explanation = 3;
+  // Where the fact comes from, e.g. "Wikipedia: Bubble wrap".
+  string source = 4;
+  // Every answer that was on the ballot, the truth among them.
+  repeated RevealedChoice choices = 5;
+  repeated Award awards = 6;
+  int32 seconds = 7;
+}
+
+// One player's place in the match.
+message Standing {
+  string player_id = 1;
+  int32 score = 2;
+  // What the last question alone earned them.
+  int32 delta = 3;
+  // 1-based. Players on the same score share a rank: 1, 1, 3.
+  int32 rank = 4;
+}
+
+// Broadcast after every question.
+message Leaderboard {
+  int32 number = 1; // the question just played, 1-based
+  int32 total = 2;
+  // Everyone the match started with, highest score first. Players who left
+  // keep their row and their points.
+  repeated Standing standings = 3;
+  // Whoever earned the most on the last question. Several on a tie; empty if
+  // nobody scored.
+  repeated string top_ids = 4;
+  // True when the host skipped the question before it was scored.
+  bool skipped = 5;
+  int32 seconds = 6;
+}
+
+// Broadcast when the match is over. It stays up until the host sends Finish.
+message FinalResult {
+  repeated Standing standings = 1;
+  // The highest score among the players still here. Several on a tie: a tie
+  // is shared, never broken at random. Empty if nobody scored.
+  repeated string winner_ids = 2;
+  // True when the match stopped before its last question: the host ended it,
+  // or too few players were left to go on.
+  bool ended_early = 3;
+}
+
+// ── Client → Server ───────────────────────────────────────────────────────
+
+message FibblashClientMessage {
+  oneof body {
+    SubmitAnswer submit_answer = 1;
+    CastVote cast_vote = 2;
+    HostNext host_next = 3;
+    HostSkip host_skip = 4;
+    HostEnd host_end = 5;
+    Finish finish = 6;
+  }
+}
+
+// A player's answer: a lie, or something funny. One per question. Refused when
+// empty, too long, or (REAL and HYBRID) the same as the truth.
+message SubmitAnswer {
+  string text = 1;
+}
+
+// A player's vote in the open vote. One per vote. Refused for a choice that
+// does not exist or that this player wrote.
+message CastVote {
+  string choice_id = 1;
+}
+
+// Host only: end the current phase now, as if its clock had run out.
+message HostNext {}
+
+// Host only: drop the current question and go to the leaderboard. Points
+// already shown on screen are kept; nothing else from the question is scored.
+message HostSkip {}
+
+// Host only: end the match now and show the final standings.
+message HostEnd {}
+
+// Host only, on the final standings: back to the lobby.
+message Finish {}

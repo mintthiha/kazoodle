@@ -1,7 +1,7 @@
 import { useT } from "../../../i18n";
 import { Standings } from "../Standings";
 import { standingsOf } from "./rows";
-import { joinNames } from "../names";
+import { joinNames } from "../../../players/joinNames";
 import { leaders, type LocalGame } from "./localGame";
 
 interface Props {

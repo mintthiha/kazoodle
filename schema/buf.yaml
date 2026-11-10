@@ -5,6 +5,7 @@ modules:
   - path: proto/core
   - path: proto/games/imposter
   - path: proto/games/wavelength
+  - path: proto/games/fibblash
 lint:
   use:
     - STANDARD

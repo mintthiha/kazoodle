@@ -17,10 +17,12 @@ game:
 proto/core/protocol.proto            # package partygames.v1
 proto/games/imposter/imposter.proto      # package imposter.v1
 proto/games/wavelength/wavelength.proto  # package wavelength.v1
+proto/games/fibblash/fibblash.proto      # package fibblash.v1
 buf.yaml                                 # workspace: lists the modules, lint config
 buf.gen.core.yaml                        # codegen for the core module
 buf.gen.imposter.yaml                    # codegen for the imposter module
 buf.gen.wavelength.yaml                  # codegen for the wavelength module
+buf.gen.fibblash.yaml                    # codegen for the fibblash module
 ```
 
 Generated output (do not edit by hand):
@@ -32,6 +34,8 @@ Generated output (do not edit by hand):
 ../web/src/games/imposter/gen/imposter_pb.ts
 ../server/internal/games/wavelength/pb/wavelength.pb.go
 ../web/src/games/wavelength/gen/wavelength_pb.ts
+../server/internal/games/fibblash/pb/fibblash.pb.go
+../web/src/games/fibblash/gen/fibblash_pb.ts
 ```
 
 ## Adding a game

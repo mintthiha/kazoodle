@@ -1,4 +1,4 @@
-import type { Locale } from "../../i18n";
+import type { Locale } from "../i18n";
 
 /** "Ben and Cleo", "Ben, Cleo et Dee": a list of names the way each language
  * writes one, so a sentence like "+1 each for {who}" reads naturally. */

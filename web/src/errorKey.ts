@@ -16,6 +16,9 @@ const ERRORS: Record<string, MessageKey> = {
   not_in_room: "error.not_in_room",
   session_expired: "error.session_expired",
   session_replaced: "error.session_replaced",
+  kicked: "error.kicked",
+  player_not_found: "error.player_not_found",
+  kick_self: "error.kick_self",
 };
 
 /** The message key for a server error code, or null when there is no error.

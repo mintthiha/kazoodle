@@ -4,12 +4,13 @@
   "private": true,
   "description": "Kazoodle wire protocol: .proto source of truth + codegen for Go and TypeScript.",
   "scripts": {
-    "generate": "buf generate --template buf.gen.core.yaml && buf generate --template buf.gen.imposter.yaml && buf generate --template buf.gen.wavelength.yaml",
+    "generate": "buf generate --template buf.gen.core.yaml && buf generate --template buf.gen.imposter.yaml && buf generate --template buf.gen.wavelength.yaml && buf generate --template buf.gen.fibblash.yaml",
     "generate:core": "buf generate --template buf.gen.core.yaml",
     "generate:imposter": "buf generate --template buf.gen.imposter.yaml",
     "lint": "buf lint",
     "format": "buf format -w",
-    "generate:wavelength": "buf generate --template buf.gen.wavelength.yaml"
+    "generate:wavelength": "buf generate --template buf.gen.wavelength.yaml",
+    "generate:fibblash": "buf generate --template buf.gen.fibblash.yaml"
   },
   "devDependencies": {
     "@bufbuild/buf": "^1.55.1",

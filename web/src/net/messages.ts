@@ -11,20 +11,22 @@ import {
   type ServerMessage,
 } from "./gen/protocol_pb";
 
-export function encodeCreateRoom(displayName: string, locale: string): string {
+// screen = true joins as a main screen: a shared display that shows the game
+// but is never dealt in as a player.
+export function encodeCreateRoom(displayName: string, locale: string, screen = false): string {
   return toJsonString(
     ClientMessageSchema,
     create(ClientMessageSchema, {
-      payload: { case: "createRoom", value: { displayName, locale } },
+      payload: { case: "createRoom", value: { displayName, locale, screen } },
     }),
   );
 }
 
-export function encodeJoinRoom(roomCode: string, displayName: string, locale: string): string {
+export function encodeJoinRoom(roomCode: string, displayName: string, locale: string, screen = false): string {
   return toJsonString(
     ClientMessageSchema,
     create(ClientMessageSchema, {
-      payload: { case: "joinRoom", value: { roomCode, displayName, locale } },
+      payload: { case: "joinRoom", value: { roomCode, displayName, locale, screen } },
     }),
   );
 }
@@ -88,6 +90,16 @@ export function encodeGameAction(gameId: string, payload: string): string {
     ClientMessageSchema,
     create(ClientMessageSchema, {
       payload: { case: "gameAction", value: { gameId, payload } },
+    }),
+  );
+}
+
+/** Host only: remove a player from the room. */
+export function encodeKickPlayer(playerId: string): string {
+  return toJsonString(
+    ClientMessageSchema,
+    create(ClientMessageSchema, {
+      payload: { case: "kickPlayer", value: { playerId } },
     }),
   );
 }

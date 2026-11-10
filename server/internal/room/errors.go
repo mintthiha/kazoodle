@@ -28,3 +28,11 @@ var (
 	// ErrWrongGame — a GameAction's game_id does not match the running game.
 	ErrWrongGame = errors.New("game_id does not match the running game")
 )
+
+// Kick errors, reported back to the host who sent the KickPlayer.
+var (
+	// ErrPlayerNotFound — the player to remove is not in the room.
+	ErrPlayerNotFound = errors.New("no such player in this room")
+	// ErrKickSelf — the host tried to remove themselves; LeaveRoom is for that.
+	ErrKickSelf = errors.New("the host cannot remove themselves")
+)

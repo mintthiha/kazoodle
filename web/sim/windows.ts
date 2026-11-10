@@ -40,7 +40,12 @@ interface Slot {
 const profiles: string[] = [];
 const contexts: BrowserContext[] = [];
 
-async function launch(url: string, baseURL: string | undefined, slot?: Slot): Promise<{ context: BrowserContext; page: Page }> {
+async function launch(
+  url: string,
+  baseURL: string | undefined,
+  slot?: Slot,
+  headlessViewport = { width: 360, height: 640 },
+): Promise<{ context: BrowserContext; page: Page }> {
   const profile = mkdtempSync(join(tmpdir(), "pg-sim-"));
   profiles.push(profile);
 
@@ -61,7 +66,7 @@ async function launch(url: string, baseURL: string | undefined, slot?: Slot): Pr
     args,
     slowMo: HEADLESS ? 0 : Number(process.env.SIM_SLOWMO ?? 120),
     // Null means the page is exactly as big as its real window.
-    viewport: slot ? null : { width: 360, height: 640 },
+    viewport: slot ? null : headlessViewport,
   });
   context.setDefaultTimeout(30_000);
   contexts.push(context);
@@ -170,6 +175,68 @@ export async function openTable(names: string[], baseURL: string): Promise<Stage
 
   const narrator = await openNarrator(screenInfo, phoneHeight, narratorHeight);
   return { phones, narrator };
+}
+
+/** How wide the main screen's page is, in its own pixels: a laptop-sized layout. */
+const SCREEN_PAGE_WIDTH = 1280;
+/** The main screen's share of the width; the phones split the rest. */
+const SCREEN_SHARE = 0.5;
+
+export interface ScreenStage extends Stage {
+  /** The main screen: a TV the whole room watches, which hosts the room. */
+  screen: Player;
+}
+
+/** A main screen on the left, one phone per name beside it, and the narrator along
+ * the bottom. Each window gets its own scale, so the main screen lays out like a
+ * laptop and the phones like phones. */
+export async function openTableWithScreen(names: string[], baseURL: string): Promise<ScreenStage> {
+  if (HEADLESS) {
+    const tv = await launch("", baseURL, undefined, { width: SCREEN_PAGE_WIDTH, height: 800 });
+    const phones: Player[] = [];
+    for (const name of names) {
+      const { context, page } = await launch("", baseURL);
+      phones.push({ name, context, page });
+    }
+    return { screen: { name: "Main screen", ...tv }, phones, narrator: null };
+  }
+
+  const screenInfo = await measureScreen();
+  const narratorHeight = screenInfo.height * NARRATOR_SHARE;
+  const height = screenInfo.height - narratorHeight;
+
+  const tvWidth = screenInfo.width * SCREEN_SHARE;
+  const tvScale = Math.min(1, Math.max(0.3, tvWidth / SCREEN_PAGE_WIDTH));
+  const tvSlot: Slot = {
+    scale: tvScale,
+    left: Math.floor(screenInfo.left / tvScale),
+    top: Math.floor(screenInfo.top / tvScale),
+    width: Math.floor(tvWidth / tvScale),
+    height: Math.floor(height / tvScale),
+  };
+  const tv = await launch(blankPage("Main screen"), baseURL, tvSlot);
+  await placeWindow(tv.context, tv.page, tvSlot);
+
+  const shareWidth = (screenInfo.width - tvWidth) / names.length;
+  const scale = Math.min(1, Math.max(0.45, shareWidth / PHONE_WIDTH));
+  const toPage = (px: number) => Math.floor(px / scale);
+  const phones = await Promise.all(
+    names.map(async (name, i) => {
+      const slot: Slot = {
+        scale,
+        left: toPage(screenInfo.left + tvWidth + i * shareWidth),
+        top: toPage(screenInfo.top),
+        width: toPage(shareWidth),
+        height: toPage(height),
+      };
+      const { context, page } = await launch(blankPage(name), baseURL, slot);
+      await placeWindow(context, page, slot);
+      return { name, context, page };
+    }),
+  );
+
+  const narrator = await openNarrator(screenInfo, height, narratorHeight);
+  return { screen: { name: "Main screen", ...tv }, phones, narrator };
 }
 
 async function openNarrator(screenInfo: Screen, top: number, height: number): Promise<Narrator> {

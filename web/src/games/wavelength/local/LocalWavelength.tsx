@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useT } from "../../../i18n";
 import type { LocalGameProps } from "../../registry";
 import { resolveNames } from "../../onephone/seats";
-import { TwoTapButton } from "../../onephone/TwoTapButton";
+import { TwoTapButton } from "../../../screens/TwoTapButton";
 import { AnswerView } from "./AnswerView";
 import { CategoryView } from "./CategoryView";
 import { FinalView } from "./FinalView";

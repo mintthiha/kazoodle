@@ -107,6 +107,12 @@
   transform: rotate(1deg) translateX(-3px);
 }
 
+.cover-slip mark {
+  padding: 0 0.1em;
+  background: var(--accent);
+  color: inherit;
+}
+
 .cover-slip-odd {
   background: var(--ground);
   color: var(--accent);

@@ -68,6 +68,7 @@ export function GameSession({ gameId, onExit }: Props) {
         onSetOptions={(opts) => actions.setGameOptions(gameId, opts)}
         onEcho={actions.echo}
         onLeave={actions.leaveRoom}
+        onKick={actions.kickPlayer}
       />
     );
   } else {

@@ -22,6 +22,7 @@ import {
   encodeEcho,
   encodeGameAction,
   encodeJoinRoom,
+  encodeKickPlayer,
   encodeLeaveRoom,
   encodeResumeRoom,
   encodeSetGameOptions,
@@ -46,6 +47,10 @@ export type ConnState = "connecting" | "open" | "reconnecting" | "closed";
 export interface Player {
   id: string;
   displayName: string;
+  /** A main screen (a TV showing the game), not a person. It is on the roster
+   * so the room can address it, but it never plays and never counts towards a
+   * game's minimum. Optional so a plain { id, displayName } still fits. */
+  screen?: boolean;
 }
 
 /** The host's live pending choice for the next game's start options (e.g.
@@ -122,6 +127,14 @@ interface Desired {
   displayName: string;
   locale: string;
   token?: string;
+  /** Joining as a main screen rather than a player. */
+  screen?: boolean;
+}
+
+/** A wire player as the snapshot holds it. `screen` is only set when true, so an
+ * ordinary player stays the plain { id, displayName } every screen expects. */
+function toPlayer(p: { id: string; displayName: string; screen: boolean }): Player {
+  return p.screen ? { id: p.id, displayName: p.displayName, screen: true } : { id: p.id, displayName: p.displayName };
 }
 
 const SESSION_KEY = "pg.session.v1";
@@ -283,13 +296,13 @@ export class Connection {
   // ─── actions ─────────────────────────────────────────────────────────────
 
   readonly actions = {
-    createRoom: (displayName: string, locale: string): void => {
-      this.#desired = { code: null, displayName, locale };
+    createRoom: (displayName: string, locale: string, screen = false): void => {
+      this.#desired = { code: null, displayName, locale, screen };
       this.#patch({ lastError: null });
       this.#assertDesired();
     },
-    joinRoom: (code: string, displayName: string, locale: string): void => {
-      this.#desired = { code, displayName, locale };
+    joinRoom: (code: string, displayName: string, locale: string, screen = false): void => {
+      this.#desired = { code, displayName, locale, screen };
       this.#patch({ lastError: null });
       this.#assertDesired();
     },
@@ -310,6 +323,15 @@ export class Connection {
       if (this.#isOpen() && this.#snapshot.room) {
         this.#ws!.send(encodeSetGameOptions(gameId, options));
       }
+    },
+    /** Whether the connection is already in a room or trying to get into one,
+     * including a seat saved from before a reload that it is about to reclaim.
+     * A screen that opens a room by itself checks this first, so a reload
+     * resumes the old room instead of opening a second one. */
+    wantsRoom: (): boolean => this.#desired !== null,
+    /** Host only: remove a player from the room. The server refuses anyone else. */
+    kickPlayer: (playerId: string): void => {
+      if (this.#isOpen() && this.#snapshot.room) this.#ws!.send(encodeKickPlayer(playerId));
     },
     gameAction: (gameId: string, payload: string): void => {
       if (this.#isOpen() && this.#snapshot.game) {
@@ -341,8 +363,8 @@ export class Connection {
     }
     this.#ws!.send(
       d.code === null
-        ? encodeCreateRoom(d.displayName, d.locale)
-        : encodeJoinRoom(d.code, d.displayName, d.locale),
+        ? encodeCreateRoom(d.displayName, d.locale, d.screen)
+        : encodeJoinRoom(d.code, d.displayName, d.locale, d.screen),
     );
   }
 
@@ -371,6 +393,7 @@ export class Connection {
         token: d.token,
         displayName: typeof d.displayName === "string" ? d.displayName : "",
         locale: typeof d.locale === "string" ? d.locale : "en",
+        screen: d.screen === true,
       };
     } catch {
       return null;
@@ -411,7 +434,7 @@ export class Connection {
             code: roomCode,
             selfId: selfPlayerId,
             hostId,
-            players: players.map((p) => ({ id: p.id, displayName: p.displayName })),
+            players: players.map(toPlayer),
             departed,
             offline: [...offlinePlayerIds],
             pendingOptions,
@@ -456,7 +479,7 @@ export class Connection {
         this.#patch({
           room: {
             ...this.#snapshot.room,
-            players: [...this.#snapshot.room.players, { id: p.id, displayName: p.displayName }],
+            players: [...this.#snapshot.room.players, toPlayer(p)],
           },
         });
         break;
@@ -545,6 +568,19 @@ export class Connection {
           this.#gameEventLog = [];
           this.#patch({ room: null, game: null, lastError: code, lastDeparture: null, lastGameEnd: null });
           this.#ws?.close();
+          break;
+        }
+
+        // The host removed this player. The server has already taken them off
+        // the roster; LeaveRoom tells this connection's side of the server it
+        // is no longer in the room, so it may create or join another one.
+        if (code === "kicked") {
+          if (this.#isOpen()) this.#ws!.send(encodeLeaveRoom());
+          this.#desired = null;
+          this.#saveSession();
+          this.#seatLost = false;
+          this.#gameEventLog = [];
+          this.#patch({ room: null, game: null, lastError: code, lastDeparture: null, lastGameEnd: null });
           break;
         }
 

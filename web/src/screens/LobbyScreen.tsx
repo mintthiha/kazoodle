@@ -6,6 +6,7 @@ import { Avatar } from "../players/Avatar";
 import { makeHueFor } from "../players/hues";
 import { ChatPanel } from "./ChatPanel";
 import { RulesCard } from "./RulesCard";
+import { TwoTapButton } from "./TwoTapButton";
 import type { RoomState } from "../net/connection";
 import type { EchoLine } from "../net/connection";
 import type { OnlineGame } from "../games/registry";
@@ -31,6 +32,8 @@ interface Props {
   onSetOptions: (options: string) => void;
   onEcho: (text: string) => void;
   onLeave: () => void;
+  /** Host only: remove a player from the room. */
+  onKick: (playerId: string) => void;
 }
 
 // Second screen: the room's code, who is in it, the match setup and start
@@ -53,6 +56,7 @@ export function LobbyScreen({
   onSetOptions,
   onEcho,
   onLeave,
+  onKick,
 }: Props) {
   const { t } = useT();
   const [opts, setOpts] = useState(game.defaultOptions);
@@ -62,10 +66,15 @@ export function LobbyScreen({
   const [copy, setCopy] = useState<{ state: CopyState; n: number }>({ state: "idle", n: 0 });
   // Only connected players get dealt in, so a held seat does not count towards
   // starting. Otherwise the button could promise a game the server will refuse.
-  const onlineCount = room.players.length - room.offline.length;
-  const canStart = onlineCount >= minPlayers;
-  const hueFor = makeHueFor(room.players, room.departed);
-  const openSeats = Math.max(0, minPlayers - room.players.length);
+  // A main screen is on the roster but never plays, so it is left out of every
+  // count and drawn apart from the players.
+  const people = room.players.filter((p) => !p.screen);
+  const screens = room.players.filter((p) => p.screen);
+  const onlineCount = people.filter((p) => !room.offline.includes(p.id)).length;
+  const maxPlayers = game.maxPlayers ?? Infinity;
+  const canStart = onlineCount >= minPlayers && onlineCount <= maxPlayers;
+  const hueFor = makeHueFor(people, room.departed);
+  const openSeats = Math.max(0, minPlayers - people.length);
   const { Setup } = game;
 
   // Clear the copy confirmation a couple of seconds after it appears. The
@@ -87,6 +96,7 @@ export function LobbyScreen({
       : game.defaultOptions;
 
   const host = room.players.find((p) => p.id === room.hostId);
+  const hostName = host?.screen ? t("lobby.screen") : host ? displayNameOf(host.displayName, t) : t("lobby.host");
 
   // The host's pick is kept here and broadcast whole, since SetGameOptions
   // carries the options as one payload rather than a patch.
@@ -138,10 +148,10 @@ export function LobbyScreen({
 
           <section>
             <h2>
-              {t("lobby.players")} <span className="num">({room.players.length})</span>
+              {t("lobby.players")} <span className="num">({people.length})</span>
             </h2>
             <ul className="roster">
-              {room.players.map((p) => {
+              {people.map((p) => {
                 const name = displayNameOf(p.displayName, t);
                 return (
                   <li key={p.id} className="roster-row">
@@ -154,9 +164,24 @@ export function LobbyScreen({
                       <span className="pill pill-offline">{t("lobby.offline")}</span>
                     )}
                     {p.id === room.hostId && <span className="pill">{t("lobby.host")}</span>}
+                    {isHost && p.id !== room.selfId && (
+                      <TwoTapButton
+                        label={t("lobby.remove")}
+                        confirmLabel={t("lobby.removeConfirm")}
+                        onConfirm={() => onKick(p.id)}
+                      />
+                    )}
                   </li>
                 );
               })}
+              {screens.map((s) => (
+                <li key={s.id} className="roster-row roster-screen">
+                  <span className="avatar-empty" aria-hidden="true" />
+                  <span className="roster-name">{t("lobby.screen")}</span>
+                  {room.offline.includes(s.id) && <span className="pill pill-offline">{t("lobby.offline")}</span>}
+                  {s.id === room.hostId && <span className="pill">{t("lobby.host")}</span>}
+                </li>
+              ))}
               {/* Seats still to fill before a game can start, drawn empty so a
                   disabled Start button has a visible reason. */}
               {Array.from({ length: openSeats }, (_, i) => (
@@ -189,18 +214,17 @@ export function LobbyScreen({
         {errorKey(lastError) && <p className="hint">{t(errorKey(lastError)!)}</p>}
         {isHost ? (
           <>
-            {!canStart && (
+            {onlineCount < minPlayers && (
               <p className="status">{t("lobby.needPlayers", { min: minPlayers })}</p>
             )}
+            {onlineCount > maxPlayers && <p className="hint">{t("lobby.tooManyPlayers", { max: maxPlayers })}</p>}
             <button className="primary" onClick={() => onStartGame(opts)} disabled={!canStart}>
               {t(game.startKey)}
             </button>
           </>
         ) : (
           <p className="status">
-            {t("lobby.waitingForHost", {
-              who: host ? displayNameOf(host.displayName, t) : t("lobby.host"),
-            })}
+            {t("lobby.waitingForHost", { who: hostName })}
           </p>
         )}
       </div>

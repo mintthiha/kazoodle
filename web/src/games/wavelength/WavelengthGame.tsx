@@ -18,7 +18,7 @@ import {
   encodeSetCategory,
   encodeSubmitAnswer,
 } from "./messages";
-import { joinNames } from "./names";
+import { joinNames } from "../../players/joinNames";
 import { ResultShow } from "./ResultShow";
 import { ChooseScreen } from "./online/ChooseScreen";
 import { wlErrorKey } from "./online/errors";

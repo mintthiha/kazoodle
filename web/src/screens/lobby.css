@@ -463,3 +463,8 @@
     animation: badge-pop 300ms var(--ease-out);
   }
 }
+
+/* A main screen on the roster: it is in the room, but it is not a player. */
+.roster-screen .roster-name {
+  color: var(--muted);
+}

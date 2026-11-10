@@ -102,9 +102,9 @@ func (c *conn) readPump(ctx context.Context) {
 func (c *conn) handle(ctx context.Context, msg *protocol.ClientMessage) {
 	switch p := msg.GetPayload().(type) {
 	case *protocol.ClientMessage_CreateRoom:
-		c.doCreate(ctx, p.CreateRoom.GetDisplayName(), p.CreateRoom.GetLocale())
+		c.doCreate(ctx, p.CreateRoom)
 	case *protocol.ClientMessage_JoinRoom:
-		c.doJoin(ctx, p.JoinRoom.GetRoomCode(), p.JoinRoom.GetDisplayName(), p.JoinRoom.GetLocale())
+		c.doJoin(ctx, p.JoinRoom)
 	case *protocol.ClientMessage_ResumeRoom:
 		c.doResume(ctx, p.ResumeRoom.GetRoomCode(), p.ResumeRoom.GetSessionToken())
 	case *protocol.ClientMessage_LeaveRoom:
@@ -117,17 +117,25 @@ func (c *conn) handle(ctx context.Context, msg *protocol.ClientMessage) {
 		c.doSetGameOptions(ctx, p.SetGameOptions.GetGameId(), p.SetGameOptions.GetOptions())
 	case *protocol.ClientMessage_GameAction:
 		c.doGameAction(ctx, p.GameAction.GetGameId(), p.GameAction.GetPayload())
+	case *protocol.ClientMessage_KickPlayer:
+		c.doKick(ctx, p.KickPlayer.GetPlayerId())
 	default:
 		c.Send(errMsg("bad_message", "empty or unknown payload"))
 	}
 }
 
-func (c *conn) doCreate(ctx context.Context, displayName, locale string) {
+func (c *conn) doCreate(ctx context.Context, req *protocol.CreateRoom) {
 	if c.roomCode != "" {
 		c.Send(errMsg("already_in_room", "leave your current room first"))
 		return
 	}
-	res, err := c.mgr.Create(ctx, displayName, locale, c)
+	var res room.JoinResult
+	var err error
+	if req.GetScreen() {
+		res, err = c.mgr.CreateScreen(ctx, req.GetLocale(), c)
+	} else {
+		res, err = c.mgr.Create(ctx, req.GetDisplayName(), req.GetLocale(), c)
+	}
 	if err != nil {
 		c.Send(errMsg("create_failed", err.Error()))
 		return
@@ -136,12 +144,18 @@ func (c *conn) doCreate(ctx context.Context, displayName, locale string) {
 	c.Send(roomJoinedMsg(res))
 }
 
-func (c *conn) doJoin(ctx context.Context, code, displayName, locale string) {
+func (c *conn) doJoin(ctx context.Context, req *protocol.JoinRoom) {
 	if c.roomCode != "" {
 		c.Send(errMsg("already_in_room", "leave your current room first"))
 		return
 	}
-	res, err := c.mgr.Join(ctx, code, displayName, locale, c)
+	var res room.JoinResult
+	var err error
+	if req.GetScreen() {
+		res, err = c.mgr.JoinScreen(ctx, req.GetRoomCode(), req.GetLocale(), c)
+	} else {
+		res, err = c.mgr.Join(ctx, req.GetRoomCode(), req.GetDisplayName(), req.GetLocale(), c)
+	}
 	if errors.Is(err, room.ErrRoomNotFound) {
 		c.Send(errMsg("room_not_found", "no room with that code"))
 		return
@@ -302,7 +316,7 @@ func (c *conn) heartbeat(ctx context.Context) {
 func roomJoinedMsg(res room.JoinResult) *protocol.ServerMessage {
 	players := make([]*protocol.Player, 0, len(res.Players))
 	for _, p := range res.Players {
-		players = append(players, &protocol.Player{Id: p.ID, DisplayName: p.DisplayName})
+		players = append(players, &protocol.Player{Id: p.ID, DisplayName: p.DisplayName, Screen: p.Screen})
 	}
 	return &protocol.ServerMessage{
 		Payload: &protocol.ServerMessage_RoomJoined{
@@ -323,5 +337,32 @@ func errMsg(code, detail string) *protocol.ServerMessage {
 		Payload: &protocol.ServerMessage_Error{
 			Error: &protocol.ErrorInfo{Code: code, Message: detail},
 		},
+	}
+}
+
+// doKick is the host removing another player. The removed player's own
+// connection is told by the room ("kicked") and leaves on its own, which is what
+// clears its roomCode here; this connection only hears about a refusal.
+func (c *conn) doKick(ctx context.Context, targetID string) {
+	if c.roomCode == "" {
+		c.Send(errMsg("not_in_room", "join a room first"))
+		return
+	}
+	if err := c.mgr.Kick(ctx, c.roomCode, c.playerID, targetID); err != nil {
+		c.Send(errMsg(kickErrCode(err), err.Error()))
+	}
+}
+
+// kickErrCode maps a KickPlayer failure to a stable client-facing code.
+func kickErrCode(err error) string {
+	switch {
+	case errors.Is(err, room.ErrNotHost):
+		return "not_host"
+	case errors.Is(err, room.ErrPlayerNotFound):
+		return "player_not_found"
+	case errors.Is(err, room.ErrKickSelf):
+		return "kick_self"
+	default:
+		return "kick_failed"
 	}
 }

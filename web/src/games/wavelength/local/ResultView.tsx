@@ -1,6 +1,6 @@
 import { useT } from "../../../i18n";
 import { ResultShow } from "../ResultShow";
-import { joinNames } from "../names";
+import { joinNames } from "../../../players/joinNames";
 import { standingsOf } from "./rows";
 import { clueGivers, psychicWon, roundPoints, totalRounds, type LocalGame } from "./localGame";
 

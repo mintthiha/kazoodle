@@ -185,7 +185,12 @@ func (r *Room) applyResume(cmd resumeCmd) resumeReply {
 	r.cancelGrace(m)
 
 	// If everyone had dropped, nobody could take over as host when the host did.
-	if host, ok := r.members[r.hostID]; !ok || !host.online() {
+	// And the main screen that opened the room takes it back from whichever
+	// phone was minding it: a TV that reloads should not lose its own show.
+	if id == r.ownerScreen && r.hostID != id {
+		r.hostID = id
+		r.broadcastExcept(id, msgHostChanged(id))
+	} else if host, ok := r.members[r.hostID]; !ok || !host.online() {
 		if r.hostID != id {
 			r.hostID = id
 			r.broadcastExcept(id, msgHostChanged(id))

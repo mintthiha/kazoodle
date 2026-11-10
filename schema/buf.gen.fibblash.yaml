@@ -1,0 +1,16 @@
+version: v2
+clean: true
+inputs:
+  - directory: proto/games/fibblash
+plugins:
+  # Go types -> server/internal/games/fibblash/pb/fibblash.pb.go
+  - local: protoc-gen-go
+    out: ../server/internal/games/fibblash/pb
+    opt: paths=source_relative
+
+  # TypeScript types -> web/src/games/fibblash/gen/fibblash_pb.ts
+  - local: protoc-gen-es
+    out: ../web/src/games/fibblash/gen
+    opt:
+      - target=ts
+      - import_extension=none

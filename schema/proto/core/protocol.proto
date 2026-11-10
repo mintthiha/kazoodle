@@ -20,6 +20,12 @@ option go_package = "github.com/mintthiha/party-games/server/internal/protocol;p
 message Player {
   string id = 1;
   string display_name = 2;
+
+  // True for a main screen: a shared display (a TV, a laptop on a projector)
+  // that sits in the room to show the game to everyone. It is on the roster so
+  // it gets every public broadcast and can be the host, but it is never dealt
+  // into a game as a player and does not count towards a game's minimum.
+  bool screen = 3;
 }
 
 // ── Client → Server ───────────────────────────────────────────────────────
@@ -35,6 +41,7 @@ message ClientMessage {
     GameAction game_action = 6;
     SetGameOptions set_game_options = 7;
     ResumeRoom resume_room = 8;
+    KickPlayer kick_player = 9;
   }
 }
 
@@ -45,6 +52,8 @@ message CreateRoom {
   // BCP-47-ish tag, e.g. "en" or "fr". Used to localize server-produced,
   // player-facing strings (a game's secret word, for one). Defaults to "en".
   string locale = 2;
+  // Join as a main screen rather than a player. See Player.screen.
+  bool screen = 3;
 }
 
 // Join an existing room by code. Replies with RoomJoined, or ErrorInfo if the
@@ -53,6 +62,15 @@ message JoinRoom {
   string room_code = 1;
   string display_name = 2;
   string locale = 3;
+  // Join as a main screen rather than a player. See Player.screen.
+  bool screen = 4;
+}
+
+// Host-only: remove someone from the room — a phone left behind, or a guest
+// spoiling the game. They are sent ErrorInfo "kicked" and then dropped exactly
+// as if they had left, so a running game hears about it as a departure.
+message KickPlayer {
+  string player_id = 1;
 }
 
 // Leave the current room. The connection stays open; the client may create or
@@ -180,8 +198,9 @@ message EchoResult {
 // A problem with the client's last message. Not fatal to the connection.
 message ErrorInfo {
   // Stable, machine-readable: "room_not_found", "not_in_room", "bad_message",
-  // "session_expired", or "session_replaced" (another tab or device reclaimed
-  // this seat, so this connection no longer speaks for it).
+  // "session_expired", "session_replaced" (another tab or device reclaimed
+  // this seat, so this connection no longer speaks for it), or "kicked" (the
+  // host removed this player from the room; the client should leave it).
   string code = 1;
   // Human-readable detail for logs and debugging. Not localized.
   string message = 2;

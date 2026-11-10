@@ -1,0 +1,65 @@
+/* The shared countdown: a shrinking bar and the time in words. Used by every
+   game with a server clock. The bar is accent yellow until the last five
+   seconds, then red. */
+.countdown {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.countdown-bar {
+  flex: 1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--raised);
+}
+
+.countdown-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transform: scaleX(var(--share));
+  transform-origin: left;
+}
+
+.countdown-label {
+  flex: none;
+  max-width: 60%;
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+.countdown[data-low="true"] .countdown-fill {
+  background: var(--negative);
+}
+
+.countdown[data-low="true"] .countdown-label {
+  color: var(--negative);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The clock ticks once a second, so easing across that second turns a
+     stepping bar into a smooth one. */
+  .countdown-fill {
+    transition:
+      transform 1s linear,
+      background-color 200ms ease;
+  }
+
+  /* Under five seconds the words throb in time with the clock. */
+  .countdown[data-low="true"] .countdown-label {
+    animation: throb 1s ease-out infinite;
+  }
+
+  @keyframes throb {
+    0% {
+      transform: scale(1.12);
+    }
+    40%,
+    100% {
+      transform: scale(1);
+    }
+  }
+}

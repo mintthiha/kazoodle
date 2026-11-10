@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/mintthiha/party-games/server/internal/game"
+	"github.com/mintthiha/party-games/server/internal/games/fibblash"
 	"github.com/mintthiha/party-games/server/internal/games/imposter"
 	"github.com/mintthiha/party-games/server/internal/games/wavelength"
 	"github.com/mintthiha/party-games/server/internal/room"
@@ -35,6 +36,7 @@ func main() {
 	games := game.NewRegistry()
 	games.Register("imposter", imposter.New())
 	games.Register("wavelength", wavelength.New())
+	games.Register("fibblash", fibblash.New())
 
 	mgr := room.NewManager(ctx, games)
 

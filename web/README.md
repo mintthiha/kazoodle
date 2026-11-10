@@ -57,6 +57,9 @@ src/
     JoinScreen.tsx        name + create / join by code
     LobbyScreen.tsx       room code, player list, echo box, leave
     ConnBanner.tsx        connecting / reconnecting / disconnected strip
+  screens/bigscreen/     a main screen (TV) hosting a room: auto-create, big code
+  games/fibblash/        Fibblash: view.ts (pure fold), a phone view and a TV view
+  clock/                 the shared server-clock countdown
   games/imposter/local/  Imposter on one phone: no server, no socket
     localGame.ts           the rules, as pure functions
     customCategories.ts    rules for categories a group writes itself
