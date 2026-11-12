@@ -72,16 +72,20 @@ func scoreVotes(choices []choice, votes map[string]string) []award {
 }
 
 // scoreMatchup is what one CREATIVE matchup awards: pointsVote per vote, and
-// pointsSweep to an answer that took every vote from everyone who could vote.
-// A sweep needs at least two voters: winning the only vote there was is not
-// much of a landslide.
+// pointsSweep to an answer that took every vote it could have had. In a trio
+// an answer's own author is a voter who may not pick it, so they are left out
+// of that count. A sweep needs at least two such votes: winning the only vote
+// there was is not much of a landslide.
 func scoreMatchup(m matchup) []award {
 	out := scoreVotes(m.choices, m.votes)
-	if len(m.voters) < 2 || len(m.votes) != len(m.voters) {
-		return out
-	}
 	for _, c := range m.choices {
-		if tally(m.votes, c.id) == len(m.voters) {
+		possible := 0
+		for _, v := range m.voters {
+			if indexOf(c.authors, v) < 0 {
+				possible++
+			}
+		}
+		if possible >= 2 && tally(m.votes, c.id) == possible {
 			for _, a := range c.authors {
 				out = append(out, award{playerID: a, points: pointsSweep, reason: pb.AwardReason_AWARD_REASON_SWEEP})
 			}

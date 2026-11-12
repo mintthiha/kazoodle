@@ -179,8 +179,9 @@ export async function openTable(names: string[], baseURL: string): Promise<Stage
 
 /** How wide the main screen's page is, in its own pixels: a laptop-sized layout. */
 const SCREEN_PAGE_WIDTH = 1280;
-/** The main screen's share of the width; the phones split the rest. */
-const SCREEN_SHARE = 0.5;
+/** The main screen's share of the width; the phones split the rest. Four or more
+ * phones get more of it, or each would be too narrow to read. */
+const screenShare = (phones: number) => (phones > 3 ? 0.36 : 0.5);
 
 export interface ScreenStage extends Stage {
   /** The main screen: a TV the whole room watches, which hosts the room. */
@@ -205,7 +206,7 @@ export async function openTableWithScreen(names: string[], baseURL: string): Pro
   const narratorHeight = screenInfo.height * NARRATOR_SHARE;
   const height = screenInfo.height - narratorHeight;
 
-  const tvWidth = screenInfo.width * SCREEN_SHARE;
+  const tvWidth = screenInfo.width * screenShare(names.length);
   const tvScale = Math.min(1, Math.max(0.3, tvWidth / SCREEN_PAGE_WIDTH));
   const tvSlot: Slot = {
     scale: tvScale,

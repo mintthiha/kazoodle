@@ -8,8 +8,8 @@ import { buildReplay, type Beat, type Shot } from "./replay";
 import { closeAll, openTableWithScreen, settled } from "./windows";
 
 // Fibblash, live on your screen against the real server: a main screen on the
-// left hosting the room, three phones beside it, and a narrator along the
-// bottom saying what is going on. `npm run sim:fibblash`. Writes
+// left hosting the room, phones beside it, and a narrator along the bottom
+// saying what is going on. `npm run sim:fibblash`. Writes
 // sim/output/fibblash-replay.html.
 //
 // Unlike the other simulations this one does not set the pace: Fibblash runs
@@ -20,14 +20,19 @@ import { closeAll, openTableWithScreen, settled } from "./windows";
 // test that passed.
 //
 // SIM_HEADLESS=1 runs without windows. SIM_HOLD is how long the windows stay up
-// at the end, in seconds.
+// at the end, in seconds. SIM_PLAYERS is how many phones play, 3 to 5.
 
 const HEADLESS = Boolean(process.env.SIM_HEADLESS);
 const HOLD = Number(process.env.SIM_HOLD ?? 20);
 const TYPING_MS = HEADLESS ? 0 : 60;
 const OUTPUT = fileURLToPath(new URL("./output/", import.meta.url));
 
-const NAMES = ["Ana", "Ben", "Cleo"];
+const CAST = ["Ana", "Ben", "Cleo", "Dev", "Eli"];
+const NAMES = CAST.slice(0, Math.min(CAST.length, Math.max(3, Number(process.env.SIM_PLAYERS ?? 3))));
+const COUNT = ["", "one", "two", "three", "four", "five"][NAMES.length];
+
+/** "Ana, Ben and Cleo". */
+const listNames = (names: string[]) => `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
 /** What each player writes, in order, for questions with a true answer. Vague
  * enough to be a plausible lie for most blanks. */
@@ -35,6 +40,8 @@ const LIES: Record<string, string[]> = {
   Ana: ["a haunted toaster", "pocket lint", "the Eiffel Tower", "a goldfish", "seven", "Belgium", "a spare tyre", "jelly"],
   Ben: ["spaghetti", "the moon", "a tiny hat", "carrots", "Norway", "a kazoo", "forty", "his landlord"],
   Cleo: ["Grandma's recipe", "a llama", "bubble gum", "the post office", "Tuesday", "a velvet glove", "an iceberg", "soap"],
+  Dev: ["a parking ticket", "Napoleon", "three socks", "a weather balloon", "twelve", "Portugal", "mayonnaise", "a lost cat"],
+  Eli: ["the dentist", "a trampoline", "Mars", "a broken umbrella", "sixty", "Canada", "a waffle iron", "glitter"],
 };
 
 /** What each player writes for a creative prompt. */
@@ -42,11 +49,21 @@ const JOKES: Record<string, string[]> = {
   Ana: ["I Googled it first", "It's a feature, not a bug", "Bring snacks, it's a long one", "Ask your mother"],
   Ben: ["We've lost the receipt", "Not again, Gary", "That's tomorrow's problem", "Have you tried crying?"],
   Cleo: ["Ten out of ten, no notes", "Legally, I can't say", "Sir, this is a Wendy's", "Only on Tuesdays"],
+  Dev: ["My cat signed off on it", "Blame the intern", "It was like that when I got here", "Do it for the vine"],
+  Eli: ["Free with every purchase", "Mum says it's my turn", "I have a PowerPoint about this", "Bold of you to assume"],
 };
 
 /** Fallbacks, in case a lie turns out to be the real answer (the server
  * refuses those) — unlikely, but a simulation should not fall over on it. */
 const SPARES = ["a rubber duck", "the Vatican", "nine hundred", "a lighthouse"];
+
+/** How likely a player is to spot the truth on a truth vote. Random guessing
+ * alone finds it about one time in six, so a whole match could pass without
+ * anyone being paid for it. */
+const TRUTH_ODDS = 0.4;
+
+/** Answer text compared loosely, in case the server tidies spacing or case. */
+const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
 
 const KIND_STORY: Record<string, { name: string; first: string; again: string }> = {
   "1": {
@@ -75,7 +92,7 @@ const images = new Map<string, string>();
 /** A screen's visible text, on one line. */
 const text = async (l: Locator) => (await l.innerText()).replace(/\s+/g, " ").trim();
 
-test("a main screen and three phones play a whole game of Fibblash", async () => {
+test(`a main screen and ${COUNT} phones play a whole game of Fibblash`, async () => {
   mkdirSync(OUTPUT, { recursive: true });
   const stage = await openTableWithScreen(NAMES, WEB_URL);
   const { screen: tv, phones, narrator } = stage;
@@ -117,10 +134,10 @@ test("a main screen and three phones play a whole game of Fibblash", async () =>
       await button(p, "Join").click();
       await expect(p.page.locator(".room-code-value")).toHaveText(code);
     }
-    await expect(tv.page.locator(".big-roster .roster-row")).toHaveCount(3);
+    await expect(tv.page.locator(".big-roster .roster-row")).toHaveCount(NAMES.length);
     await capture(
-      "Three phones join",
-      "Ana, Ben and Cleo type the code on their own phones. The main screen counts players, not itself, and only it has the start button: it's the host.",
+      `${COUNT[0].toUpperCase()}${COUNT.slice(1)} phones join`,
+      `${listNames(NAMES)} type the code on their own phones. The main screen counts players, not itself, and only it has the start button: it's the host.`,
     );
 
     await tv.page.locator(".choice", { hasText: "Match length" }).locator(".choice-option", { hasText: /^8 questions$/ }).click();
@@ -133,6 +150,13 @@ test("a main screen and three phones play a whole game of Fibblash", async () =>
     const used = new Map(NAMES.map((n) => [n, 0]));
     let clock = "";
     let truthVotes = 0;
+    // This question's lies, as locked in. The sim wrote them all, so on the
+    // ballot the one answer it did not write is the truth.
+    const lies = new Set<string>();
+    // Who knowingly picked the truth this question; each must be paid for it.
+    const sharp = new Set<string>();
+    // The first CREATIVE matchup is voted unanimously, to see a sweep paid.
+    let sweep: "planned" | "voting" | "done" = "planned";
 
     for (let guard = 0; guard < 200; guard++) {
       // Wait for the next phase, whatever it is. The server decides when.
@@ -156,14 +180,16 @@ test("a main screen and three phones play a whole game of Fibblash", async () =>
         const prompt = await text(tv.page.locator(".fb-prompt"));
         const first = !seenKinds.has(kind);
         seenKinds.add(kind);
+        lies.clear();
+        sharp.clear();
         await capture(`Question ${number}: ${story.name}`, `${first ? story.first : story.again} "${prompt}"`);
       } else if (phase === "answer") {
         const pool = kind === "2" ? JOKES : LIES;
         for (const [i, p] of phones.entries()) {
           const n = used.get(p.name)!;
           used.set(p.name, n + 1);
-          const answer = pool[p.name][n % pool[p.name].length];
-          await answerWith(p, answer);
+          const answer = await answerWith(p, pool[p.name][n % pool[p.name].length]);
+          if (kind !== "2") lies.add(norm(answer));
           if (i === 0) {
             await expect(tv.page.locator('.fb-seat[data-done="true"]')).toHaveCount(1);
             // Who, never what: the main screen does not show the answer.
@@ -179,13 +205,24 @@ test("a main screen and three phones play a whole game of Fibblash", async () =>
         // Nothing on the ballot names who wrote what.
         for (const name of NAMES) await expect(tv.page.locator(".fb-board")).not.toContainText(name);
         let caption: string;
+        let truthVote = false;
+        let target: string | null = null;
         if (kind === "2") {
+          const board = await text(tv.page.locator(".fb-board"));
           caption =
-            "Three answers make one three-way matchup. Each author votes for one of the other two; their own answer is greyed out on their phone.";
+            NAMES.length === 3
+              ? "Three answers make one three-way matchup. Each author votes for one of the other two; their own answer is greyed out on their phone."
+              : `${NAMES.length} answers split into a pair and a three-way, voted one matchup at a time. A pair's authors sit their own matchup out; everyone else picks a favourite. Up now: ${board}`;
+          if (sweep === "planned") {
+            sweep = "voting";
+            target = await text(tv.page.locator(".fb-board .fb-choice-text").first());
+            caption += ` This time everyone who can will pick "${target}", to earn it a sweep.`;
+          }
         } else if (question.includes("funniest")) {
           caption =
             "The same answers again, the truth still among them, now for laughs: +250 per funny vote. The truth stays hidden until both votes are in.";
         } else {
+          truthVote = true;
           truthVotes++;
           caption =
             truthVotes === 1
@@ -193,17 +230,37 @@ test("a main screen and three phones play a whole game of Fibblash", async () =>
               : "Find the truth. Your own lie is greyed out.";
         }
         await capture(question, caption);
-        for (const p of phones) await voteRandomly(p);
+        for (const p of phones) {
+          if (truthVote && Math.random() < TRUTH_ODDS) {
+            await vote(p, (t) => !lies.has(norm(t)));
+            sharp.add(p.name);
+          } else if (target !== null) {
+            await vote(p, (t) => t === target);
+          } else {
+            await vote(p);
+          }
+        }
       } else if (phase === "matchupResult") {
         const won = tv.page.locator('.fb-reveal-item[data-won="true"] .fb-reveal-text');
         const winner = (await won.count()) > 0 ? await text(won.first()) : "";
         const points = await awardsLine(tv);
+        let swept = "";
+        if (sweep === "voting") {
+          sweep = "done";
+          await expect(tv.page.locator(".fb-award-why", { hasText: "Took every vote!" })).toHaveCount(1);
+          swept = " Every vote it could get went one way, so its author gets the +500 sweep bonus.";
+        }
         await capture(
           winner ? `"${winner}" wins the matchup` : "Nobody won the matchup",
-          `Now the names come out: who wrote each answer and who voted for it. ${points}`,
+          `Now the names come out: who wrote each answer and who voted for it.${swept} ${points}`,
         );
       } else if (phase === "result") {
         const truth = await text(tv.page.locator(".fb-truth-text"));
+        // Everyone who knowingly picked the truth was paid for it.
+        for (const name of sharp) {
+          const row = tv.page.locator(".fb-award", { has: tv.page.locator(".roster-name", { hasText: name }) });
+          await expect(row.locator(".fb-award-why")).toContainText("Found the truth");
+        }
         const points = await awardsLine(tv);
         await capture(
           `The truth: "${truth}"`,
@@ -227,6 +284,7 @@ test("a main screen and three phones play a whole game of Fibblash", async () =>
 
     // ─── The end ─────────────────────────────────────────────────────────────
     expect([...seenKinds].sort()).toEqual(["1", "2", "3"]);
+    expect(sweep).toBe("done");
     const headline = await text(tv.page.locator(".fb-final-headline"));
     for (const p of phones) await expect(p.page.locator(".fb-final-headline")).toHaveText(headline);
     await capture(
@@ -252,14 +310,14 @@ test("a main screen and three phones play a whole game of Fibblash", async () =>
 
   const html = buildReplay(beats, images, new Date(), {
     title: "Fibblash Replay",
-    source: "A main screen and three phones against the real server",
+    source: `A main screen and ${COUNT} phones against the real server`,
   });
   writeFileSync(`${OUTPUT}fibblash-replay.html`, html);
   console.log(`\nReplay: ${OUTPUT}fibblash-replay.html (${beats.length} steps)\n`);
 
   /** Types an answer on one phone and locks it in, falling back to a spare if
    * the server says it is secretly the true answer. */
-  async function answerWith(p: Player, answer: string) {
+  async function answerWith(p: Player, answer: string): Promise<string> {
     const box = p.page.getByRole("textbox", { name: /Your lie|Your answer/ });
     for (const attempt of [answer, ...SPARES]) {
       await box.fill("");
@@ -268,19 +326,29 @@ test("a main screen and three phones play a whole game of Fibblash", async () =>
       const locked = p.page.locator(".fb-locked");
       const refused = p.page.getByText("That’s the real answer!");
       await expect(locked.or(refused)).toBeVisible();
-      if (await locked.isVisible()) return;
+      if (await locked.isVisible()) return attempt;
     }
     throw new Error(`${p.name} could not find an answer that wasn't the truth`);
   }
 
-  /** One phone picks something it is allowed to vote for, at random, and votes.
-   * A phone with no vote here (nothing to pick) does nothing. */
-  async function voteRandomly(p: Player) {
+  /** One phone votes for the first answer it may pick whose text passes
+   * `want`, or for any answer it may pick, at random, when there is no `want`
+   * or none passes (say, the wanted answer is its own). A phone with no vote
+   * here does nothing. A wanted answer that is nowhere on the ballot fails. */
+  async function vote(p: Player, want?: (text: string) => boolean) {
     const cast = button(p, "Vote for this one");
     if (!(await cast.isVisible())) return;
-    const options = p.page.locator("button.fb-choice:not([disabled])");
-    const n = await options.count();
-    await options.nth(Math.floor(Math.random() * n)).click();
+    const options = await p.page.locator("button.fb-choice:not([disabled])").all();
+    const texts = await Promise.all(options.map((o) => text(o.locator(".fb-choice-text"))));
+    let pick = want ? texts.findIndex(want) : -1;
+    if (pick < 0) {
+      const anywhere = await p.page.locator("button.fb-choice .fb-choice-text").allInnerTexts();
+      if (want && !anywhere.some((t) => want(t.replace(/\s+/g, " ").trim()))) {
+        throw new Error(`${p.name} cannot find the answer they want on the ballot: ${anywhere.join(" / ")}`);
+      }
+      pick = Math.floor(Math.random() * options.length);
+    }
+    await options[pick].click();
     await cast.click();
     await expect(p.page.getByText("Vote locked in")).toBeVisible();
   }
@@ -293,6 +361,8 @@ test("a main screen and three phones play a whole game of Fibblash", async () =>
     for (const row of rows) {
       const name = await text(row.locator(".roster-name"));
       const why = await text(row.locator(".fb-award-why"));
+      // A count of one is singular.
+      expect(why).not.toMatch(/\b1 votes\b/);
       const delta = await text(row.locator(".fb-delta"));
       parts.push(`${name} ${delta} (${why})`);
     }

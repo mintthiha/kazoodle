@@ -473,7 +473,7 @@ const en = {
   "fb.source": "Source: {source}",
   "fb.award.1": "Found the truth",
   "fb.award.2": "Fooled {n}",
-  "fb.award.3": "{n} votes",
+  "fb.award.3": "{n, plural, one {# vote} other {# votes}}",
   "fb.award.4": "Took every vote!",
   "fb.points": "+{n}",
   "fb.yourPoints": "You: +{n}",
@@ -983,8 +983,8 @@ const fr: Record<MessageKey, string> = {
   "fb.noVotes": "Aucun vote",
   "fb.source": "Source : {source}",
   "fb.award.1": "A trouvé la vérité",
-  "fb.award.2": "{n} piégé(s)",
-  "fb.award.3": "{n} vote(s)",
+  "fb.award.2": "{n, plural, one {# piégé} other {# piégés}}",
+  "fb.award.3": "{n, plural, one {# vote} other {# votes}}",
   "fb.award.4": "Tous les votes !",
   "fb.points": "+{n}",
   "fb.yourPoints": "Vous : +{n}",
@@ -1035,12 +1035,34 @@ export function detectLocale(): Locale {
   return "en";
 }
 
-/** Look up a key, fall back to English, then to the key itself. Substitutes
- * {name} placeholders from vars. */
+/** A count's grammatical form: {n, plural, one {# vote} other {# votes}}. The
+ * syntax is ICU MessageFormat's, so a real i18n library can take these strings
+ * over unchanged. Only the forms are inside; # stands for the number. */
+const PLURAL = /\{(\w+), plural,((?:\s*\w+\s*\{[^{}]*\})+)\s*\}/g;
+const PLURAL_FORM = /(\w+)\s*\{([^{}]*)\}/g;
+
+/** The locale's own plural rules: French says "0 vote", English "0 votes". */
+const pluralRules: Record<Locale, Intl.PluralRules> = {
+  en: new Intl.PluralRules("en"),
+  fr: new Intl.PluralRules("fr"),
+};
+
+function pluralize(locale: Locale, template: string, vars: Vars): string {
+  return template.replace(PLURAL, (whole, name: string, body: string) => {
+    if (!(name in vars)) return whole;
+    const n = Number(vars[name]);
+    const forms = new Map([...body.matchAll(PLURAL_FORM)].map((m) => [m[1], m[2]]));
+    const form = forms.get(pluralRules[locale].select(n)) ?? forms.get("other") ?? "";
+    return form.replaceAll("#", String(vars[name]));
+  });
+}
+
+/** Look up a key, fall back to English, then to the key itself. Picks plural
+ * forms, then substitutes {name} placeholders from vars. */
 export function translate(locale: Locale, key: MessageKey, vars?: Vars): string {
   const template = dictionaries[locale][key] ?? en[key] ?? key;
   if (!vars) return template;
-  return template.replace(/\{(\w+)\}/g, (_, name: string) =>
+  return pluralize(locale, template, vars).replace(/\{(\w+)\}/g, (_, name: string) =>
     name in vars ? String(vars[name]) : `{${name}}`,
   );
 }

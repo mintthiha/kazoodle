@@ -275,7 +275,8 @@ func TestACreativeQuestionWithATrio(t *testing.T) {
 	if len(mr.GetWinnerIds()) != 1 || mr.GetWinnerIds()[0] != boaty {
 		t.Errorf("matchup winners = %v", mr.GetWinnerIds())
 	}
-	if st.scores["p3"] != 2*pointsVote || st.scores["p1"] != pointsVote || st.scores["p2"] != 0 {
+	// Boaty took both votes it could have had (its author can't vote for it): a sweep.
+	if st.scores["p3"] != 2*pointsVote+pointsSweep || st.scores["p1"] != pointsVote || st.scores["p2"] != 0 {
 		t.Errorf("scores = %v", st.scores)
 	}
 

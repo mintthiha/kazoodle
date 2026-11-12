@@ -120,6 +120,75 @@ func TestScoreMatchup(t *testing.T) {
 	}
 }
 
+// In a trio every author is also a voter, and can never vote for their own
+// answer. A sweep is every vote the answer could have had, so its own author's
+// vote must not count against it.
+func TestScoreMatchupTrio(t *testing.T) {
+	cs := []choice{
+		{id: "A", authors: []string{"p1"}},
+		{id: "B", authors: []string{"p2"}},
+		{id: "C", authors: []string{"p3"}},
+	}
+	tests := []struct {
+		name      string
+		voters    []string
+		votes     map[string]string
+		wantP1    int
+		wantSweep bool
+	}{
+		{
+			name:      "three players: both other authors pick it",
+			voters:    []string{"p1", "p2", "p3"},
+			votes:     map[string]string{"p1": "B", "p2": "A", "p3": "A"},
+			wantP1:    2*pointsVote + pointsSweep,
+			wantSweep: true,
+		},
+		{
+			name:      "five players: everyone but its author picks it",
+			voters:    []string{"p1", "p2", "p3", "p4", "p5"},
+			votes:     map[string]string{"p1": "C", "p2": "A", "p3": "A", "p4": "A", "p5": "A"},
+			wantP1:    4*pointsVote + pointsSweep,
+			wantSweep: true,
+		},
+		{
+			name:      "its author not voting does not spoil it",
+			voters:    []string{"p1", "p2", "p3"},
+			votes:     map[string]string{"p2": "A", "p3": "A"},
+			wantP1:    2*pointsVote + pointsSweep,
+			wantSweep: true,
+		},
+		{
+			name:   "one vote elsewhere spoils it",
+			voters: []string{"p1", "p2", "p3", "p4"},
+			votes:  map[string]string{"p1": "B", "p2": "A", "p3": "A", "p4": "B"},
+			wantP1: 2 * pointsVote,
+		},
+		{
+			name:   "a player who could have voted for it and did not spoils it",
+			voters: []string{"p1", "p2", "p3", "p4"},
+			votes:  map[string]string{"p1": "B", "p2": "A", "p3": "A"},
+			wantP1: 2 * pointsVote,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			awards := scoreMatchup(matchup{choices: cs, voters: tt.voters, votes: tt.votes})
+			if got := total(awards, "p1"); got != tt.wantP1 {
+				t.Errorf("p1 scored %d, want %d", got, tt.wantP1)
+			}
+			swept := false
+			for _, a := range awards {
+				if a.reason == pb.AwardReason_AWARD_REASON_SWEEP {
+					swept = true
+				}
+			}
+			if swept != tt.wantSweep {
+				t.Errorf("sweep = %v, want %v", swept, tt.wantSweep)
+			}
+		})
+	}
+}
+
 func TestWinners(t *testing.T) {
 	cs := []choice{{id: "A"}, {id: "B"}, {id: "C"}}
 	tests := []struct {
